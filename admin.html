@@ -1127,7 +1127,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.22</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.23</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3246,6 +3246,18 @@ function procesarArchivo(event) {
         if(window._tipoArchivo === 'dni')       mostrarFotoInline('l-dni-frente',r.url, false);
         if(window._tipoArchivo === 'dni-dorso') mostrarFotoInline('l-dni-dorso', r.url, false);
         if(window._tipoArchivo === 'apto')      mostrarFotoInline('l-apto',      r.url, file.type.includes('pdf'));
+        // Persistir URL en Firestore
+        var _dniUp = (DB.jugadores[itemSel.arrIdx][COL.DNI]||DB.jugadores[itemSel.arrIdx][COL.TARJETA]||'').toString();
+        var _campoMap = {foto:'foto', dni:'dniFoto', 'dni-dorso':'dniDorso', apto:'apto'};
+        var _campoUp = _campoMap[window._tipoArchivo];
+        if(_dniUp && _campoUp) {
+          var _upd = {}; _upd[_campoUp] = r.url;
+          db.collection('socios').doc(_dniUp).update(_upd)
+            .then(function(){ _contarEscrituras(1); })
+            .catch(function(e){ console.error('Error guardando URL foto:', e); });
+        }
+        // Actualizar card en la grilla
+        renderPlayers();
         toast('Archivo subido correctamente', 'ok');
       }
     }, function(e){ ocultarLoader(); alert('Error: ' + e); });
