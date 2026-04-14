@@ -1127,7 +1127,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.20</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.22</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1154,7 +1154,7 @@ var FIREBASE_CONFIG = {
   "messagingSenderId": "486153791045",
   "appId": "1:486153791045:web:81bf466e0d1453590c652c"
 };
-var GAS_URL         = 'https://script.google.com/macros/s/AKfycbx4DPUUx6MoJgusmPdqABnrIVysucZ9XPgVq-wtUnoIp1g464ptIONkccUmnighqIv0EA/exec';
+var GAS_URL         = 'https://script.google.com/macros/s/AKfycbx4kVBNBGsnlYtWqbeZMKjC7tLcjGOHsYB-IUs5j-3T_2P95vyIMlOPL-FW9pBHTokeQQ/exec';
 var GAS_OCR_KEY     = ''; // deprecated
 var ADMIN_EMAIL     = 'admin@sgd.app';
 
@@ -1591,25 +1591,40 @@ function callScriptPost(payload, onSuccess, onError) {
     var user = auth.currentUser;
     if (!user) { if(onError) onError('Sin sesión activa'); return; }
     user.getIdToken(false).then(function(idToken) {
-      var body = Object.assign({}, payload, {idToken: idToken});
-      delete body.token; delete body.pass;
-      // idToken como query param — sobrevive el redirect 302 de GAS
-      var _gasUrl = GAS_URL + '?idToken=' + encodeURIComponent(body.idToken) + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
-      // idToken va TANTO en query param (para sobrevivir redirect) COMO en body
-      var _bodyFinal = Object.assign({}, body);
-      // NO borrar idToken ni firebaseApiKey del body
-      fetch(_gasUrl, {
-        method: 'POST',
-        redirect: 'follow',
-        headers: {'Content-Type': 'text/plain'},
-        body: JSON.stringify(_bodyFinal)
-      })
+      var apiKey = FIREBASE_CONFIG.apiKey || '';
+      // Paso 1: GET para verificar token y obtener nonce (no sufre el redirect)
+      var getUrl = GAS_URL + '?idToken=' + encodeURIComponent(idToken)
+        + '&firebaseApiKey=' + encodeURIComponent(apiKey);
+      fetch(getUrl, {method: 'GET', redirect: 'follow'})
       .then(function(r){ return r.text(); })
-      .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
+      .then(function(t) {
+        var resp; try { resp = JSON.parse(t); } catch(e) { resp = {error: 'Respuesta inválida'}; }
+        if (!resp.ok || !resp.nonce) {
+          if(onError) onError(resp.error || 'Error de autenticación');
+          return;
+        }
+        // Paso 2: POST con el nonce (token ya verificado en el GET)
+        var body = Object.assign({}, payload);
+        body.nonce = resp.nonce;
+        delete body.token; delete body.pass; delete body.idToken;
+        fetch(GAS_URL, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: {'Content-Type': 'text/plain'},
+          body: JSON.stringify(body)
+        })
+        .then(function(r){ return r.text(); })
+        .then(function(t2){ var d; try{d=JSON.parse(t2);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
+        .catch(function(){ if(onError) onError('Sin conexión'); });
+      })
       .catch(function(){ if(onError) onError('Sin conexión'); });
-    }).catch(function(e){ if(onError) onError('Error de autenticación'); });
+    }).catch(function(){ if(onError) onError('Error de autenticación'); });
     return;
   }
+  _fsDispatch(action, payload, onSuccess, onError);
+}
+
+
   _fsDispatch(action, payload, onSuccess, onError);
 }
 
@@ -1955,33 +1970,27 @@ function _fsDispatch(action, p, ok, err) {
         var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to||p.emailDest, subject:p.subject||p.asunto, body:p.body||p.htmlBody,
           colorPrimario: INST.colorPrimario||'#1a7a3c', nombreOrg:INST.nombre||'SGD',
           emailRemit: INST.emailRemitente||''};
-        var _gasUrlEmail = GAS_URL
-          + '?idToken=' + encodeURIComponent(_idTok)
-          + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
-        var _emailBodyStr = JSON.stringify(_emailBody);
-        fetch(_gasUrlEmail, {
-          method: 'POST',
-          redirect: 'manual',
-          headers: {'Content-Type': 'text/plain'},
-          body: _emailBodyStr
-        })
-        .then(function(r) {
-          if (r.type === 'opaqueredirect' || r.status === 302 || r.status === 301) {
-            var location = r.headers.get('Location') || r.url;
-            if (location) {
-              return fetch(location, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: {'Content-Type': 'text/plain'},
-                body: _emailBodyStr
-              });
-            }
-          }
-          return r;
-        })
+        var _apiKeyE = FIREBASE_CONFIG.apiKey || '';
+        var _getUrlE = GAS_URL + '?idToken=' + encodeURIComponent(_idTok)
+          + '&firebaseApiKey=' + encodeURIComponent(_apiKeyE);
+        fetch(_getUrlE, {method: 'GET', redirect: 'follow'})
         .then(function(r){ return r.text(); })
-        .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
-        .catch(function(){ cbErr('Sin conexión para enviar email'); });
+        .then(function(t) {
+          var resp; try { resp = JSON.parse(t); } catch(e) { resp = {error:'inválido'}; }
+          if (!resp.ok || !resp.nonce) { cbErr(resp.error || 'Error auth'); return; }
+          _emailBody.nonce = resp.nonce;
+          delete _emailBody.idToken;
+          fetch(GAS_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: {'Content-Type': 'text/plain'},
+            body: JSON.stringify(_emailBody)
+          })
+          .then(function(r){ return r.text(); })
+          .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
+          .catch(function(){ cbErr('Sin conexión para enviar email'); });
+        })
+        .catch(function(){ cbErr('Sin conexión'); });
       }).catch(function(){ cbErr('Error de autenticación'); });
       break;
     }
@@ -4332,6 +4341,14 @@ function getMesSeleccionado(){ return document.getElementById('rMes').value; }
 function td(txt, cls){ return '<td' + (cls?' class="'+cls+'"':'') + '>' + txt + '</td>'; }
 function getRangoFechas(){ return {desde:document.getElementById('rDesde').value, hasta:document.getElementById('rHasta').value}; }
 function periodoLabel(p){ var a = p.split('-'); var m = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']; return m[parseInt(a[1])-1] + ' ' + a[0]; }
+
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, function(ch) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+
 function normFecha(f) {
   if(!f) return '';
   var s = f.toString().trim();
