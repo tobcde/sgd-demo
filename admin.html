@@ -300,7 +300,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
   <div id="carga-progreso" style="display:none;flex:1;align-items:center;gap:8px;margin:0 12px;"></div>
   <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-    <a id="fs-counter" href="https://console.firebase.google.com/project/excursionistas-futsal/firestore/databases/-default-/usage/last-24h" target="_blank"
+    <a id="fs-counter" href="https://console.firebase.google.com/" target="_blank"
       style="font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;text-decoration:none;cursor:pointer;" title="Ver uso en Firebase Console">
       &#x1F4D6; 0 | &#x270F; 0
     </a>
@@ -583,7 +583,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       </div>
       <div style="margin-bottom:10px;">
         <label class="filter-label">Observacion (opcional)</label>
-        <input id="masiva-obs" class="edit-input" maxlength="500" style="width:100%;margin-top:4px;" placeholder="ej: Cuota abril 2025">
+        <input id="masiva-obs" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Cuota abril 2025">
       </div>
       <div id="masiva-preview" style="display:none;background:var(--bg);border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;border:1px solid var(--border);"></div>
       <button class="btn btn-save" onclick="ejecutarMasiva()" id="btn-masiva" style="width:100%;">GENERAR INSCRIPCIONES</button>
@@ -696,7 +696,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <input id="inpPDNI" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="DNI">
       <input id="inpPFecha" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Fecha de nacimiento (ej: 01/05/1990)">
       <input id="inpPEmail" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Email">
-      <input id="inpPPass" type="password" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Contrasena (para login)" autocomplete="new-password">
+      <input id="inpPPass" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Contrasena (para login)">
       <div style="display:flex;gap:8px;">
         <button id="btnProfesor" class="btn btn-save" style="flex:1;" onclick="guardarProfesor()">AGREGAR</button>
         <button id="btnCancelProfesor" class="btn" style="display:none;background:var(--muted);color:#fff;" onclick="cancelarEditProfesor()">CANCELAR</button>
@@ -1000,7 +1000,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
         <div class="filter-group full" style="grid-column:1/-1;">
           <label class="filter-label">Observaciones</label>
-          <input id="mi-obs" class="edit-input" maxlength="500" style="width:100%;" placeholder="ej: baja programada junio">
+          <input id="mi-obs" class="edit-input" style="width:100%;" placeholder="ej: baja programada junio">
         </div>
         <div class="filter-group full" style="grid-column:1/-1;">
           <label class="filter-label" style="color:var(--secondary);">&#x1F46A; Hermano de (DNI)</label>
@@ -1046,12 +1046,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div class="filter-group full" style="grid-column:1/-1;">
-          <label class="filter-label">Monto total a cobrar</label>
-          <div id="mp-monto-display" style="font-size:20px;font-weight:800;color:#6de097;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:center;">$0</div>
-          <input id="mp-monto" type="number" style="display:none;">
-          <div style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center;">Se cobra la suma de los planes marcados arriba</div>
-        </div>
+        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Monto total ($)</label><input id="mp-monto" type="number" class="edit-input" style="width:100%;font-size:16px;padding:12px;" oninput="sincronizarMontoManual()"></div>
         <div class="filter-group"><label class="filter-label">Desde</label><input id="mp-desde" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label">Hasta</label><input id="mp-hasta" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label">Metodo de pago</label>
@@ -1060,7 +1055,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div class="filter-group"><label class="filter-label">Fecha de pago</label><input id="mp-fecha" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Cobrador</label>
           <select id="mp-cobrador" class="edit-input" style="width:100%;"></select></div>
-        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="mp-obs" class="edit-input" style="width:100%;" maxlength="500" placeholder="Opcional"></div>
+        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="mp-obs" class="edit-input" style="width:100%;"></div>
       </div>
       <button class="btn btn-save" onclick="confirmarPago()" style="width:100%;padding:14px;font-size:14px;">CONFIRMAR PAGO</button>
     </div>
@@ -1088,7 +1083,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Domicilio</label><input id="ns-domicilio" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label" id="lbl-ns-categoria">Categoria</label>
           <select id="ns-categoria" class="edit-input" style="width:100%;"></select></div>
-        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="ns-obs" class="edit-input" maxlength="500" style="width:100%;"></div>
+        <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Observaciones</label><input id="ns-obs" class="edit-input" style="width:100%;"></div>
         <div style="grid-column:1/-1;border-top:1px solid var(--border);margin-top:6px;padding-top:12px;">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Contactos de emergencia</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -1132,7 +1127,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.14</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.7</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1159,8 +1154,8 @@ var FIREBASE_CONFIG = {
   "messagingSenderId": "486153791045",
   "appId": "1:486153791045:web:81bf466e0d1453590c652c"
 };
-var GAS_URL         = 'https://script.google.com/macros/s/AKfycbydNyAvnZJ8B991qmEDo2MFYCI2oDDrYIdTKI02vD0VX-CRWyWnq4IToqKmSepCU7E7/exec';
-var GAS_OCR_KEY     = ''; // deprecated — se usa Firebase ID token
+var GAS_URL         = 'https://script.google.com/macros/s/AKfycbx4DPUUx6MoJgusmPdqABnrIVysucZ9XPgVq-wtUnoIp1g464ptIONkccUmnighqIv0EA/exec';
+var GAS_OCR_KEY     = ''; // deprecated
 var ADMIN_EMAIL     = 'admin@sgd.app';
 
 firebase.initializeApp(FIREBASE_CONFIG);
@@ -1197,7 +1192,7 @@ var WA_CRED_KEY = 'sgd_wa_cred';
 var DESCUENTO_HNO_SUGERIDO = 0;
 var CARGA_COMPLETA = false; // descuento sugerido para hermanos en $
 
-// Columnas de la hoja (igual que excursionistas para compatibilidad)
+// Columnas de la hoja
 var COL = {
   APELLIDO:0, NOMBRE:1, EMAIL:2, TARJETA:3, TEL:4, CELULAR:5,
   ACTIVO:6, TIPO_DOC:7, DNI:8, FECHA_NAC:9, SEXO:10,
@@ -1349,31 +1344,14 @@ function horarioToRow(doc) {
   return [d.dia||'', d.hora||'', d.sede||'', d.profesores||'', d.grupo||'', d.liga||d.extra||'', d.modalidad||'Mixto', doc.id];
 }
 
-function _normalizarFechaDisplay(f) {
-  // Convierte cualquier formato de fecha a dd/MM/yyyy para display consistente
-  if (!f) return '';
-  var s = f.toString().trim();
-  // Si ya es dd/MM/yyyy → dejar igual
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
-  // Si es yyyy-MM-dd → convertir
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    var p = s.substring(0,10).split('-');
-    return p[2] + '/' + p[1] + '/' + p[0];
-  }
-  return s;
-}
-
 function cuotaToRow(d, fsId) {
-  // formato: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs]
-  // Normalizar fechas a dd/MM/yyyy para que calcularEstadoTiempoReal funcione siempre
+  // formato: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs, _fsId]
   var row = [
     d.dni||d.doc||'', d.nombre||'',
     d.plan||d.concepto||'',
-    _normalizarFechaDisplay(d.periodoDesde||''),
-    _normalizarFechaDisplay(d.periodoHasta||''),
-    _normalizarFechaDisplay(d.fechaPago||''),
-    d.monto||0,
-    d.metodo||'', d.cobrador||d.obs||'', d.obs||''
+    d.periodoDesde||'', d.periodoHasta||'',
+    d.fechaPago||'', d.monto||0,
+    d.metodo||'', d.cobrador||'', d.obs||''
   ];
   row._fsId = fsId || d._fsId || '';
   return row;
@@ -1603,27 +1581,16 @@ function callScript(payload, onSuccess, onError, _retry) {
 
 function callScriptPost(payload, onSuccess, onError) {
   var action = payload.action || '';
+  // uploadFile va al GAS (Drive)
   if (action === 'uploadFile') {
-    // Obtener Firebase ID token — más seguro que contraseña fija
-    var user = auth.currentUser;
-    if (!user) { if(onError) onError('Sin sesión activa'); return; }
-    user.getIdToken(false).then(function(idToken) {
-      var body = Object.assign({}, payload, {idToken: idToken});
-      // Eliminar campos legacy innecesarios
-      delete body.token; delete body.pass;
-      // Mandar idToken como query param — sobrevive el redirect 302 de GAS
-      var _gasUrl = GAS_URL + '?idToken=' + encodeURIComponent(body.idToken) + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
-      var _bodyNoToken = Object.assign({}, body); delete _bodyNoToken.idToken;
-      fetch(_gasUrl, {
-        method: 'POST',
-        redirect: 'follow',
-        headers: {'Content-Type': 'text/plain'},
-        body: JSON.stringify(_bodyNoToken)
-      })
-      .then(function(r){ return r.text(); })
-      .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
-      .catch(function(){ if(onError) onError('Sin conexión'); });
-    }).catch(function(e){ if(onError) onError('Error de autenticación'); });
+    fetch(GAS_URL, {
+      method:'POST', redirect:'follow',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify(Object.assign({}, payload, {token: GAS_OCR_KEY}))
+    })
+    .then(function(r){ return r.text(); })
+    .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
+    .catch(function(){ if(onError) onError('Sin conexión'); });
     return;
   }
   _fsDispatch(action, payload, onSuccess, onError);
@@ -1642,7 +1609,7 @@ function _fsDispatch(action, p, ok, err) {
       var dniNorm = normDoc(c.dni || c.DNI || c.doc || '');
       if (!dniNorm){ cbErr('DNI requerido'); return; }
       // Verificar duplicado antes de escribir
-      var dup = DB.jugadores.slice(1).find(function(jj){ return (jj[COL.DNI]||jj[COL.TARJETA]||'').toString().replace(/[^0-9]/g,'') === dniNorm; });
+      var dup = DB.jugadores.slice(1).find(function(f){ return (f[COL.DNI]||'').toString() === dniNorm; });
       if (dup){ cbErr('Ya existe un jugador con DNI ' + dniNorm + ' (' + (dup[COL.APELLIDO]||'') + ', ' + (dup[COL.NOMBRE]||'') + ')'); return; }
       var hoy = new Date().toLocaleDateString('sv');
       var doc = {
@@ -1964,25 +1931,14 @@ function _fsDispatch(action, p, ok, err) {
 
     // ── EMAIL (via GAS) ───────────────────────────────────────────
     case 'sendEmail': {
-      var _user = auth.currentUser;
-      if (!_user) { cbErr('Sin sesión activa'); break; }
-      _user.getIdToken(false).then(function(_idTok) {
-        var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to, subject:p.subject, body:p.body,
+      fetch(GAS_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({action:'sendEmail', token:GAS_OCR_KEY, to:p.to, subject:p.subject, body:p.body,
           colorPrimario: INST.colorPrimario||'#1a7a3c', nombreOrg:INST.nombre||'SGD',
-          emailRemit: INST.emailRemitente||''};
-        var _gasUrlEmail = GAS_URL + '?idToken=' + encodeURIComponent(_emailBody.idToken)
-                               + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
-        var _emailBodyNoToken = Object.assign({}, _emailBody); delete _emailBodyNoToken.idToken;
-        fetch(_gasUrlEmail, {
-          method: 'POST',
-          redirect: 'follow',
-          headers: {'Content-Type': 'text/plain'},
-          body: JSON.stringify(_emailBodyNoToken)
-        })
-        .then(function(r){ return r.text(); })
+          emailRemit: INST.emailRemitente||''})
+      }).then(function(r){ return r.text(); })
         .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
         .catch(function(){ cbErr('Sin conexión para enviar email'); });
-      }).catch(function(){ cbErr('Error de autenticación'); });
       break;
     }
 
@@ -2140,7 +2096,7 @@ function renderInscripcionesModal(dni) {
 function abrirModalInscripcion() {
   if(!itemSel) return;
   var f = DB.jugadores[itemSel.arrIdx];
-  document.getElementById('mi-sub').innerText = esc(f[COL.APELLIDO]||'') + ' ' + esc(f[COL.NOMBRE]||'');
+  document.getElementById('mi-sub').innerText = (f[COL.APELLIDO]||'') + ' ' + (f[COL.NOMBRE]||'');
   // Poblar select de planes
   var sel = document.getElementById('mi-plan');
   sel.innerHTML = '<option value="">-- Seleccionar --</option>'
@@ -2344,7 +2300,7 @@ function renderPlayers() {
     lazyCargarInactivos(function(){ renderPlayers(); });
     return;
   }
-  var busq = (document.getElementById('busq').value||'').trim().toLowerCase();
+  var busq = document.getElementById('busq').value.toLowerCase();
   var genF = document.getElementById('fGen').value, catF = document.getElementById('fCat').value;
   var estF = document.getElementById('fEstado').value, cuotaF = document.getElementById('fCuota').value;
   var grid = document.getElementById('gridJugadores');
@@ -2402,8 +2358,8 @@ function renderPlayers() {
     html += '<div style="' + prStyle + '">';
     var catSecCard = (f[COL.CAT_SECUNDARIA]||'').toString().trim();
     var catSecBadge = catSecCard ? '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;font-weight:800;padding:1px 7px;border-radius:8px;margin-left:6px;font-family:\'Barlow Condensed\',sans-serif;">+' + catSecCard + '</span>' : '';
-    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + esc(apellido) + catSecBadge + '<br><span style="font-size:12px;color:var(--muted);">' + esc(nombre) + '</span></h4>';
-    html += '<p class="card-info" style="margin:0 0 6px 0;">Doc: ' + esc(dni) + (anioNac ? ' | Nac. ' + anioNac : '') + '</p>';
+    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + apellido + catSecBadge + '<br><span style="font-size:12px;color:var(--muted);">' + nombre + '</span></h4>';
+    html += '<p class="card-info" style="margin:0 0 6px 0;">Doc: ' + dni + (anioNac ? ' | Nac. ' + anioNac : '') + '</p>';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
     html += '<div><span class="status-dot ' + (act ? 'active-dot' : 'inactive-dot') + '"></span>';
     html += '<span style="font-size:11px;font-weight:600;text-transform:uppercase;">' + (act ? 'ACTIVO' : 'INACTIVO') + '</span></div>';
@@ -2529,7 +2485,7 @@ function renderCuotas() {
     var lb = it.est==='ok'?'Al dia':it.est==='debe'?'DEBE':it.est==='vence'?'POR VENCER':it.est==='parcial'?'PARCIAL':'Sin plan';
     var _vigente = it.hastaStr ? formatDate(it.hastaStr) : it.hasta ? formatDate(it.hasta) : '-';
     html += '<div class="ct-row">';
-    html += '<div><div class="ct-nombre">' + esc(f[COL.APELLIDO]||'') + ', ' + esc(f[COL.NOMBRE]||'') + '</div><div class="ct-sub">Doc: ' + esc(f[COL.DNI]||f[COL.TARJETA]||'') + ' | ' + esc(f[COL.CATEGORIA_APP]||'Sin ' + T('grupo')) + '</div></div>';
+    html += '<div><div class="ct-nombre">' + (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'') + '</div><div class="ct-sub">Doc: ' + (f[COL.DNI]||f[COL.TARJETA]||'') + ' | ' + (f[COL.CATEGORIA_APP]||'Sin ' + T('grupo')) + '</div></div>';
     html += '<div><span class="cuota-pill ' + cl + '">' + lb + '</span></div>';
     var _chipExtras = it.extraConceptos && it.extraConceptos.length ?
       it.extraConceptos.map(function(x){ return '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;margin-top:3px;display:inline-block;">+' + x + '</span>'; }).join(' ') : '';
@@ -2603,8 +2559,6 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   document.getElementById('mp-desde').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   document.getElementById('mp-hasta').value = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
   document.getElementById('mp-monto').value = _moSugerido || '';
-  var _disp = document.getElementById('mp-monto-display');
-  if(_disp) _disp.innerText = '$' + Number(_moSugerido||0).toLocaleString('es-AR');
   document.getElementById('mp-obs').value = '';
   document.getElementById('mp-cobrador').innerHTML = DB.profesores.map(function(p){ return '<option>' + p[0] + '</option>'; }).join('') || '<option>Sin especificar</option>';
   // Poblar planes vigentes del socio
@@ -2668,8 +2622,6 @@ function recalcularTotalPago() {
   var calcEl = document.getElementById('mp-total-calc');
   if(calcEl) calcEl.innerText = '$' + total.toLocaleString('es-AR');
   document.getElementById('mp-monto').value = total || '';
-  var disp = document.getElementById('mp-monto-display');
-  if(disp) disp.innerText = '$' + Number(total||0).toLocaleString('es-AR');
 }
 
 function togglePagoExtra() {
@@ -2696,16 +2648,6 @@ function confirmarPago() {
   var _obs = document.getElementById('mp-obs').value;
   var _fecha = document.getElementById('mp-fecha').value;
   if(!_fecha || !desde || !hasta) { pagoCtx._enviando = false; return alert('Completa fecha y periodo'); }
-  // H-006: desde <= hasta
-  if(desde > hasta) { pagoCtx._enviando = false; return alert('La fecha DESDE no puede ser posterior a HASTA'); }
-  // H-007: fecha de pago no puede ser futura (máximo 7 días adelante)
-  var _hoy = new Date(); _hoy.setHours(0,0,0,0);
-  var _maxFecha = new Date(_hoy); _maxFecha.setDate(_maxFecha.getDate() + 7);
-  var _fechaObj = new Date(_fecha);
-  if(_fechaObj > _maxFecha) { pagoCtx._enviando = false; return alert('La fecha de pago no puede ser más de 7 días en el futuro'); }
-  // H-008: fecha de pago no puede ser anterior a 5 años
-  var _minFecha = new Date(_hoy); _minFecha.setFullYear(_minFecha.getFullYear() - 5);
-  if(_fechaObj < _minFecha) { pagoCtx._enviando = false; return alert('La fecha de pago parece incorrecta (más de 5 años atrás)'); }
 
   var periodo = periodoLabel(document.getElementById('cPeriodo') ? document.getElementById('cPeriodo').value : '');
 
@@ -2796,15 +2738,9 @@ function _marcarTodosMesConfirmado() {
 
 function exportarCSV() {
   var rows = [T('socio') + ',Nombre,Documento,' + T('grupo') + ',Plan,Estado,Vigente Hasta'];
-  function _csvCell(v) {
-    var s = String(v||'').replace(/"/g,'""');
-    if (/^[=+\-@	]/.test(s)) s = "'" + s;
-    return '"' + s + '"';
-  }
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     var cv = estadoCuotaV2(f);
-    var vigenteHasta = (function(){ var ins = (DB.inscripciones||[]).filter(function(ii){ return (ii.dni||'').toString()===((f[COL.DNI]||f[COL.TARJETA]||'').toString()); }); var v = ins.find(function(ii){ return !ii.hasta; }); return v ? 'indefinida' : (ins.length ? ins[0].hasta||'-' : '-'); })();
-    rows.push([_csvCell(f[COL.APELLIDO]),_csvCell(f[COL.NOMBRE]),f[COL.DNI]||f[COL.TARJETA],_csvCell(f[COL.CATEGORIA_APP]),_csvCell(cv.planNom),cv.estado,vigenteHasta].join(','));
+    rows.push(['"'+(f[COL.APELLIDO]||'')+'"','"'+(f[COL.NOMBRE]||'')+'"',f[COL.DNI]||f[COL.TARJETA],'"'+(f[COL.CATEGORIA_APP]||'')+'"','"'+(cv.planNom||'')+'"',cv.estado,cv.hasta?formatDate(cv.hasta):''].join(','));
   });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -2837,7 +2773,7 @@ function renderPeriodosAdmin() {
   if(!el) return;
   el.innerHTML = !PERIODOS_EDIT.length ? '<p style="color:var(--muted);font-size:12px;padding:8px;">Sin periodos definidos</p>' :
     PERIODOS_EDIT.map(function(p, i){
-      return '<div class="item-row"><span>' + esc(nombreMes(p.mes)) + ' ' + p.anioD + (p.desc ? ' - ' + esc(p.desc) : '') + '</span>'
+      return '<div class="item-row"><span>' + nombreMes(p.mes) + ' ' + p.anioD + (p.desc ? ' - ' + p.desc : '') + '</span>'
         + '<button class="icon-btn" style="color:var(--red);" onclick="eliminarPeriodoEdit(' + i + ')">X</button></div>';
     }).join('');
 }
@@ -3030,7 +2966,7 @@ function abrirM(ai) {
   var dni = (f[COL.DNI]||f[COL.TARJETA]||'').toString();
   var sheet = f[f.length-2], row = f[f.length-1];
   itemSel = {sheet:sheet, row:row, dni:dni, arrIdx:ai};
-  document.getElementById('m-nombre').innerText = esc(f[COL.APELLIDO]||'') + ', ' + esc(f[COL.NOMBRE]||'');
+  document.getElementById('m-nombre').innerText = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
   document.getElementById('m-dni-sub').innerText = 'Doc: ' + dni + (f[COL.FECHA_NAC] ? ' | Nac: ' + f[COL.FECHA_NAC] : '');
   var anioNac = extraerAnioNac(f[COL.FECHA_NAC]);
   document.getElementById('m-edad').innerText = anioNac ? anioNac + ' (' + calcularEdad(f[COL.FECHA_NAC]) + ' anios)' : '-';
@@ -3253,7 +3189,6 @@ function procesarArchivo(event) {
       action:'uploadFile', base64:base64, mimeType:file.type,
       nombre: nombreArchivo + (file.type.includes('pdf') ? '.pdf' : '.jpg'),
       doc:(DB.jugadores[itemSel.arrIdx][COL.DNI]||DB.jugadores[itemSel.arrIdx][COL.TARJETA]||'').toString(),
-      folderID: INST.driveFolder || '',
       hoja:itemSel.sheet, fila:itemSel.row, columna:col, pass:TOKEN
     }, function(r){
       ocultarLoader();
@@ -3263,15 +3198,6 @@ function procesarArchivo(event) {
         if(window._tipoArchivo === 'dni')       mostrarFotoInline('l-dni-frente',r.url, false);
         if(window._tipoArchivo === 'dni-dorso') mostrarFotoInline('l-dni-dorso', r.url, false);
         if(window._tipoArchivo === 'apto')      mostrarFotoInline('l-apto',      r.url, file.type.includes('pdf'));
-        var _dniUp = (DB.jugadores[itemSel.arrIdx][COL.DNI]||DB.jugadores[itemSel.arrIdx][COL.TARJETA]||'').toString();
-        var _campoMap = {foto:'foto', dni:'dniFoto', 'dni-dorso':'dniDorso', apto:'apto'};
-        var _campoUp = _campoMap[window._tipoArchivo];
-        if(_dniUp && _campoUp) {
-          var _upd = {}; _upd[_campoUp] = r.url;
-          db.collection('socios').doc(_dniUp).update(_upd)
-            .then(function(){ _contarEscrituras(1); })
-            .catch(function(e){ console.error('Error guardando URL:', e); });
-        }
         toast('Archivo subido correctamente', 'ok');
       }
     }, function(e){ ocultarLoader(); alert('Error: ' + e); });
@@ -3329,9 +3255,8 @@ function abrirNuevoSocio() {
 function cerrarNuevoSocio(){ document.getElementById('modalNuevoSocio').classList.remove('open'); }
 
 function guardarNuevoSocio() {
-  // H-016: sanitizar entrada — remover tags HTML antes de guardar
-  var apellido = document.getElementById('ns-apellido').value.trim().replace(/<[^>]*>/g, '');
-  var nombre = document.getElementById('ns-nombre').value.trim().replace(/<[^>]*>/g, '');
+  var apellido = document.getElementById('ns-apellido').value.trim();
+  var nombre = document.getElementById('ns-nombre').value.trim();
   var dni = document.getElementById('ns-dni').value.trim();
   var errEl = document.getElementById('ns-error');
   function _err(msg){ errEl.innerText = msg; errEl.style.display = ''; return; }
@@ -3340,10 +3265,6 @@ function guardarNuevoSocio() {
   if(!dni || dni.length < 4) return _err('Documento invalido');
   var dup = DB.jugadores.slice(1).find(function(f){ return f && (f[COL.DNI]||f[COL.TARJETA]||'').toString() === dni; });
   if(dup) return _err('Ya existe un ' + T('socio') + ' con documento ' + dni);
-  var _emailVal = document.getElementById('ns-email').value.trim();
-  if(_emailVal && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(_emailVal)) return _err('El email no tiene formato válido');
-  var _celVal = document.getElementById('ns-celular').value.trim();
-  if(_celVal && !/^[0-9+\s\-]{6,20}$/.test(_celVal)) return _err('El celular debe contener solo números (6-20 dígitos)');
   errEl.style.display = 'none';
   var jug = {
     apellido:apellido.toUpperCase(), nombre:nombre.toUpperCase(), doc:dni,
@@ -3369,15 +3290,8 @@ function guardarNuevoSocio() {
     if(r && r.ok === false){ _err(r.error||'Error al guardar'); return; }
     cerrarNuevoSocio();
     toast(apellido + ', ' + nombre + ' agregado correctamente', 'ok');
-    var nf = new Array(26).fill('');
-    nf[COL.APELLIDO]=jug.apellido; nf[COL.NOMBRE]=jug.nombre; nf[COL.DNI]=jug.doc;
-    nf[COL.EMAIL]=jug.email; nf[COL.CELULAR]=jug.celular; nf[COL.FECHA_NAC]=jug.fechaNac;
-    nf[COL.SEXO]=jug.sexo; nf[COL.DOMICILIO]=jug.domicilio; nf[COL.ACTIVO]=true;
-    nf[COL.CATEGORIA_APP]=jug.categoria; nf[COL.PLAN]=jug.plan;
-    nf[COL.CONTACTO1] = jug.contacto1||'';
-    nf[COL.CONTACTO2] = jug.contacto2||'';
-    nf.push('Hoja 1'); nf.push(r.fila||999);
-    DB.jugadores.push(nf); renderPlayers();
+    // El adapter (addSocio) ya hizo push a DB.jugadores y renderPlayers()
+    // No repetir acá para evitar duplicado visual
   }, function(e){ ocultarLoader(); _err('Error: ' + e); });
 }
 
@@ -3403,8 +3317,8 @@ function enviarComprobanteEmail() {
   callScript({action:'sendEmail', emailDest:email, logoUrl:(INST.logoUrl||''), asunto:'Comprobante de pago - ' + (INST.nombre||''), htmlBody:
     (function(){
       var _logo = '<img src="cid:logo" style="width:80px;height:80px;object-fit:contain;background:white;border-radius:10px;padding:6px;" alt="">';
-      var _nombre = esc(INST.nombre || 'Club Atletico Excursionistas');
-      var _plan = esc((datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : ''));
+      var _nombre = INST.nombre || INST.nombreCorto || 'SGD';
+      var _plan = (datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : '');
       var _monto = '$' + Number(datos.moTotal||0).toLocaleString('es-AR');
       var _row = function(lbl, val) {
         return '<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;white-space:nowrap;">'+lbl+'</td>'
@@ -3422,19 +3336,19 @@ function enviarComprobanteEmail() {
         +'</td></tr>'
         // Saludo
         +'<tr><td style="padding:24px 32px 8px;">'
-        +'<p style="color:#e8f0e8;font-size:15px;margin:0;">Hola <b style="color:#c9a227;">'+esc(datos.nombre||'')+'</b>,</p>'
+        +'<p style="color:#e8f0e8;font-size:15px;margin:0;">Hola <b style="color:#c9a227;">'+datos.nombre+'</b>,</p>'
         +'<p style="color:#7a927a;font-size:13px;margin:8px 0 0;">Registramos tu pago correctamente. Aca tenes el detalle:</p>'
         +'</td></tr>'
         // Tabla de detalle
         +'<tr><td style="padding:8px 32px 24px;">'
         +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#121812;border-radius:10px;border:1px solid #253025;overflow:hidden;color:#e8f0e8;">'
-        +_row('Plan', esc(_plan))
+        +_row('Plan', _plan)
         +'<tr><td style="padding:10px 16px;color:#888;font-size:13px;border-bottom:1px solid #2a2a2a;">Monto</td>'
         +'<td style="padding:10px 16px;font-size:20px;font-weight:800;color:#c9a227;border-bottom:1px solid #2a2a2a;text-align:right;">'+_monto+'</td></tr>'
-        +_row('Periodo', esc(datos.periodo||'-'))
-        +_row('Vigente hasta', esc((function(v){ if(!v||v==='-')return '-'; var p=v.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:v; })(datos.vigente)))
-        +_row('Metodo', esc(datos.metodo||'Efectivo'))
-        +_row('Cobrado por', esc(datos.cobrador||'-'))
+        +_row('Periodo', datos.periodo||'-')
+        +_row('Vigente hasta', (function(v){ if(!v||v==='-')return '-'; var p=v.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:v; })(datos.vigente))
+        +_row('Metodo', datos.metodo||'Efectivo')
+        +_row('Cobrado por', datos.cobrador||'-')
         +'</table>'
         +'</td></tr>'
         // Badge verde AL DIA
@@ -3657,7 +3571,7 @@ function renderListActividades() {
       return '<div class="item-row">'
         + '<span style="display:flex;align-items:center;gap:8px;">'
         + '<span class="emoji" style="font-size:20px;">' + (a.icono||'') + '</span>'
-        + '<strong>' + esc(a.nombre) + '</strong>'
+        + '<strong>' + a.nombre + '</strong>'
         + '<span style="width:14px;height:14px;border-radius:50%;background:' + (a.color||'#888') + ';display:inline-block;"></span>'
         + '</span>'
         + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Actividades" data-row="' + (i+2) + '">X</button>'
@@ -3722,7 +3636,7 @@ function guardarActividadesJ() {
 function renderList(id, data, tabla) {
   var el = document.getElementById(id); if(!el) return;
   el.innerHTML = data.map(function(item){
-    return '<div class="item-row"><span>' + esc(item[0]) + '</span>'
+    return '<div class="item-row"><span>' + item[0] + '</span>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="' + tabla + '" data-row="' + item[item.length-1] + '">X</button></div>';
   }).join('');
   el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, parseInt(btn.dataset.row)); });
@@ -3742,12 +3656,12 @@ function renderListProfesores() {
   var el = document.getElementById('listP'); if(!el) return;
   el.innerHTML = DB.profesores.map(function(p, i) {
     var nombre = p[0] || '';
-    var dni = p[1] ? (' &bull; DNI: ' + esc(p[1])) : '';
-    var email = p[3] ? (' &bull; ' + esc(p[3])) : '';
+    var dni = p[1] ? (' &bull; DNI: ' + p[1]) : '';
+    var email = p[3] ? (' &bull; ' + p[3]) : '';
     var row = p[p.length - 1];
     return '<div class="item-row" style="flex-direction:column;align-items:flex-start;gap:4px;">'
       + '<div style="display:flex;width:100%;justify-content:space-between;align-items:center;">'
-      + '<span style="font-weight:600;">' + esc(nombre) + '</span>'
+      + '<span style="font-weight:600;">' + nombre + '</span>'
       + '<div style="display:flex;gap:6px;">'
       + '<button class="icon-btn" style="color:var(--muted);font-size:13px;" data-action="editprof" data-idx="' + i + '">editar</button>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Profesores" data-row="' + row + '">X</button>'
@@ -3889,7 +3803,7 @@ function renderListCat() {
     var acts = getCatActs(c);
     var actsHtml = acts ? (' <span style="font-size:11px;color:var(--muted);">[' + acts + ']</span>') : '';
     return '<div class="item-row"><span style="border-left:6px solid ' + c[1] + ';padding-left:10px;flex:1;">'
-      + '<strong>' + esc(c[0]) + '</strong> (' + esc(c[2]) + ' al ' + esc(c[3]) + ') - ' + esc(c[4])
+      + '<strong>' + c[0] + '</strong> (' + c[2] + ' al ' + c[3] + ') - ' + c[4]
       + actsHtml + '</span>'
       + '<div style="display:flex;gap:4px;"><button class="icon-btn" style="color:var(--muted);" data-action="editcat" data-idx="' + i + '">editar</button>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Config_Categorias" data-row="' + c[c.length-1] + '">X</button></div></div>';
@@ -3984,8 +3898,8 @@ function renderListPrecios() {
     return '<div class="item-row">'
       + '<span style="flex:1;">'
       + '<span class="emoji" style="font-size:15px;">' + icono + '</span> '
-      + '<strong>' + esc(p.actividad) + '</strong>'
-      + ' <span style="color:var(--muted);font-size:12px;">/ ' + esc(p.categoria) + '</span>'
+      + '<strong>' + p.actividad + '</strong>'
+      + ' <span style="color:var(--muted);font-size:12px;">/ ' + p.categoria + '</span>'
       + ' &nbsp;<span style="color:#6de097;font-weight:700;">$' + Number(p.monto).toLocaleString('es-AR') + '</span>'
       + '</span>'
       + '<div style="display:flex;gap:4px;">'
@@ -4176,9 +4090,9 @@ function renderHorarios() {
   var el = document.getElementById('listH'); if(!el) return;
   el.innerHTML = DB.horarios.map(function(h){
     return '<div class="item-row" style="border-left:4px solid var(--secondary);flex-direction:column;align-items:flex-start;">'
-      + '<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;"><strong>' + esc(h[0]) + ' ' + esc(h[1]) + ' hs</strong>'
+      + '<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;"><strong>' + h[0] + ' ' + h[1] + ' hs</strong>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Horarios" data-row="' + h[h.length-1] + '">X</button></div>'
-      + '<small style="color:var(--muted);">Sede: ' + esc(h[2]||'-') + ' | Instructores: ' + esc(h[3]||'-') + ' | ' + T('grupo') + ': ' + esc(h[4]||'-') + (h[5] ? ' | Actividad: ' + esc(h[5]) : '') + ' | Modalidad: ' + esc(h[6]||'Mixto') + '</small></div>';
+      + '<small style="color:var(--muted);">Sede: ' + (h[2]||'-') + ' | Instructores: ' + (h[3]||'-') + ' | ' + T('grupo') + ': ' + (h[4]||'-') + (h[5] ? ' | Actividad: ' + h[5] : '') + ' | Modalidad: ' + (h[6]||'Mixto') + '</small></div>';
   }).join('');
   el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, parseInt(btn.dataset.row)); });
 }
@@ -4241,15 +4155,10 @@ function cargarFormInstitucion() {
 }
 
 function guardarInstitucion() {
-  var _logoRaw = document.getElementById('inst-logoUrl').value.trim();
-  // H-028: bloquear javascript: en logoUrl
-  if (_logoRaw && /^javascript:/i.test(_logoRaw)) {
-    return alert('URL de logo inválida');
-  }
   var campos = {
     nombre: document.getElementById('inst-nombre').value.trim(),
     nombreCorto: document.getElementById('inst-nombreCorto').value.trim(),
-    logoUrl: _logoRaw,
+    logoUrl: document.getElementById('inst-logoUrl').value.trim(),
     colorPrimario: document.getElementById('inst-colorPrimario').value,
     colorSecundario: document.getElementById('inst-colorSecundario').value,
     terminologiaSocio: document.getElementById('inst-terminologiaSocio').value.trim() || 'Socio',
@@ -4277,7 +4186,7 @@ function cargarCamposExtra() {
   var el = document.getElementById('lista-campos-extra'); if(!el) return;
   el.innerHTML = !campos.length ? '<p style="color:var(--muted);font-size:12px;">Sin campos personalizados</p>' :
     campos.map(function(c){
-      return '<div class="campo-extra-row"><span><strong>' + esc(c.nombre) + '</strong> (' + esc(c.tipo) + ')</span>'
+      return '<div class="campo-extra-row"><span><strong>' + c.nombre + '</strong> (' + c.tipo + ')</span>'
         + '<button class="icon-btn" style="color:var(--red);" onclick="eliminarCampoExtra(\'' + c.nombre + '\')">X</button></div>';
     }).join('');
 }
@@ -4297,7 +4206,7 @@ function agregarCampoExtra() {
 }
 
 function eliminarCampoExtra(nombre) {
-  sgdConfirm('Eliminar el campo <b>' + esc(nombre) + '</b>?', function() { _eliminarCampoExtraConfirmado(nombre); }, 'ELIMINAR');
+  sgdConfirm('Eliminar el campo <b>' + nombre + '</b>?', function() { _eliminarCampoExtraConfirmado(nombre); }, 'ELIMINAR');
 }
 function _eliminarCampoExtraConfirmado(nombre) {
   mostrarLoader('Eliminando...');
@@ -4334,7 +4243,6 @@ function renderReporte() {
   _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
   _sd('r-filter-caja-fecha', tipo === 'caja_dia' ? '' : 'none');
   _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz'].includes(tipo) ? '' : 'none');
-  toast('Generando reporte...', '');
   if(tipo === 'deudores') rptDeudores();
   else if(tipo === 'al_dia') rptAlDia();
   else if(tipo === 'jugadores') rptJugadores();
@@ -4355,14 +4263,6 @@ function getMesSeleccionado(){ return document.getElementById('rMes').value; }
 function td(txt, cls){ return '<td' + (cls?' class="'+cls+'"':'') + '>' + txt + '</td>'; }
 function getRangoFechas(){ return {desde:document.getElementById('rDesde').value, hasta:document.getElementById('rHasta').value}; }
 function periodoLabel(p){ var a = p.split('-'); var m = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']; return m[parseInt(a[1])-1] + ' ' + a[0]; }
-
-function esc(s) {
-  if (s === null || s === undefined) return '';
-  return String(s).replace(/[&<>"']/g, function(ch) {
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
-  });
-}
-
 function normFecha(f) {
   if(!f) return '';
   var s = f.toString().trim();
@@ -4736,9 +4636,8 @@ function rptAuditoria() {
 }
 
 function rptCajaDia() {
-  var fecha = document.getElementById('rCajaFecha') ? document.getElementById('rCajaFecha').value : '';
+  var fecha = document.getElementById('rCajaFecha').value;
   if(!fecha) return;
-  var cont = document.getElementById('r-tbody'); if(!cont) return;
   var pagos = CUOTAS_DB.cuotas.filter(function(c){ return (c[5]||'') === fecha; });
   var total = pagos.reduce(function(s,c){ return s + Number(c[6]||0); }, 0);
   var rows = pagos.map(function(c){
@@ -4753,11 +4652,7 @@ function exportarReporteCSV() {
   var headers = Array.from(document.querySelectorAll('#r-thead th')).map(function(th){ return '"' + th.innerText + '"'; });
   var rows = [headers.join(',')];
   document.querySelectorAll('#r-tbody tr').forEach(function(tr){
-    rows.push(Array.from(tr.querySelectorAll('td')).map(function(td){
-      var s = td.innerText.replace(/"/g,'""');
-      if (/^[=+\-@	]/.test(s)) s = "'" + s;
-      return '"' + s + '"';
-    }).join(','));
+    rows.push(Array.from(tr.querySelectorAll('td')).map(function(td){ return '"' + td.innerText + '"'; }).join(','));
   });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -5126,7 +5021,6 @@ function confirmarAuditoriaPago() {
   var motivo = document.getElementById('audit-motivo').value.trim();
   if(!motivo) {
     document.getElementById('audit-motivo-error').style.display = 'block';
-    toast('El motivo es obligatorio', 'err');
     return;
   }
   document.getElementById('audit-motivo-error').style.display = 'none';
@@ -5152,13 +5046,6 @@ function confirmarAuditoriaPago() {
 
   if(_auditCtx.tipo === 'EDITAR') {
     var nuevoMonto  = parseFloat(document.getElementById('audit-monto').value)||0;
-    if (nuevoMonto <= 0) {
-      ocultarLoader();
-      document.getElementById('audit-monto').style.borderColor = 'var(--red)';
-      setTimeout(function(){ document.getElementById('audit-monto').style.borderColor = ''; }, 3000);
-      toast('El monto debe ser mayor a $0', 'err');
-      return;
-    }
     var nuevoMetodo = document.getElementById('audit-metodo').value;
     var nuevaFecha  = document.getElementById('audit-fecha').value;
     var nuevaObs    = document.getElementById('audit-obs').value.trim();
@@ -5246,16 +5133,9 @@ function sgdConfirm(msg, onOk, btnOkLabel) {
 }
 
 window.onload = function() {
+  // Limpiar tokens viejos en localStorage
   localStorage.removeItem('sgd_token');
   localStorage.removeItem('sgd_admin_uid');
-  if (!GAS_URL || GAS_URL === 'https://script.google.com/macros/s/AKfycbydNyAvnZJ8B991qmEDo2MFYCI2oDDrYIdTKI02vD0VX-CRWyWnq4IToqKmSepCU7E7/exec' || GAS_URL.trim() === '') {
-    console.warn('[SGD] GAS_URL no configurado');
-    setTimeout(function(){
-      document.querySelectorAll('[onclick^="subirArchivo"]').forEach(function(btn){
-        btn.disabled = true; btn.title = 'Subida no configurada'; btn.style.opacity = '0.4';
-      });
-    }, 1000);
-  }
   // B7: Forzar limpieza de sessionStorage en recarga forzada
   // Ctrl+F5 no siempre limpia sessionStorage en todos los browsers
   // Verificamos con performance.navigation para detectar recarga forzada
@@ -5559,7 +5439,7 @@ function citGenerarLista() {
 // --- RENDER PANTALLA IMPRESION ---
 function citMostrarPrint(jugadores, info) {
   var logoSrc = INST.logoUrl ? getDriveDisplay(INST.logoUrl) : '';
-  var clubNombre = INST.nombre || 'CA Excursionistas Futsal';
+  var clubNombre = INST.nombre || INST.nombreCorto || 'SGD';
   var fecha = new Date().toLocaleDateString('es-AR');
   var total = jugadores.length;
 
@@ -5655,7 +5535,7 @@ function citRenderHistorial() {
       + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;">'
       + citEsc(c.categoria) + ' &mdash; vs ' + citEsc(c.rival) + '</div>'
       + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">' + subtitulo
-      + (c.observaciones ? ' &middot; ' + esc(c.observaciones) : '') + '</div>'
+      + (c.observaciones ? ' &middot; ' + citEsc(c.observaciones) : '') + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;">'
       + '<button onclick="citVerHistorico(\'' + c.rowIndex + '\')" style="font-size:11px;padding:5px 10px;background:var(--primary-dim);border:1px solid var(--primary-border);color:#6de097;border-radius:6px;cursor:pointer;font-family:\'Barlow Condensed\',sans-serif;">&#128424; Ver</button>'
