@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title id="page-title">Registro de Datos</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #1a7a3c;
+  --primary-dark: #0f5228;
+  --secondary: #c9a227;
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #1c2230;
+  --border: #2a3444;
+  --text: #e6edf3;
+  --muted: #7d8590;
+  --red: #f85149;
+  --red-dim: rgba(248,81,73,.12);
+  --red-border: rgba(248,81,73,.35);
+  --primary-dim: rgba(26,122,60,.12);
+  --primary-border: rgba(26,122,60,.35);
+  --secondary-dim: rgba(201,162,39,.12);
+  --secondary-border: rgba(201,162,39,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* LOADER */
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
+#loader.oculto{display:none;}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loader-msg{margin-top:14px;color:var(--muted);font-size:13px;text-align:center;}
+
+/* HEADER */
+.app-header{background:var(--surface);border-bottom:2px solid var(--primary);padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;}
+.app-header img{width:38px;height:38px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;}
+.app-header h1{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;}
+.app-header h1 span{color:var(--secondary);}
+
+/* PROGRESS */
+.progress-bar{display:flex;align-items:center;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--border);gap:0;overflow-x:auto;}
+.progress-step{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.progress-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;border:2px solid var(--border);color:var(--muted);background:var(--bg);transition:all .3s;}
+.progress-dot.activo{border-color:var(--primary);color:var(--primary);background:var(--primary-dim);}
+.progress-dot.listo{border-color:var(--primary);color:#fff;background:var(--primary);}
+.progress-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-family:'Barlow Condensed',sans-serif;white-space:nowrap;}
+.progress-label.activo{color:var(--primary);}
+.progress-sep{width:20px;height:2px;background:var(--border);margin:0 2px;flex-shrink:0;}
+.progress-sep.listo{background:var(--primary);}
+
+/* STEPS */
+.step{display:none;padding:16px;max-width:540px;margin:0 auto;}
+.step.activo{display:block;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;}
+.card-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:14px;color:var(--secondary);}
+
+/* CAMARA */
+.cam-wrap{position:relative;background:#000;border-radius:10px;overflow:hidden;display:none;}
+.cam-guide{position:absolute;inset:10% 7.5%;border:2px solid rgba(26,122,60,.7);border-radius:6px;pointer-events:none;}
+.cam-guide::before,.cam-guide::after{content:'';position:absolute;width:16px;height:16px;border-color:var(--primary);border-style:solid;}
+.cam-guide::before{top:-2px;left:-2px;border-width:2px 0 0 2px;}
+.cam-guide::after{bottom:-2px;right:-2px;border-width:0 2px 2px 0;}
+video{width:100%;display:block;}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--primary);background:var(--primary-dim);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-zone-icon{font-size:28px;margin-bottom:8px;}
+.upload-zone-label{font-size:13px;color:var(--muted);}
+.upload-preview{width:100%;max-height:200px;object-fit:contain;border-radius:8px;background:#111;display:block;margin-top:10px;}
+.upload-preview-remove{position:absolute;top:8px;right:8px;background:var(--red-dim);border:1px solid var(--red-border);color:var(--red);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;}
+
+/* BOTONES */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 20px;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:all .2s;width:100%;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{filter:brightness(1.15);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;filter:none;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary);}
+.btn-sm{padding:9px 14px;font-size:13px;width:auto;}
+.btn-cam{background:var(--surface2);border:1px solid var(--border);color:var(--text);margin-bottom:10px;}
+.btn-cam:hover{border-color:var(--primary);}
+.btn-row{display:flex;gap:10px;margin-top:16px;}
+
+/* ALERTAS */
+.alert{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;}
+.alert-ok{background:var(--primary-dim);border:1px solid var(--primary-border);color:#6de097;}
+.alert-warn{background:var(--secondary-dim);border:1px solid var(--secondary-border);color:var(--secondary);}
+.alert-err{background:var(--red-dim);border:1px solid var(--red-border);color:var(--red);}
+
+/* TABLA COMPARACION */
+.comp-table{width:100%;border-collapse:collapse;font-size:13px;}
+.comp-table th{text-align:left;color:var(--muted);font-weight:600;font-family:'Barlow Condensed',sans-serif;padding:6px 8px;text-transform:uppercase;font-size:11px;border-bottom:1px solid var(--border);}
+.comp-table td{padding:8px 8px;border-bottom:1px solid var(--border);}
+.comp-table td:first-child{color:var(--muted);font-size:12px;width:120px;}
+.val-ocr{color:var(--secondary);}
+.val-sistema{color:#6de097;}
+
+/* CAMPOS EDITABLES */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;font-family:'Barlow Condensed',sans-serif;}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:14px;font-family:'Barlow',sans-serif;transition:border-color .2s;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--primary);}
+.field textarea{resize:vertical;min-height:72px;}
+
+/* RESUMEN */
+.resumen-section{background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:12px;}
+.resumen-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:10px;letter-spacing:.05em;}
+.resumen-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.resumen-row:last-child{border-bottom:none;}
+.resumen-label{color:var(--muted);font-size:12px;flex-shrink:0;}
+.resumen-val{text-align:right;font-weight:500;}
+
+/* SUCCESS */
+#step6{text-align:center;padding:40px 20px;}
+.success-icon{font-size:64px;margin-bottom:16px;}
+.success-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;text-transform:uppercase;color:var(--primary);margin-bottom:8px;}
+.success-msg{color:var(--muted);font-size:14px;margin-bottom:24px;}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 20px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;transition:all .3s;white-space:nowrap;max-width:90vw;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.ok{border-color:var(--primary-border);color:#6de097;}
+#toast.err{border-color:var(--red-border);color:var(--red);}
+
+/* VERSION BADGE */
+#version-badge{position:fixed;bottom:12px;right:12px;z-index:9999;background:rgba(13,17,23,.85);border:1px solid var(--primary-border);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;letter-spacing:.05em;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="spinner"></div>
+  <p id="loader-msg">Cargando...</p>
+</div>
+
+<!-- HEADER -->
+<div class="app-header">
+  <img id="header-logo" src="" alt="Logo" onerror="this.style.display='none'">
+  <h1 id="header-titulo">Sistema de <span>Registro</span></h1>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar">
+  <div class="progress-step">
+    <div class="progress-dot activo" id="pd1">1</div>
+    <div class="progress-label activo" id="pl1">Doc Frente</div>
+  </div>
+  <div class="progress-sep" id="ps1"></div>
+  <div class="progress-step">
+    <div class="progress-dot" id="pd2">2</div>
+    <div class="progress-label" id="pl2">Doc Dorso</div>
+  </div>
+  <div class="progress-sep" id="ps2"></div>
+  <div class="progress-step">
+    <div class="progress-dot" id="pd3">3</div>
+    <div class="progress-label" id="pl3">Verificar</div>
+  </div>
+  <div class="progress-sep" id="ps3"></div>
+  <div class="progress-step">
+    <div class="progress-dot" id="pd4">4</div>
+    <div class="progress-label" id="pl4">Completar</div>
+  </div>
+  <div class="progress-sep" id="ps4"></div>
+  <div class="progress-step">
+    <div class="progress-dot" id="pd5">5</div>
+    <div class="progress-label" id="pl5">Confirmar</div>
+  </div>
+</div>
+
+<!-- PASO 1: FRENTE DNI -->
+<div class="step activo" id="step1">
+  <div class="card">
+    <div class="card-title">&#x1F4F7; Documento — Frente</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Escaneá o fotografiá el frente del DNI. Asegurate que el número y nombre sean legibles.</p>
+    <button class="btn btn-cam" onclick="toggleCam(1)" id="btn-cam1">&#x1F3A5; Usar cámara</button>
+    <div class="cam-wrap" id="cam1-wrap">
+      <video id="cam1-video" autoplay playsinline></video>
+      <div class="cam-guide"></div>
+    </div>
+    <button class="btn btn-primary" onclick="capturar(1)" id="btn-capturar1" style="display:none;margin-bottom:10px;">&#x23FA; Capturar</button>
+    <div class="upload-zone" id="zona1">
+      <div class="upload-zone-icon">&#x1F4C4;</div>
+      <div class="upload-zone-label">Tocá para seleccionar imagen</div>
+      <input type="file" accept="image/*" onchange="cargarImagen(1, this)">
+    </div>
+    <div id="prev1-wrap" style="display:none;position:relative;">
+      <img id="prev1-img" class="upload-preview">
+      <button class="upload-preview-remove" onclick="quitarImg(1)">&#x2715;</button>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="btn-sig1" onclick="irPaso(2)" disabled>Continuar &#x2192;</button>
+</div>
+
+<!-- PASO 2: DORSO DNI -->
+<div class="step" id="step2">
+  <div class="card">
+    <div class="card-title">&#x1F4F7; Documento — Dorso</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Fotografiá el dorso del documento (opcional pero recomendado).</p>
+    <button class="btn btn-cam" onclick="toggleCam(2)" id="btn-cam2">&#x1F3A5; Usar cámara</button>
+    <div class="cam-wrap" id="cam2-wrap">
+      <video id="cam2-video" autoplay playsinline></video>
+      <div class="cam-guide"></div>
+    </div>
+    <button class="btn btn-primary" onclick="capturar(2)" id="btn-capturar2" style="display:none;margin-bottom:10px;">&#x23FA; Capturar</button>
+    <div class="upload-zone" id="zona2">
+      <div class="upload-zone-icon">&#x1F4C4;</div>
+      <div class="upload-zone-label">Tocá para seleccionar imagen</div>
+      <input type="file" accept="image/*" onchange="cargarImagen(2, this)">
+    </div>
+    <div id="prev2-wrap" style="display:none;position:relative;">
+      <img id="prev2-img" class="upload-preview">
+      <button class="upload-preview-remove" onclick="quitarImg(2)">&#x2715;</button>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-outline" onclick="irPaso(1)">&#x2190; Volver</button>
+    <button class="btn btn-primary" id="btn-sig2" onclick="procesarOCR()">Procesar &#x2192;</button>
+  </div>
+</div>
+
+<!-- PASO 3: VERIFICAR OCR -->
+<div class="step" id="step3">
+  <div class="card">
+    <div class="card-title">&#x1F50D; Verificar datos leídos</div>
+    <div id="alert-dni-encontrado" class="alert alert-ok" style="display:none;"></div>
+    <div id="alert-dni-no-encontrado" class="alert alert-warn" style="display:none;"></div>
+    <div id="card-comp" style="display:none;">
+      <table class="comp-table">
+        <thead><tr><th>Campo</th><th>Leído del DNI</th><th>Sistema</th></tr></thead>
+        <tbody id="comp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="btn-sig3" onclick="irPaso(4)" disabled>Continuar &#x2192;</button>
+  <button class="btn btn-outline" onclick="irPaso(1)" style="margin-top:10px;">&#x2190; Volver a escanear</button>
+</div>
+
+<!-- PASO 4: COMPLETAR DATOS -->
+<div class="step" id="step4">
+  <div class="card">
+    <div class="card-title">&#x270F;&#xFE0F; Completar datos</div>
+    <div id="campos-editables"></div>
+  </div>
+
+  <!-- FOTO CARNET -->
+  <div class="card">
+    <div class="card-title">&#x1F4F7; Foto</div>
+    <div id="prev-foto-wrap" style="display:none;position:relative;">
+      <img id="prev-foto-img" class="upload-preview">
+    </div>
+    <div class="upload-zone" id="zona-foto">
+      <div class="upload-zone-icon">&#x1F930;</div>
+      <div class="upload-zone-label">Subir foto (opcional)</div>
+      <input type="file" accept="image/*" onchange="cargarFoto('foto', this)">
+    </div>
+  </div>
+
+  <!-- APTO MEDICO -->
+  <div class="card">
+    <div class="card-title">&#x1FA7A; Certificado médico</div>
+    <div id="prev-apto-wrap" style="display:none;position:relative;"></div>
+    <div class="upload-zone" id="zona-apto">
+      <div class="upload-zone-icon">&#x1F4CB;</div>
+      <div class="upload-zone-label upload-zone-label-apto">Subir imagen o PDF del certificado</div>
+      <input type="file" accept="image/*,application/pdf" onchange="cargarFoto('apto', this)">
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-outline" onclick="irPaso(3)">&#x2190; Volver</button>
+    <button class="btn btn-primary" onclick="irPaso(5)">Continuar &#x2192;</button>
+  </div>
+</div>
+
+<!-- PASO 5: RESUMEN Y CONFIRMACION -->
+<div class="step" id="step5">
+  <div class="card">
+    <div class="card-title">&#x2705; Confirmar envío</div>
+    <div id="resumen-datos"></div>
+  </div>
+  <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarGuardar()">&#x1F4BE; ENVIAR DATOS</button>
+  <button class="btn btn-outline" onclick="irPaso(4)" style="margin-top:10px;">&#x2190; Volver</button>
+</div>
+
+<!-- PASO 6: EXITO -->
+<div class="step" id="step6">
+  <div class="success-icon">&#x2705;</div>
+  <div class="success-title">&#xA1;Listo!</div>
+  <p class="success-msg" id="success-msg"></p>
+  <button class="btn btn-primary" onclick="reiniciar()">Registrar otro</button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+<div id="version-badge">v1.0</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- FIREBASE SDK                                                   -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════════════
+// CONFIG — reemplazada por el installer para cada cliente
+// ══════════════════════════════════════════════════════════════════
+var FIREBASE_CONFIG = {
+  "apiKey": "AIzaSyDT3dsUMNTMBKwHbmwu3SIYcaL6znQ1K6c",
+  "authDomain": "sgd-demo.firebaseapp.com",
+  "projectId": "sgd-demo",
+  "storageBucket": "sgd-demo.firebasestorage.app",
+  "messagingSenderId": "486153791045",
+  "appId": "1:486153791045:web:81bf466e0d1453590c652c"
+};
+var GAS_URL        = 'https://script.google.com/macros/s/AKfycbydNyAvnZJ8B991qmEDo2MFYCI2oDDrYIdTKI02vD0VX-CRWyWnq4IToqKmSepCU7E7/exec';       // URL del GAS compartido (OCR + Drive)
+var GAS_OCR_KEY    = 'sgd2026';   // pass compartida del GAS
+
+// ══════════════════════════════════════════════════════════════════
+// INIT FIREBASE
+// ══════════════════════════════════════════════════════════════════
+firebase.initializeApp(FIREBASE_CONFIG);
+var auth = firebase.auth();
+var db   = firebase.firestore();
+
+// ══════════════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════════════════════════════
+var INST = {};   // datos de institución desde Firestore
+var S = {
+  paso:       1,
+  imgFront:   null,
+  imgBack:    null,
+  foto:       null,
+  apto:       null,
+  aptoType:   null,
+  ocrData:    null,  // {apellido, nombre, dni, fechaNac, sexo, domicilio}
+  sistemaData:null,  // doc Firestore del socio si ya existe
+  esNuevo:    false,
+  camStreams:  {}
+};
+
+// Campos editables que muestra el Paso 4
+var CAMPOS = [
+  {key:'email',    label:'Email',      tipo:'email',  editable:true},
+  {key:'celular',  label:'Celular',    tipo:'tel',    editable:true},
+  {key:'domicilio',label:'Domicilio',  tipo:'text',   editable:true},
+  {key:'c1nombre', label:'Contacto 1 - Nombre', tipo:'text', editable:true},
+  {key:'c1tel',    label:'Contacto 1 - Tel',    tipo:'tel',  editable:true},
+  {key:'c2nombre', label:'Contacto 2 - Nombre', tipo:'text', editable:true},
+  {key:'c2tel',    label:'Contacto 2 - Tel',    tipo:'tel',  editable:true}
+];
+
+// ══════════════════════════════════════════════════════════════════
+// HELPERS UI
+// ══════════════════════════════════════════════════════════════════
+function mostrarLoader(msg) {
+  document.getElementById('loader').classList.remove('oculto');
+  document.getElementById('loader-msg').innerText = msg || 'Cargando...';
+}
+function ocultarLoader() {
+  document.getElementById('loader').classList.add('oculto');
+}
+function toast(msg, tipo) {
+  var el = document.getElementById('toast');
+  el.className = 'show ' + (tipo || '');
+  el.innerText = msg;
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.className = ''; }, 3500);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// BRANDING
+// ══════════════════════════════════════════════════════════════════
+function aplicarBranding(inst) {
+  INST = inst;
+  if (inst.colorPrimario) {
+    document.documentElement.style.setProperty('--primary', inst.colorPrimario);
+    var c = inst.colorPrimario;
+    document.documentElement.style.setProperty('--primary-dim',    hexAlpha(c, 0.12));
+    document.documentElement.style.setProperty('--primary-border', hexAlpha(c, 0.35));
+    document.documentElement.style.setProperty('--primary-dark',   darken(c));
+  }
+  if (inst.colorSecundario) {
+    document.documentElement.style.setProperty('--secondary', inst.colorSecundario);
+    document.documentElement.style.setProperty('--secondary-dim',    hexAlpha(inst.colorSecundario, 0.12));
+    document.documentElement.style.setProperty('--secondary-border', hexAlpha(inst.colorSecundario, 0.35));
+  }
+  if (inst.logoUrl) document.getElementById('header-logo').src = inst.logoUrl;
+  var nombre = inst.nombreCorto || inst.nombre || 'Registro';
+  document.getElementById('header-titulo').innerHTML = nombre + ' &mdash; <span>Registro</span>';
+  document.getElementById('page-title').innerText = nombre + ' - Registro';
+}
+
+function hexAlpha(hex, alpha) {
+  var r = parseInt(hex.slice(1,3),16),
+      g = parseInt(hex.slice(3,5),16),
+      b = parseInt(hex.slice(5,7),16);
+  return 'rgba('+r+','+g+','+b+','+alpha+')';
+}
+function darken(hex) {
+  var r = Math.max(0,parseInt(hex.slice(1,3),16)-30),
+      g = Math.max(0,parseInt(hex.slice(3,5),16)-30),
+      b = Math.max(0,parseInt(hex.slice(5,7),16)-30);
+  return '#'+[r,g,b].map(function(v){return v.toString(16).padStart(2,'0');}).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FIRESTORE — cargar institución
+// ══════════════════════════════════════════════════════════════════
+function cargarInstitucion() {
+  return db.collection('config').doc('institucion').get()
+    .then(function(doc) {
+      if (doc.exists) aplicarBranding(doc.data());
+    })
+    .catch(function(e) { console.warn('Sin config institución:', e); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FIRESTORE — buscar socio por DNI
+// ══════════════════════════════════════════════════════════════════
+function buscarSocioPorDni(dni) {
+  var dniNorm = normalizarDni(dni);
+  return db.collection('socios').doc(dniNorm).get()
+    .then(function(doc) {
+      if (doc.exists) return {found: true, datos: doc.data()};
+      return {found: false};
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FIRESTORE — guardar socio
+// ══════════════════════════════════════════════════════════════════
+function guardarSocioFirestore(dni, campos, esNuevo) {
+  var dniNorm = normalizarDni(dni);
+  var ref = db.collection('socios').doc(dniNorm);
+
+  if (esNuevo) {
+    var hoy = new Date().toLocaleDateString('sv'); // yyyy-mm-dd
+    var doc = {
+      apellido:    (campos.apellido || '').toUpperCase(),
+      nombre:      (campos.nombre   || '').toUpperCase(),
+      email:       campos.email     || '',
+      celular:     campos.celular   || '',
+      activo:      true,
+      tipoDoc:     'DNI',
+      dni:         dniNorm,
+      fechaNac:    campos.fechaNac  || '',
+      sexo:        normalizarSexo(campos.sexo),
+      domicilio:   campos.domicilio || '',
+      obs:         '',
+      membresia:   '',
+      vencimiento: '',
+      fechaIngreso:hoy,
+      creador:     'App',
+      categoriaApp:'',
+      plan:        '',
+      foto:        campos.fotoUrl     || '',
+      dniFoto:     campos.dniFotoUrl  || '',
+      apto:        campos.aptoUrl     || '',
+      actividades: '',
+      catSecundaria:'',
+      contacto1:   campos.contacto1  || '',
+      contacto2:   campos.contacto2  || ''
+    };
+    return ref.set(doc).then(function(){ return {ok: true}; });
+  } else {
+    // Update — solo campos editables
+    var upd = {};
+    if (campos.email)      upd.email     = campos.email;
+    if (campos.celular)    upd.celular   = campos.celular;
+    if (campos.domicilio)  upd.domicilio = campos.domicilio;
+    if (campos.fotoUrl)    upd.foto      = campos.fotoUrl;
+    if (campos.dniFotoUrl) upd.dniFoto   = campos.dniFotoUrl;
+    if (campos.dniDorsoUrl)upd.dniDorso  = campos.dniDorsoUrl;
+    if (campos.aptoUrl)    upd.apto      = campos.aptoUrl;
+    if (campos.contacto1)  upd.contacto1 = campos.contacto1;
+    if (campos.contacto2)  upd.contacto2 = campos.contacto2;
+    return ref.update(upd).then(function(){ return {ok: true}; });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// GAS — OCR (único endpoint que queda en GAS)
+// ══════════════════════════════════════════════════════════════════
+function callOCR(imgFront, imgBack, cb, cbErr) {
+  var body = {
+    action:   'ocrDocumento',
+    token:    GAS_OCR_KEY,
+    imgFront: imgFront || null,
+    imgBack:  imgBack  || null,
+    tipoDoc:  'DNI argentino'
+  };
+  fetch(GAS_URL, {
+    method:  'POST',
+    headers: {'Content-Type': 'text/plain'},
+    body:    JSON.stringify(body)
+  })
+  .then(function(r){ return r.text(); })
+  .then(function(t){
+    var d; try{ d=JSON.parse(t); } catch(e){ d={error:'Respuesta inválida'}; }
+    if(d && d.error){ if(cbErr) cbErr(d.error); else toast(d.error,'err'); }
+    else { if(cb) cb(d); }
+  })
+  .catch(function(){ if(cbErr) cbErr('Sin conexión con el servidor OCR'); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// GAS — Upload Drive (único otro endpoint en GAS)
+// ══════════════════════════════════════════════════════════════════
+function callUploadDrive(dniNorm, cb, cbErr) {
+  if (!S.imgFront && !S.foto && !S.apto) { cb({}); return; }
+  mostrarLoader('Subiendo imágenes...');
+  var body = {
+    action:    'saveFotosDrive',
+    token:     GAS_OCR_KEY,
+    dni:       dniNorm,
+    folderID:  INST.driveFolder || '',
+    imgFront:  S.imgFront || null,
+    imgBack:   S.imgBack  || null,
+    foto:      S.foto     || null,
+    apto:      S.apto     || null,
+    aptoType:  S.aptoType || null
+  };
+  fetch(GAS_URL, {
+    method:  'POST',
+    headers: {'Content-Type': 'text/plain'},
+    body:    JSON.stringify(body)
+  })
+  .then(function(r){ return r.text(); })
+  .then(function(t){
+    var d; try{ d=JSON.parse(t); } catch(e){ d={error:'Respuesta inválida'}; }
+    if(d && d.error){ if(cbErr) cbErr(d.error); else toast(d.error,'err'); }
+    else { if(cb) cb(d.urls || {}); }
+  })
+  .catch(function(){ if(cbErr) cbErr('Sin conexión para subir imágenes'); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PROGRESO
+// ══════════════════════════════════════════════════════════════════
+function irPaso(n) {
+  document.getElementById('step' + S.paso).classList.remove('activo');
+  for (var i = 1; i <= 5; i++) {
+    var dot = document.getElementById('pd'+i);
+    var lbl = document.getElementById('pl'+i);
+    var sep = document.getElementById('ps'+i);
+    dot.className = 'progress-dot';
+    lbl.className = 'progress-label';
+    if (sep) sep.className = 'progress-sep';
+    if (i < n) {
+      dot.className += ' listo'; dot.innerHTML = '&#x2713;';
+      if (sep) sep.className += ' listo';
+    } else if (i === n) {
+      dot.className += ' activo'; dot.innerHTML = i;
+      lbl.className += ' activo';
+    } else {
+      dot.innerHTML = i;
+    }
+  }
+  S.paso = n;
+  document.getElementById('step' + n).classList.add('activo');
+  window.scrollTo(0, 0);
+  if (n === 4) inicializarPaso4();
+  if (n === 5) renderResumen();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PASO 1 y 2 — Cámara e imágenes
+// ══════════════════════════════════════════════════════════════════
+function toggleCam(n) {
+  var wrap = document.getElementById('cam'+n+'-wrap');
+  var btnCap = document.getElementById('btn-capturar'+n);
+  if (wrap.style.display === 'none' || !wrap.style.display) {
+    wrap.style.display = 'block'; btnCap.style.display = 'flex';
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false})
+      .then(function(stream){ S.camStreams[n]=stream; document.getElementById('cam'+n+'-video').srcObject=stream; })
+      .catch(function(){ toast('No se pudo acceder a la cámara','err'); wrap.style.display='none'; btnCap.style.display='none'; });
+  } else {
+    detenerCam(n);
+  }
+}
+
+function detenerCam(n) {
+  var stream = S.camStreams[n];
+  if (stream) stream.getTracks().forEach(function(t){ t.stop(); });
+  delete S.camStreams[n];
+  var wrap = document.getElementById('cam'+n+'-wrap');
+  var btnCap = document.getElementById('btn-capturar'+n);
+  if (wrap) wrap.style.display = 'none';
+  if (btnCap) btnCap.style.display = 'none';
+}
+
+function capturar(n) {
+  var video = document.getElementById('cam'+n+'-video');
+  var vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+  var cropW = Math.round(vw * 0.85), cropH = Math.round(vh * 0.65);
+  var cropX = Math.round((vw-cropW)/2), cropY = Math.round((vh-cropH)/2);
+  var canvas = document.createElement('canvas');
+  canvas.width = cropW; canvas.height = cropH;
+  canvas.getContext('2d').drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+  setImagen(n, canvas.toDataURL('image/jpeg', 0.90));
+  detenerCam(n);
+}
+
+function cargarImagen(n, input) {
+  var file = input.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){ setImagen(n, e.target.result); };
+  reader.readAsDataURL(file);
+}
+
+function comprimirImagen(dataUrl, maxW, maxH, calidad, cb) {
+  var img = new Image();
+  img.onload = function(){
+    var w=img.width, h=img.height;
+    if (w>maxW||h>maxH){ var r=Math.min(maxW/w,maxH/h); w=Math.round(w*r); h=Math.round(h*r); }
+    var canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+    canvas.getContext('2d').drawImage(img,0,0,w,h);
+    cb(canvas.toDataURL('image/jpeg', calidad));
+  };
+  img.src = dataUrl;
+}
+
+function setImagen(n, data) {
+  comprimirImagen(data, 1200, 1200, 0.75, function(compressed) {
+    if (n === 1) S.imgFront = compressed;
+    else         S.imgBack  = compressed;
+
+    var zona = document.getElementById('zona'+n);
+    var prevWrap = document.getElementById('prev'+n+'-wrap');
+    var prevImg  = document.getElementById('prev'+n+'-img');
+    zona.style.display = 'none';
+    prevImg.src = compressed;
+    prevWrap.style.display = 'block';
+
+    if (n === 1) document.getElementById('btn-sig1').disabled = false;
+  });
+}
+
+function quitarImg(n) {
+  if (n===1) S.imgFront=null; else S.imgBack=null;
+  document.getElementById('prev'+n+'-wrap').style.display='none';
+  document.getElementById('zona'+n).style.display='block';
+  if (n===1) document.getElementById('btn-sig1').disabled=true;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PASO 3 — OCR y verificación
+// ══════════════════════════════════════════════════════════════════
+function procesarOCR() {
+  mostrarLoader('Leyendo documento con IA...');
+  callOCR(S.imgFront, S.imgBack, function(r) {
+    if (!r.ok || !r.data) { ocultarLoader(); toast('No se pudo leer el documento','err'); return; }
+    S.ocrData = r.data;
+    irPaso(3);
+    buscarSocioPorDni(S.ocrData.dni).then(function(result) {
+      ocultarLoader();
+      mostrarVerificacion(result);
+    }).catch(function(e) {
+      ocultarLoader();
+      // Aún si falla la búsqueda, mostramos los datos OCR
+      mostrarVerificacion({found: false});
+      toast('No se pudo consultar el sistema','err');
+    });
+  }, function(err) {
+    ocultarLoader();
+    toast('Error OCR: ' + err, 'err');
+    // Permitir continuar manual si el OCR falla
+    S.ocrData = {apellido:'', nombre:'', dni:'', fechaNac:'', sexo:'', domicilio:''};
+    irPaso(3);
+    mostrarVerificacion({found: false});
+  });
+}
+
+function mostrarVerificacion(result) {
+  var ocr = S.ocrData || {};
+  S.sistemaData = result.found ? result.datos : null;
+  S.esNuevo = !result.found;
+
+  var tSocio = INST.terminologiaSocio || 'Socio';
+
+  // Alertas
+  var alertOk  = document.getElementById('alert-dni-encontrado');
+  var alertWarn = document.getElementById('alert-dni-no-encontrado');
+  if (result.found) {
+    alertOk.style.display = 'block';
+    alertOk.innerHTML = '&#x2713; ' + tSocio + ' encontrado: <b>'
+      + (result.datos.apellido||'') + ', ' + (result.datos.nombre||'') + '</b>. Se actualizarán sus datos.';
+    alertWarn.style.display = 'none';
+  } else {
+    alertWarn.style.display = 'block';
+    alertWarn.innerHTML = '&#x26A0; DNI no encontrado en el sistema. Se creará un nuevo registro.';
+    alertOk.style.display = 'none';
+  }
+
+  // Tabla comparativa
+  var campos = [
+    {label:'Apellido',  ocr: ocr.apellido  || '', sis: result.found ? (result.datos.apellido||'') : ''},
+    {label:'Nombre',    ocr: ocr.nombre    || '', sis: result.found ? (result.datos.nombre||'')   : ''},
+    {label:'DNI',       ocr: ocr.dni       || '', sis: result.found ? (result.datos.dni||'')      : ''},
+    {label:'Fecha Nac.',ocr: ocr.fechaNac  || '', sis: result.found ? (result.datos.fechaNac||'') : ''},
+    {label:'Sexo',      ocr: ocr.sexo      || '', sis: result.found ? (result.datos.sexo||'')     : ''}
+  ];
+
+  var tbody = '';
+  campos.forEach(function(c) {
+    tbody += '<tr>'
+      + '<td>' + c.label + '</td>'
+      + '<td class="val-ocr">' + (c.ocr||'&mdash;') + '</td>'
+      + '<td class="val-sistema">' + (c.sis||'&mdash;') + '</td>'
+      + '</tr>';
+  });
+  document.getElementById('comp-tbody').innerHTML = tbody;
+  document.getElementById('card-comp').style.display = 'block';
+  document.getElementById('btn-sig3').disabled = !ocr.dni;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PASO 4 — Formulario de datos adicionales
+// ══════════════════════════════════════════════════════════════════
+function inicializarPaso4() {
+  var sis = S.sistemaData || {};
+  var html = '';
+
+  // Datos OCR — no editables, solo informativos
+  var ocr = S.ocrData || {};
+  html += '<div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;">'
+    + '<div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-family:\'Barlow Condensed\',sans-serif;">Datos del documento (no editables)</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'
+    + '<div><span style="color:var(--muted);font-size:11px;">Apellido</span><div style="font-weight:600;">' + (ocr.apellido||'—') + '</div></div>'
+    + '<div><span style="color:var(--muted);font-size:11px;">Nombre</span><div style="font-weight:600;">' + (ocr.nombre||'—') + '</div></div>'
+    + '<div><span style="color:var(--muted);font-size:11px;">DNI</span><div style="font-weight:600;color:var(--secondary);">' + (ocr.dni||'—') + '</div></div>'
+    + '<div><span style="color:var(--muted);font-size:11px;">Fecha Nac.</span><div style="font-weight:600;">' + (ocr.fechaNac||'—') + '</div></div>'
+    + '</div></div>';
+
+  // Campos editables
+  CAMPOS.forEach(function(c) {
+    var val = sis[c.key] || '';
+    // Separar contacto1/2 del formato "Nombre|Tel"
+    if (c.key === 'c1nombre' && sis.contacto1) val = sis.contacto1.split('|')[0] || '';
+    if (c.key === 'c1tel'    && sis.contacto1) val = sis.contacto1.split('|')[1] || '';
+    if (c.key === 'c2nombre' && sis.contacto2) val = sis.contacto2.split('|')[0] || '';
+    if (c.key === 'c2tel'    && sis.contacto2) val = sis.contacto2.split('|')[1] || '';
+
+    html += '<div class="field"><label>' + c.label + '</label>'
+      + '<input type="' + c.tipo + '" id="edit-' + c.key + '" value="' + escHtml(val) + '"></div>';
+  });
+
+  document.getElementById('campos-editables').innerHTML = html;
+
+  // Foto existente
+  var fotoExistente = sis.foto || '';
+  var prevFotoWrap = document.getElementById('prev-foto-wrap');
+  var zonaFoto = document.getElementById('zona-foto');
+  var btnViejo = prevFotoWrap.querySelector('.btn-cambiar-foto');
+  if (btnViejo) btnViejo.remove();
+
+  if (fotoExistente && !S.foto) {
+    var fotoThumb = fotoExistente;
+    var mDrive = fotoExistente.match(/[?&]id=([a-zA-Z0-9_-]{10,})/) || fotoExistente.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
+    if (mDrive) fotoThumb = 'https://drive.google.com/thumbnail?id=' + mDrive[1] + '&sz=w400';
+    document.getElementById('prev-foto-img').src = fotoThumb;
+    prevFotoWrap.style.display = 'block';
+    zonaFoto.style.display = 'none';
+    var btnCambiar = document.createElement('button');
+    btnCambiar.className = 'btn btn-outline btn-sm btn-cambiar-foto';
+    btnCambiar.style.cssText = 'width:100%;margin-top:8px;';
+    btnCambiar.innerHTML = '&#x1F4F7; Cambiar foto';
+    btnCambiar.onclick = function() {
+      S.foto = null;
+      document.getElementById('prev-foto-img').src = '';
+      prevFotoWrap.style.display = 'none';
+      zonaFoto.style.display = 'block';
+    };
+    prevFotoWrap.appendChild(btnCambiar);
+  } else if (!S.foto) {
+    prevFotoWrap.style.display = 'none';
+    zonaFoto.style.display = 'block';
+  }
+
+  // Apto existente
+  var aptoExistente = sis.apto || '';
+  var prevAptoWrap = document.getElementById('prev-apto-wrap');
+  var zonaApto = document.getElementById('zona-apto');
+  var zonaLabel = zonaApto.querySelector('.upload-zone-label-apto');
+  if (aptoExistente) {
+    prevAptoWrap.innerHTML = '<div style="padding:12px;background:var(--surface2);border-radius:8px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">'
+      + '<span style="color:var(--primary);">&#x2713; Certificado vigente</span>'
+      + '<a href="' + aptoExistente + '" target="_blank" style="color:var(--secondary);font-size:12px;text-decoration:none;">Ver actual</a></div>';
+    prevAptoWrap.style.display = 'block';
+    if (zonaLabel) zonaLabel.innerText = 'Subir nuevo certificado (reemplaza el actual)';
+  } else {
+    prevAptoWrap.style.display = 'none';
+    if (zonaLabel) zonaLabel.innerText = 'Subir imagen o PDF del certificado';
+  }
+  zonaApto.style.display = 'block';
+}
+
+function cargarFoto(tipo, input) {
+  var file = input.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    if (tipo === 'foto') {
+      S.foto = e.target.result;
+      document.getElementById('prev-foto-img').src = e.target.result;
+      document.getElementById('prev-foto-wrap').style.display = 'block';
+      document.getElementById('zona-foto').style.display = 'none';
+    } else {
+      S.apto = e.target.result; S.aptoType = file.type;
+      var prevApto = document.getElementById('prev-apto-wrap');
+      if (file.type !== 'application/pdf') {
+        prevApto.innerHTML = '<img src="'+e.target.result+'" style="width:100%;max-height:200px;object-fit:contain;display:block;background:#111;border-radius:8px;">'
+          + '<button class="upload-preview-remove" onclick="quitarFoto(\'apto\')">&#x2715;</button>';
+        prevApto.style.position='relative';
+      } else {
+        prevApto.innerHTML = '<div style="padding:12px;background:var(--surface2);border-radius:8px;font-size:13px;">&#x1F4C4; '+file.name
+          +'<button class="upload-preview-remove" style="position:relative;margin-left:10px;" onclick="quitarFoto(\'apto\')">&#x2715;</button></div>';
+      }
+      prevApto.style.display = 'block';
+      document.getElementById('zona-apto').style.display = 'none';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function quitarFoto(tipo) {
+  if (tipo==='foto') {
+    S.foto=null;
+    document.getElementById('prev-foto-wrap').style.display='none';
+    document.getElementById('zona-foto').style.display='block';
+  } else {
+    S.apto=null; S.aptoType=null;
+    document.getElementById('prev-apto-wrap').style.display='none';
+    document.getElementById('zona-apto').style.display='block';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PASO 5 — Resumen
+// ══════════════════════════════════════════════════════════════════
+function renderResumen() {
+  var campos = getCamposEditados();
+  var ocr = S.ocrData || {};
+  var tSocio = INST.terminologiaSocio || 'Socio';
+
+  var html = '<div class="resumen-section"><div class="resumen-title">Datos personales</div>';
+  var labels = {apellido:'Apellido',nombre:'Nombre',dni:'DNI',fechaNac:'Fecha Nac.',sexo:'Sexo',domicilio:'Domicilio',email:'Email',celular:'Celular'};
+  var todos = Object.assign({}, {apellido:ocr.apellido,nombre:ocr.nombre,dni:ocr.dni,fechaNac:ocr.fechaNac,sexo:ocr.sexo}, campos);
+  Object.keys(labels).forEach(function(k) {
+    if (todos[k]) html += '<div class="resumen-row"><span class="resumen-label">'+labels[k]+'</span><span class="resumen-val">'+escHtml(todos[k])+'</span></div>';
+  });
+  html += '</div>';
+
+  html += '<div class="resumen-section"><div class="resumen-title">Archivos</div>';
+  html += '<div class="resumen-row"><span class="resumen-label">Doc. Frente</span><span class="resumen-val">'+(S.imgFront?'<span style="color:#6de097;">&#x2713; Listo</span>':'<span style="color:var(--red);">&#x2717; No cargado</span>')+'</span></div>';
+  html += '<div class="resumen-row"><span class="resumen-label">Doc. Dorso</span><span class="resumen-val">'+(S.imgBack?'<span style="color:#6de097;">&#x2713; Listo</span>':'<span style="color:var(--muted);">No cargado</span>')+'</span></div>';
+  html += '<div class="resumen-row"><span class="resumen-label">Foto</span><span class="resumen-val">'+(S.foto?'<span style="color:#6de097;">&#x2713; Lista</span>':'<span style="color:var(--muted);">No cargada</span>')+'</span></div>';
+  html += '<div class="resumen-row"><span class="resumen-label">Certificado</span><span class="resumen-val">'+(S.apto?'<span style="color:#6de097;">&#x2713; Cargado</span>':'<span style="color:var(--muted);">No cargado</span>')+'</span></div>';
+  html += '</div>';
+
+  html += '<div class="resumen-section"><div class="resumen-title">Acción</div>';
+  html += '<div class="resumen-row"><span class="resumen-label">Tipo</span><span class="resumen-val" style="color:var(--secondary);">'
+    +(S.esNuevo?'Crear '+tSocio.toLowerCase()+' nuevo':'Actualizar '+tSocio.toLowerCase()+' existente')+'</span></div></div>';
+
+  document.getElementById('resumen-datos').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// GUARDAR — orquesta Drive + Firestore
+// ══════════════════════════════════════════════════════════════════
+function confirmarGuardar() {
+  var campos = getCamposEditados();
+  var dni = normalizarDni((S.ocrData && S.ocrData.dni) || campos.dni || '');
+  if (!dni) { toast('No se pudo determinar el DNI', 'err'); return; }
+
+  var btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+
+  // 1. Subir fotos a Drive vía GAS
+  callUploadDrive(dni, function(urls) {
+    if (urls.fotoUrl)      campos.fotoUrl     = urls.fotoUrl;
+    if (urls.dniFrenteUrl) campos.dniFotoUrl  = urls.dniFrenteUrl;
+    if (urls.dniDorsoUrl)  campos.dniDorsoUrl = urls.dniDorsoUrl;
+    if (urls.aptoUrl)      campos.aptoUrl     = urls.aptoUrl;
+    campos.dni = dni;
+
+    // 2. Guardar en Firestore directo
+    mostrarLoader(S.esNuevo ? 'Creando registro...' : 'Actualizando datos...');
+    guardarSocioFirestore(dni, campos, S.esNuevo)
+      .then(function() {
+        ocultarLoader();
+        btn.disabled = false;
+        mostrarExito(S.esNuevo);
+      })
+      .catch(function(e) {
+        ocultarLoader();
+        btn.disabled = false;
+        toast('Error al guardar: ' + (e.message || e), 'err');
+      });
+
+  }, function(errDrive) {
+    // Drive falló pero igual intentamos guardar sin URLs
+    ocultarLoader();
+    toast('Imágenes no subidas: ' + errDrive, 'err');
+    btn.disabled = false;
+  });
+}
+
+function mostrarExito(esNuevo) {
+  var tSocio = INST.terminologiaSocio || 'Socio';
+  var ocr = S.ocrData || {};
+  var nombre = (ocr.apellido||'') + ', ' + (ocr.nombre||'');
+  document.getElementById('success-msg').innerHTML =
+    (esNuevo ? tSocio+' <b>'+nombre+'</b> creado correctamente.' : 'Datos de <b>'+nombre+'</b> actualizados correctamente.');
+  irPasoExito();
+}
+
+function irPasoExito() {
+  document.getElementById('step' + S.paso).classList.remove('activo');
+  S.paso = 6;
+  document.getElementById('step6').classList.add('activo');
+  window.scrollTo(0, 0);
+  // Ocultar progress bar en paso 6
+  document.querySelector('.progress-bar').style.display = 'none';
+}
+
+function reiniciar() {
+  S = {paso:1, imgFront:null, imgBack:null, foto:null, apto:null, aptoType:null,
+       ocrData:null, sistemaData:null, esNuevo:false, camStreams:{}};
+  document.getElementById('step6').classList.remove('activo');
+  document.querySelector('.progress-bar').style.display = 'flex';
+  // Reset UI
+  [1,2].forEach(function(n) {
+    document.getElementById('prev'+n+'-wrap').style.display='none';
+    document.getElementById('zona'+n).style.display='block';
+  });
+  document.getElementById('btn-sig1').disabled = true;
+  document.getElementById('btn-sig3').disabled = true;
+  document.getElementById('comp-tbody').innerHTML = '';
+  document.getElementById('alert-dni-no-encontrado').style.display='none';
+  document.getElementById('alert-dni-encontrado').style.display='none';
+  document.getElementById('card-comp').style.display='none';
+  document.getElementById('prev-apto-wrap').style.display='none';
+  document.getElementById('prev-foto-wrap').style.display='none';
+  var zonaLabel = document.querySelector('.upload-zone-label-apto');
+  if (zonaLabel) zonaLabel.innerText='Subir imagen o PDF del certificado';
+
+  // Ir al paso 1 sin animar progress (reset total)
+  for (var i=1; i<=5; i++){
+    var dot=document.getElementById('pd'+i), lbl=document.getElementById('pl'+i), sep=document.getElementById('ps'+i);
+    dot.className='progress-dot'; lbl.className='progress-label'; if(sep) sep.className='progress-sep';
+    dot.innerHTML=i;
+  }
+  document.getElementById('pd1').className='progress-dot activo';
+  document.getElementById('pl1').className='progress-label activo';
+  S.paso=1;
+  document.getElementById('step1').classList.add('activo');
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════════════
+function normalizarDni(dni) {
+  return dni ? dni.toString().replace(/\./g,'').replace(/\s/g,'').trim() : '';
+}
+function normalizarSexo(s) {
+  if (!s) return '';
+  var u = s.toString().toUpperCase().trim();
+  if (u === 'M' || u === 'MASCULINO') return 'Masculino';
+  if (u === 'F' || u === 'FEMENINO')  return 'Femenino';
+  return s;
+}
+function escHtml(s) {
+  return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getCamposEditados() {
+  var out = {};
+  CAMPOS.forEach(function(c) {
+    var el = document.getElementById('edit-' + c.key); if (!el) return;
+    out[c.key] = el.value.trim();
+  });
+  out.contacto1 = [out.c1nombre||'', out.c1tel||''].filter(Boolean).join('|');
+  out.contacto2 = [out.c2nombre||'', out.c2tel||''].filter(Boolean).join('|');
+  out.dni = normalizarDni((S.ocrData && S.ocrData.dni) || '');
+  if (S.esNuevo) {
+    if (!out.apellido) out.apellido = (S.ocrData && S.ocrData.apellido) || '';
+    if (!out.nombre)   out.nombre   = (S.ocrData && S.ocrData.nombre)   || '';
+    out.fechaNac = (S.ocrData && S.ocrData.fechaNac) || '';
+    out.sexo     = (S.ocrData && S.ocrData.sexo)     || '';
+    out.domicilio= out.domicilio || (S.ocrData && S.ocrData.domicilio) || '';
+  }
+  return out;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+window.onload = function() {
+  // Auth anónimo — necesario para acceder a Firestore
+  auth.signInAnonymously()
+    .then(function() {
+      return cargarInstitucion();
+    })
+    .then(function() {
+      ocultarLoader();
+    })
+    .catch(function(e) {
+      ocultarLoader();
+      console.error('Error init:', e);
+      // Continuar sin branding si falla
+    });
+
+  document.getElementById('btn-sig1').disabled = true;
+  document.getElementById('btn-sig3').disabled = true;
+};
+</script>
+</body>
+</html>
