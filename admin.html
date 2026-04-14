@@ -300,7 +300,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
   <div id="carga-progreso" style="display:none;flex:1;align-items:center;gap:8px;margin:0 12px;"></div>
   <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-    <a id="fs-counter" href="https://console.firebase.google.com/" target="_blank"
+    <a id="fs-counter" href="https://console.firebase.google.com/project/excursionistas-futsal/firestore/databases/-default-/usage/last-24h" target="_blank"
       style="font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;text-decoration:none;cursor:pointer;" title="Ver uso en Firebase Console">
       &#x1F4D6; 0 | &#x270F; 0
     </a>
@@ -1127,7 +1127,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.7</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.8</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1192,7 +1192,7 @@ var WA_CRED_KEY = 'sgd_wa_cred';
 var DESCUENTO_HNO_SUGERIDO = 0;
 var CARGA_COMPLETA = false; // descuento sugerido para hermanos en $
 
-// Columnas de la hoja
+// Columnas de la hoja (igual que excursionistas para compatibilidad)
 var COL = {
   APELLIDO:0, NOMBRE:1, EMAIL:2, TARJETA:3, TEL:4, CELULAR:5,
   ACTIVO:6, TIPO_DOC:7, DNI:8, FECHA_NAC:9, SEXO:10,
@@ -3290,8 +3290,15 @@ function guardarNuevoSocio() {
     if(r && r.ok === false){ _err(r.error||'Error al guardar'); return; }
     cerrarNuevoSocio();
     toast(apellido + ', ' + nombre + ' agregado correctamente', 'ok');
-    // El adapter (addSocio) ya hizo push a DB.jugadores y renderPlayers()
-    // No repetir acá para evitar duplicado visual
+    var nf = new Array(26).fill('');
+    nf[COL.APELLIDO]=jug.apellido; nf[COL.NOMBRE]=jug.nombre; nf[COL.DNI]=jug.doc;
+    nf[COL.EMAIL]=jug.email; nf[COL.CELULAR]=jug.celular; nf[COL.FECHA_NAC]=jug.fechaNac;
+    nf[COL.SEXO]=jug.sexo; nf[COL.DOMICILIO]=jug.domicilio; nf[COL.ACTIVO]=true;
+    nf[COL.CATEGORIA_APP]=jug.categoria; nf[COL.PLAN]=jug.plan;
+    nf[COL.CONTACTO1] = jug.contacto1||'';
+    nf[COL.CONTACTO2] = jug.contacto2||'';
+    nf.push('Hoja 1'); nf.push(r.fila||999);
+    DB.jugadores.push(nf); renderPlayers();
   }, function(e){ ocultarLoader(); _err('Error: ' + e); });
 }
 
@@ -3317,7 +3324,7 @@ function enviarComprobanteEmail() {
   callScript({action:'sendEmail', emailDest:email, logoUrl:(INST.logoUrl||''), asunto:'Comprobante de pago - ' + (INST.nombre||''), htmlBody:
     (function(){
       var _logo = '<img src="cid:logo" style="width:80px;height:80px;object-fit:contain;background:white;border-radius:10px;padding:6px;" alt="">';
-      var _nombre = INST.nombre || INST.nombreCorto || 'SGD';
+      var _nombre = INST.nombre || 'Club Atletico Excursionistas';
       var _plan = (datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : '');
       var _monto = '$' + Number(datos.moTotal||0).toLocaleString('es-AR');
       var _row = function(lbl, val) {
@@ -3602,6 +3609,8 @@ function guardarActividad() {
     if(disp) disp.textContent = '\u26BD';
     renderEmojiGrid(_emojiTodos);
     renderListActividades();
+    poblarSelects(); poblarSelectActividad(); poblarSelectsPrecios();
+    poblarSelectMasiva(); renderCatActsCheckboxes('');
     ocultarLoader();
     toast('Actividad agregada', 'ok');
   }, function(e){ ocultarLoader(); alert('Error: '+e); });
@@ -3646,7 +3655,17 @@ function crearSimple(t, id) {
   var v = document.getElementById(id).value.trim(); if(!v) return alert('Ingresa un valor');
   document.getElementById(id).value = '';
   mostrarLoader('Guardando...');
-  callScript({action:'addComplexItem', tabName:t, rowArray:[v], pass:TOKEN, _noRetry:true}, inicializar, function(e){ ocultarLoader(); alert('Error: '+e); });
+  callScript({action:'addComplexItem', tabName:t, rowArray:[v], pass:TOKEN, _noRetry:true}, function(r){
+    // Actualizar en memoria según el tipo
+    if(t === 'Sedes') {
+      DB.sedes.push([v, r.fila||v]);
+      renderList('listS', DB.sedes.map(function(s){ return [s[0], s[1]]; }), 'Sedes');
+      var hSede = document.getElementById('hSede');
+      if(hSede) hSede.innerHTML = '<option value="">Sin sede</option>' + DB.sedes.map(function(s){ return '<option value="' + s[0] + '">' + s[0] + '</option>'; }).join('');
+    }
+    ocultarLoader();
+    toast(v + ' agregado', 'ok');
+  }, function(e){ ocultarLoader(); alert('Error: '+e); });
 }
 
 // â�?��?�â�?��?� ABM PROFESORES â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�â�?��?�
@@ -3717,7 +3736,7 @@ function guardarProfesor() {
     document.getElementById('inpPPass').value.trim()
   ];
   mostrarLoader('Guardando...');
-  var cb = function() { cancelarEditProfesor(); renderListProfesores(); poblarSelects(); toast('Instructor guardado', 'ok'); };
+  var cb = function() { cancelarEditProfesor(); renderListProfesores(); poblarSelects(); poblarTurnosAsist(); ocultarLoader(); toast('Instructor guardado', 'ok'); };
   var err = function(e) { ocultarLoader(); alert('Error: ' + e); };
   if(profEditIdx) {
     callScript({action:'updateAdminItem', tabName:'Profesores', rowIndex:profEditIdx, rowArray:rowArray, pass:TOKEN, _noRetry:true}, cb, err);
@@ -3851,7 +3870,7 @@ function guardarCat() {
     limpiarFormCat();
     poblarSelectMasiva();
   };
-  var cb = function(){ reset(); renderListCat(); poblarSelects(); ocultarLoader(); toast(T('grupo') + ' guardada', 'ok'); };
+  var cb = function(){ reset(); renderListCat(); poblarSelects(); poblarSelectMasiva(); renderPlayers(); ocultarLoader(); toast(T('grupo') + ' guardada', 'ok'); };
   if(catEditIdx) callScript({action:'updateAdminItem', tabName:'Config_Categorias', rowIndex:catEditIdx, rowArray:d, pass:TOKEN, _noRetry:true}, cb, function(e){ reset(); ocultarLoader(); alert('Error: '+e); });
   else callScript({action:'addComplexItem', tabName:'Config_Categorias', rowArray:d, pass:TOKEN, _noRetry:true}, function(r){
     DB.categorias.push(d.concat([DB.categorias.length+2]));
@@ -3963,6 +3982,7 @@ function guardarPrecio() {
     }
     cancelarEditPrecio();
     renderListPrecios();
+    poblarSelectsPrecios();
     toast('Precio guardado', 'ok');
   }, function(e){ ocultarLoader(); alert('Error: '+e); });
 }
@@ -4102,7 +4122,22 @@ function crearHorario() {
   var row = [document.getElementById('hDia').value, document.getElementById('hHora').value, document.getElementById('hSede').value, profSel, document.getElementById('hCat').value, document.getElementById('hActividad').value || '', document.getElementById('hModalidad').value || 'Mixto'];
   if(!row[0] || !row[1]) return alert('Completa dia y hora');
   mostrarLoader('Guardando...');
-  callScript({action:'addComplexItem', tabName:'Horarios', rowArray:row, pass:TOKEN}, inicializar, function(e){ ocultarLoader(); alert('Error: '+e); });
+  callScript({action:'addComplexItem', tabName:'Horarios', rowArray:row, pass:TOKEN, _noRetry:true}, function(r){
+    // Agregar a DB.horarios en memoria
+    var newH = row.concat([r.fila||Date.now()]);
+    DB.horarios.push(newH);
+    DB.horarios.sort(function(a,b){
+      var dias=['Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo'];
+      return dias.indexOf(a[0])-dias.indexOf(b[0]);
+    });
+    renderHorarios();
+    poblarTurnosAsist();
+    // Limpiar formulario
+    document.getElementById('hDia').value = 'Lunes';
+    document.getElementById('hHora').value = '';
+    ocultarLoader();
+    toast('Horario agregado', 'ok');
+  }, function(e){ ocultarLoader(); alert('Error: '+e); });
 }
 
 function poblarSelects() {
@@ -5439,7 +5474,7 @@ function citGenerarLista() {
 // --- RENDER PANTALLA IMPRESION ---
 function citMostrarPrint(jugadores, info) {
   var logoSrc = INST.logoUrl ? getDriveDisplay(INST.logoUrl) : '';
-  var clubNombre = INST.nombre || INST.nombreCorto || 'SGD';
+  var clubNombre = INST.nombre || 'CA Excursionistas Futsal';
   var fecha = new Date().toLocaleDateString('es-AR');
   var total = jugadores.length;
 
