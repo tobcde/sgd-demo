@@ -1,7 +1,7 @@
 {
   "name": "SGD - Admin",
   "short_name": "Admin",
-  "start_url": "/sgd-demo/admin.html",
+  "start_url": "admin.html",
   "scope": "/sgd-demo/",
   "display": "standalone",
   "background_color": "#0a0d0a",
