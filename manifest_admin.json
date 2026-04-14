@@ -1,8 +1,8 @@
 {
   "name": "SGD - Admin",
   "short_name": "Admin",
-  "start_url": "admin.html",
-  "scope": "/sgd-demo/",
+  "start_url": "https://tobcde.github.io/sgd-demo/admin.html",
+  "scope": "https://tobcde.github.io/sgd-demo/",
   "display": "standalone",
   "background_color": "#0a0d0a",
   "theme_color": "#1a7a3c",
