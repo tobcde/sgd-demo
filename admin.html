@@ -1127,7 +1127,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.10</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.12</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1587,15 +1587,32 @@ function callScriptPost(payload, onSuccess, onError) {
     user.getIdToken(false).then(function(idToken) {
       var body = Object.assign({}, payload, {idToken: idToken});
       delete body.token; delete body.pass;
-      // idToken como query param — sobrevive el redirect 302 de GAS
+      var _bodyStr = JSON.stringify(body);
       var _gasUrl = GAS_URL
         + '?idToken=' + encodeURIComponent(idToken)
         + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
+      // Usar redirect:'manual' para capturar la Location del 302
+      // y hacer el POST directo a esa URL sin perder el body
       fetch(_gasUrl, {
         method: 'POST',
-        redirect: 'follow',
+        redirect: 'manual',
         headers: {'Content-Type': 'text/plain'},
-        body: JSON.stringify(body)
+        body: _bodyStr
+      })
+      .then(function(r) {
+        if (r.type === 'opaqueredirect' || r.status === 302 || r.status === 301) {
+          // Extraer Location del header y repostear
+          var location = r.headers.get('Location') || r.url;
+          if (location) {
+            return fetch(location, {
+              method: 'POST',
+              redirect: 'follow',
+              headers: {'Content-Type': 'text/plain'},
+              body: _bodyStr
+            });
+          }
+        }
+        return r;
       })
       .then(function(r){ return r.text(); })
       .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
@@ -1950,14 +1967,30 @@ function _fsDispatch(action, p, ok, err) {
         var _gasUrlEmail = GAS_URL
           + '?idToken=' + encodeURIComponent(_idTok)
           + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
+        var _emailBodyStr = JSON.stringify(_emailBody);
         fetch(_gasUrlEmail, {
           method: 'POST',
-          redirect: 'follow',
+          redirect: 'manual',
           headers: {'Content-Type': 'text/plain'},
-          body: JSON.stringify(_emailBody)
-        }).then(function(r){ return r.text(); })
-          .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
-          .catch(function(){ cbErr('Sin conexión para enviar email'); });
+          body: _emailBodyStr
+        })
+        .then(function(r) {
+          if (r.type === 'opaqueredirect' || r.status === 302 || r.status === 301) {
+            var location = r.headers.get('Location') || r.url;
+            if (location) {
+              return fetch(location, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: {'Content-Type': 'text/plain'},
+                body: _emailBodyStr
+              });
+            }
+          }
+          return r;
+        })
+        .then(function(r){ return r.text(); })
+        .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
+        .catch(function(){ cbErr('Sin conexión para enviar email'); });
       }).catch(function(){ cbErr('Error de autenticación'); });
       break;
     }
