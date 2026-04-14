@@ -1127,7 +1127,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.16</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.17</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3025,11 +3025,7 @@ function abrirM(ai) {
   var c1p = c1raw.split('|');
   var c2p = c2raw.split('|');
   document.getElementById('m-contacto1').innerHTML = btnContactoEmergencia(c1p[0]||'', c1p[1]||'');
-  document.getElementById('m-contacto1-tel').innerHTML = '';
   document.getElementById('m-contacto2').innerHTML = btnContactoEmergencia(c2p[0]||'', c2p[1]||'');
-  document.getElementById('m-contacto2-tel').innerHTML = '';
-  document.getElementById('m-membresia').innerText = f[COL.MEMBRESIA]||'-';
-  document.getElementById('m-venc-planilla').innerText = f[COL.VENCIMIENTO]||'-';
   mostrarFotoInline('l-perfil', f[COL.FOTO], false);
   mostrarFotoInline('l-dni-frente', f[COL.DNI_FOTO] ? f[COL.DNI_FOTO].toString().trim() : '', false);
   mostrarFotoInline('l-dni-dorso', f[COL.DNI_DORSO] ? f[COL.DNI_DORSO].toString().trim() : '', false);
