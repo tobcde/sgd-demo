@@ -1127,7 +1127,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.9</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.10</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1581,16 +1581,26 @@ function callScript(payload, onSuccess, onError, _retry) {
 
 function callScriptPost(payload, onSuccess, onError) {
   var action = payload.action || '';
-  // uploadFile va al GAS (Drive)
   if (action === 'uploadFile') {
-    fetch(GAS_URL, {
-      method:'POST', redirect:'follow',
-      headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify(Object.assign({}, payload, {token: GAS_OCR_KEY}))
-    })
-    .then(function(r){ return r.text(); })
-    .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
-    .catch(function(){ if(onError) onError('Sin conexión'); });
+    var user = auth.currentUser;
+    if (!user) { if(onError) onError('Sin sesión activa'); return; }
+    user.getIdToken(false).then(function(idToken) {
+      var body = Object.assign({}, payload, {idToken: idToken});
+      delete body.token; delete body.pass;
+      // idToken como query param — sobrevive el redirect 302 de GAS
+      var _gasUrl = GAS_URL
+        + '?idToken=' + encodeURIComponent(idToken)
+        + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
+      fetch(_gasUrl, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: {'Content-Type': 'text/plain'},
+        body: JSON.stringify(body)
+      })
+      .then(function(r){ return r.text(); })
+      .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={error:'Respuesta inválida'};} if(d&&d.error){if(onError)onError(d.error);}else{if(onSuccess)onSuccess(d);} })
+      .catch(function(){ if(onError) onError('Sin conexión'); });
+    }).catch(function(){ if(onError) onError('Error de autenticación'); });
     return;
   }
   _fsDispatch(action, payload, onSuccess, onError);
@@ -1931,14 +1941,24 @@ function _fsDispatch(action, p, ok, err) {
 
     // ── EMAIL (via GAS) ───────────────────────────────────────────
     case 'sendEmail': {
-      fetch(GAS_URL, {
-        method:'POST', headers:{'Content-Type':'text/plain'},
-        body: JSON.stringify({action:'sendEmail', token:GAS_OCR_KEY, to:p.to, subject:p.subject, body:p.body,
+      var _emailUser = auth.currentUser;
+      if (!_emailUser) { cbErr('Sin sesión activa'); break; }
+      _emailUser.getIdToken(false).then(function(_idTok) {
+        var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to, subject:p.subject, body:p.body,
           colorPrimario: INST.colorPrimario||'#1a7a3c', nombreOrg:INST.nombre||'SGD',
-          emailRemit: INST.emailRemitente||''})
-      }).then(function(r){ return r.text(); })
-        .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
-        .catch(function(){ cbErr('Sin conexión para enviar email'); });
+          emailRemit: INST.emailRemitente||''};
+        var _gasUrlEmail = GAS_URL
+          + '?idToken=' + encodeURIComponent(_idTok)
+          + '&firebaseApiKey=' + encodeURIComponent(FIREBASE_CONFIG.apiKey||'');
+        fetch(_gasUrlEmail, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: {'Content-Type': 'text/plain'},
+          body: JSON.stringify(_emailBody)
+        }).then(function(r){ return r.text(); })
+          .then(function(t){ var d; try{d=JSON.parse(t);}catch(e){d={ok:true};} cb(d); })
+          .catch(function(){ cbErr('Sin conexión para enviar email'); });
+      }).catch(function(){ cbErr('Error de autenticación'); });
       break;
     }
 
@@ -3189,6 +3209,7 @@ function procesarArchivo(event) {
       action:'uploadFile', base64:base64, mimeType:file.type,
       nombre: nombreArchivo + (file.type.includes('pdf') ? '.pdf' : '.jpg'),
       doc:(DB.jugadores[itemSel.arrIdx][COL.DNI]||DB.jugadores[itemSel.arrIdx][COL.TARJETA]||'').toString(),
+      folderID: INST.driveFolder || '',
       hoja:itemSel.sheet, fila:itemSel.row, columna:col, pass:TOKEN
     }, function(r){
       ocultarLoader();
