@@ -1127,7 +1127,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 </div>
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.18</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.19</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1503,7 +1503,7 @@ function inicializar(passReal) {
 
     // Categorías
     DB.categorias = [];
-    catSnap.forEach(function(doc){ var d=doc.data(); DB.categorias.push([d.nombre||doc.id, d.edadDesde||'', d.edadHasta||'', d.color||'', doc.id]); });
+    catSnap.forEach(function(doc){ var d=doc.data(); DB.categorias.push([d.nombre||doc.id, d.color||'', d.edadDesde||'', d.edadHasta||'', d.genero||'Mixto', d.actividades||'', doc.id]); });
 
     // Períodos de pago
     DB.configPagos = [];
@@ -1946,7 +1946,7 @@ function _fsDispatch(action, p, ok, err) {
       var _emailUser = auth.currentUser;
       if (!_emailUser) { cbErr('Sin sesión activa'); break; }
       _emailUser.getIdToken(false).then(function(_idTok) {
-        var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to, subject:p.subject, body:p.body,
+        var _emailBody = {action:'sendEmail', idToken:_idTok, to:p.to||p.emailDest, subject:p.subject||p.asunto, body:p.body||p.htmlBody,
           colorPrimario: INST.colorPrimario||'#1a7a3c', nombreOrg:INST.nombre||'SGD',
           emailRemit: INST.emailRemitente||''};
         var _gasUrlEmail = GAS_URL
@@ -2019,7 +2019,7 @@ function _rowToDoc(tabName, row) {
       }
       return {nombre:row[0]||'',dni:dniP,fechaNac:row[2]||'',email:row[3]||'',contrasena:row[4]||dniP,esPrimerLogin:!row[4]};
     }
-    case 'Config_Categorias': return {nombre:row[0]||'',edadDesde:row[1]||'',edadHasta:row[2]||'',color:row[3]||''};
+    case 'Config_Categorias': return {nombre:row[0]||'',color:row[1]||'',edadDesde:row[2]||'',edadHasta:row[3]||'',genero:row[4]||'Mixto',actividades:row[5]||''};
     case 'Sedes': return {nombre:row[0]||''};
     case 'Config_Periodos': return {mes:row[0]||1,anioD:row[1]||2025,diaD:row[2]||1,anioH:row[3]||row[1]||2025,diaH:row[4]||0,gracia:row[5]||5,desc:row[6]||''};
     case 'Actividades': return {nombre:row[0]||'',icono:row[1]||'',color:row[2]||'#555',monto:Number(row[3])||0};
@@ -3778,7 +3778,7 @@ function guardarProfesor() {
 function _actualizarEnMemoria(tabName, rowIndex) {
   switch(tabName) {
     case 'Config_Categorias':
-      DB.categorias = DB.categorias.filter(function(c){ return c[c.length-1] !== rowIndex && c[4] !== rowIndex; });
+      DB.categorias = DB.categorias.filter(function(c){ return c[c.length-1] !== rowIndex; });
       renderListCat(); poblarSelects(); poblarSelectMasiva();
       break;
     case 'Actividades':
@@ -3849,7 +3849,7 @@ function renderListCat() {
     var acts = getCatActs(c);
     var actsHtml = acts ? (' <span style="font-size:11px;color:var(--muted);">[' + acts + ']</span>') : '';
     return '<div class="item-row"><span style="border-left:6px solid ' + c[1] + ';padding-left:10px;flex:1;">'
-      + '<strong>' + c[0] + '</strong> (' + c[2] + ' al ' + c[3] + ') - ' + c[4]
+      + '<strong>' + esc(c[0]) + '</strong> (' + esc(c[2]) + ' - ' + esc(c[3]) + ' años)'
       + actsHtml + '</span>'
       + '<div style="display:flex;gap:4px;"><button class="icon-btn" style="color:var(--muted);" data-action="editcat" data-idx="' + i + '">editar</button>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Config_Categorias" data-row="' + c[c.length-1] + '">X</button></div></div>';
@@ -3859,7 +3859,7 @@ function renderListCat() {
     if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
     if(btn.dataset.action === 'editcat'){
       var c = DB.categorias[parseInt(btn.dataset.idx)];
-      cargarEditCat(c[c.length-1], c[0], c[1], c[2], c[3], c[4], getCatActs(c));
+      cargarEditCat(c[c.length-1], c[0], c[1], c[2], c[3], c[4]||'Mixto', getCatActs(c));
     }
   });
 }
