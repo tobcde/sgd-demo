@@ -884,9 +884,17 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="modal-section">
         <div class="modal-section-title">Contactos de emergencia</div>
         <div class="modal-grid">
-          <div class="modal-field"><span class="modal-field-label">Contacto 1</span><div class="modal-field-value" id="m-contacto1"></div><input class="modal-field-input" id="mi-c1nombre" type="text" placeholder="Nombre" style="width:48%;display:inline-block;"><input class="modal-field-input" id="mi-c1tel" type="tel" placeholder="Teléfono" style="width:48%;display:inline-block;margin-left:4%;"></div>
+          <div class="modal-field"><span class="modal-field-label">Contacto 1</span>
+            <div class="modal-field-value" id="m-contacto1"></div>
+            <input class="modal-field-input" id="mi-c1nombre" type="text" placeholder="Nombre">
+            <input class="modal-field-input" id="mi-c1tel" type="tel" placeholder="Teléfono" style="margin-top:4px;">
+          </div>
 
-          <div class="modal-field"><span class="modal-field-label">Contacto 2</span><div class="modal-field-value" id="m-contacto2"></div><input class="modal-field-input" id="mi-c2nombre" type="text" placeholder="Nombre" style="width:48%;display:inline-block;"><input class="modal-field-input" id="mi-c2tel" type="tel" placeholder="Teléfono" style="width:48%;display:inline-block;margin-left:4%;"></div>
+          <div class="modal-field"><span class="modal-field-label">Contacto 2</span>
+            <div class="modal-field-value" id="m-contacto2"></div>
+            <input class="modal-field-input" id="mi-c2nombre" type="text" placeholder="Nombre">
+            <input class="modal-field-input" id="mi-c2tel" type="tel" placeholder="Teléfono" style="margin-top:4px;">
+          </div>
 
         </div>
       </div>
@@ -3041,7 +3049,6 @@ function abrirM(ai) {
   var c2p = c2raw.split('|');
   document.getElementById('m-contacto1').innerHTML = btnContactoEmergencia(c1p[0]||'', c1p[1]||'');
   document.getElementById('m-contacto2').innerHTML = btnContactoEmergencia(c2p[0]||'', c2p[1]||'');
-  // Poblar inputs de edición
   if(document.getElementById('mi-c1nombre')) document.getElementById('mi-c1nombre').value = c1p[0]||'';
   if(document.getElementById('mi-c1tel'))    document.getElementById('mi-c1tel').value    = c1p[1]||'';
   if(document.getElementById('mi-c2nombre')) document.getElementById('mi-c2nombre').value = c2p[0]||'';
