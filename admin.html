@@ -318,6 +318,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   <div class="tab" onclick="cambiarTab(event,'admin')">ADMINISTRACION</div>
   <div class="tab" onclick="cambiarTab(event,'reportes')">REPORTES</div>
   <div class="tab" onclick="cambiarTab(event,'institucion')" style="color:var(--secondary);">&#x2699; INSTITUCION</div>
+  <div class="tab" onclick="cambiarTab(event,'ayuda')" style="color:#6de097;">&#x2753; AYUDA</div>
 </div>
 
 <!-- TAB SOCIOS -->
@@ -1134,8 +1135,128 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
 </div>
 
+<!-- TAB AYUDA -->
+<div id="tab-ayuda" class="tab-content" style="display:none;">
+  <div style="padding:20px;max-width:900px;margin:0 auto;">
+
+    <!-- ASISTENTE IA -->
+    <div style="background:var(--surface2);border:1px solid var(--primary);border-radius:12px;padding:20px;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <span style="font-size:24px;">&#x1F916;</span>
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--primary);text-transform:uppercase;">Asistente SGD</div>
+          <div style="font-size:11px;color:var(--muted);">Preguntá cualquier cosa sobre el sistema</div>
+        </div>
+      </div>
+
+      <!-- Chat messages -->
+      <div id="ayuda-chat" style="min-height:120px;max-height:400px;overflow-y:auto;background:var(--bg);border-radius:8px;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;">
+        <div style="background:var(--surface2);border-radius:8px;padding:12px;max-width:85%;border-left:3px solid var(--primary);">
+          <div style="font-size:11px;color:var(--primary);font-weight:700;margin-bottom:4px;">ASISTENTE SGD</div>
+          <div style="font-size:13px;color:var(--text);">Hola! Soy el asistente del SGD. Puedo ayudarte con cualquier duda sobre el sistema: cómo registrar pagos, gestionar socios, configurar categorías, generar reportes y más. ¿En qué te puedo ayudar?</div>
+        </div>
+      </div>
+
+      <!-- Sugerencias rápidas -->
+      <div id="ayuda-sugerencias" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+        <button onclick="ayudaPreguntar('¿Cómo registro un pago?')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;">¿Cómo registro un pago?</button>
+        <button onclick="ayudaPreguntar('¿Qué significa estado PARCIAL?')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;">¿Qué significa PARCIAL?</button>
+        <button onclick="ayudaPreguntar('¿Cómo agrego un socio nuevo?')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;">¿Cómo agrego un socio?</button>
+        <button onclick="ayudaPreguntar('¿Cómo configuro las categorías?')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;">¿Cómo configuro categorías?</button>
+        <button onclick="ayudaPreguntar('¿Cómo tomo asistencia?')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;">¿Cómo tomo asistencia?</button>
+        <button onclick="ayudaPreguntar('¿Qué reportes hay disponibles?')" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:4px 12px;font-size:11px;cursor:pointer;">¿Qué reportes hay?</button>
+      </div>
+
+      <!-- Input -->
+      <div style="display:flex;gap:8px;">
+        <input id="ayuda-input" type="text" placeholder="Escribí tu pregunta..." 
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;"
+          onkeydown="if(event.key==='Enter')ayudaEnviar()">
+        <button onclick="ayudaEnviar()" 
+          style="background:var(--primary);color:white;border:none;border-radius:8px;padding:10px 18px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;">
+          ENVIAR &#x27A4;
+        </button>
+      </div>
+    </div>
+
+    <!-- MANUAL DE REFERENCIA RÁPIDA -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--text);text-transform:uppercase;margin-bottom:16px;">&#x1F4D6; Referencia rápida</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+        <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:3px solid var(--primary);">
+          <div style="font-weight:700;color:var(--primary);font-size:13px;margin-bottom:8px;">&#x1F465; SOCIOS</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+            Gestioná el alta, baja y edición de socios. Cada socio tiene ficha con datos personales, inscripciones activas, historial de pagos y asistencias. El estado de cuota se calcula automáticamente en tiempo real.
+          </div>
+        </div>
+
+        <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:3px solid var(--secondary);">
+          <div style="font-weight:700;color:var(--secondary);font-size:13px;margin-bottom:8px;">&#x1F4B0; COBROS</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+            Registrá pagos desde la ficha del socio (botón COBRAR) o desde el tab CUOTAS. Cada pago genera un comprobante que podés enviar por email. Los estados son: Al día, Parcial, Debe.
+          </div>
+        </div>
+
+        <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:3px solid #4a9eff;">
+          <div style="font-weight:700;color:#4a9eff;font-size:13px;margin-bottom:8px;">&#x1F4CB; CUOTAS</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+            Vista del historial de pagos del período. Podés editar o eliminar pagos con auditoría obligatoria (requiere motivo). Exportable a CSV.
+          </div>
+        </div>
+
+        <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:3px solid #a855f7;">
+          <div style="font-weight:700;color:#a855f7;font-size:13px;margin-bottom:8px;">&#x1F4CB; ASISTENCIAS</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+            Tomá asistencia por turno y fecha. Seleccioná el horario, marcá presentes y guardá. El sistema registra el historial y calcula el porcentaje de asistencia por socio.
+          </div>
+        </div>
+
+        <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:3px solid var(--orange);">
+          <div style="font-weight:700;color:var(--orange);font-size:13px;margin-bottom:8px;">&#x2699; ADMINISTRACIÓN</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+            Configurá categorías (con rango de años), actividades, precios por actividad/categoría, sedes, horarios e instructores. Los cambios se reflejan inmediatamente en toda la app.
+          </div>
+        </div>
+
+        <div style="background:var(--bg);border-radius:8px;padding:14px;border-left:3px solid #6de097;">
+          <div style="font-weight:700;color:#6de097;font-size:13px;margin-bottom:8px;">&#x1F4CA; REPORTES</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+            Deudores, socios al día, caja del día, pagos por período, asistencia, ranking y auditoría de pagos. Todos exportables a CSV. Se generan desde datos en memoria — sin costo de lecturas.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Estados de cuota -->
+      <div style="margin-top:16px;background:var(--bg);border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:var(--text);font-size:13px;margin-bottom:10px;">Estados de cuota</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <span style="background:rgba(26,122,60,.2);color:#6de097;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700;">AL DÍA</span>
+          <span style="font-size:12px;color:var(--muted);align-self:center;">Pagó el mes actual completo</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+          <span style="background:rgba(255,193,7,.15);color:#ffc107;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700;">PARCIAL</span>
+          <span style="font-size:12px;color:var(--muted);align-self:center;">Pagó parte del mes — debe la diferencia</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+          <span style="background:rgba(220,53,69,.15);color:var(--red);border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700;">DEBE</span>
+          <span style="font-size:12px;color:var(--muted);align-self:center;">No registra pagos para el período actual</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+          <span style="background:var(--surface);color:var(--muted);border-radius:6px;padding:4px 12px;font-size:12px;font-weight:700;">SIN PLAN</span>
+          <span style="font-size:12px;color:var(--muted);align-self:center;">No tiene inscripción activa</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.24</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.25</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -5679,6 +5800,106 @@ function citBorrar(rowIndex) {
 // ═══════════════════════════════════════════════════════════
 // FIN MODULO CITACIONES
 // ═══════════════════════════════════════════════════════════
+
+// ── ASISTENTE IA (Tab Ayuda) ────────────────────────────────────
+var _ayudaHistorial = [];
+
+function ayudaPreguntar(texto) {
+  document.getElementById('ayuda-input').value = texto;
+  ayudaEnviar();
+}
+
+function ayudaEnviar() {
+  var input = document.getElementById('ayuda-input');
+  var pregunta = (input.value || '').trim();
+  if (!pregunta) return;
+  input.value = '';
+
+  // Ocultar sugerencias después del primer mensaje
+  var sug = document.getElementById('ayuda-sugerencias');
+  if (sug) sug.style.display = 'none';
+
+  // Mostrar mensaje del usuario
+  _ayudaAgregarMensaje('usuario', pregunta);
+  _ayudaHistorial.push({role: 'user', content: pregunta});
+
+  // Mostrar typing indicator
+  var typingId = 'typing-' + Date.now();
+  _ayudaAgregarMensaje('typing', '...', typingId);
+
+  // Contexto del sistema para Claude
+  var contexto = 'Sos el asistente del SGD (Sistema de Gestión Digital), '
+    + 'una app web para gestión de clubes deportivos y organizaciones. '
+    + 'El sistema está instalado en: ' + (INST.nombre || 'este club') + '. '
+    + 'Tiene ' + (DB.jugadores.length - 1) + ' socios activos. '
+    + 'Respondé siempre en español rioplatense, de forma concisa y práctica. '
+    + 'Si te preguntan algo que no es sobre el SGD, redirigí la conversación al sistema. '
+    + 'Los tabs del sistema son: SOCIOS, ASISTENCIAS, CUOTAS, CITACIONES, ADMINISTRACIÓN, REPORTES, INSTITUCIÓN y AYUDA. '
+    + 'En SOCIOS podés ver, crear y editar socios, cobrar cuotas y ver el estado de cada uno. '
+    + 'En CUOTAS está el historial de pagos con posibilidad de editar/eliminar con auditoría. '
+    + 'En ADMINISTRACIÓN se configuran categorías, actividades, precios, sedes, horarios e instructores. '
+    + 'Los estados de cuota son: AL DÍA, PARCIAL, DEBE, SIN PLAN. '
+    + 'Los pagos históricos (migrados) cubren el mes de su fecha de pago. '
+    + 'Para cobrar: ir a la ficha del socio → botón COBRAR, o desde el tab CUOTAS.';
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: contexto,
+      messages: _ayudaHistorial
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data) {
+    var el = document.getElementById(typingId);
+    if (el) el.remove();
+    var respuesta = (data.content && data.content[0] && data.content[0].text) || 'No pude responder.';
+    _ayudaAgregarMensaje('asistente', respuesta);
+    _ayudaHistorial.push({role: 'assistant', content: respuesta});
+    // Mantener historial razonable
+    if (_ayudaHistorial.length > 20) _ayudaHistorial = _ayudaHistorial.slice(-20);
+  })
+  .catch(function() {
+    var el = document.getElementById(typingId);
+    if (el) el.remove();
+    _ayudaAgregarMensaje('asistente', 'Error de conexión. Verificá tu internet e intentá de nuevo.');
+  });
+}
+
+function _ayudaAgregarMensaje(tipo, texto, id) {
+  var chat = document.getElementById('ayuda-chat');
+  if (!chat) return;
+  var div = document.createElement('div');
+  if (id) div.id = id;
+
+  if (tipo === 'usuario') {
+    div.style.cssText = 'align-self:flex-end;background:var(--primary);border-radius:8px;padding:10px 14px;max-width:80%;';
+    div.innerHTML = '<div style="font-size:13px;color:white;">' + esc(texto) + '</div>';
+  } else if (tipo === 'asistente') {
+    // Convertir markdown básico a HTML
+    var html = esc(texto)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code style="background:var(--surface);padding:1px 4px;border-radius:3px;font-size:11px;">$1</code>')
+      .replace(/
+/g, '<br>');
+    div.style.cssText = 'background:var(--surface2);border-radius:8px;padding:12px;max-width:85%;border-left:3px solid var(--primary);';
+    div.innerHTML = '<div style="font-size:11px;color:var(--primary);font-weight:700;margin-bottom:4px;">ASISTENTE SGD</div>'
+      + '<div style="font-size:13px;color:var(--text);line-height:1.5;">' + html + '</div>';
+  } else {
+    // typing
+    div.style.cssText = 'background:var(--surface2);border-radius:8px;padding:12px;max-width:85%;border-left:3px solid var(--primary);';
+    div.innerHTML = '<div style="font-size:11px;color:var(--primary);font-weight:700;margin-bottom:4px;">ASISTENTE SGD</div>'
+      + '<div style="font-size:20px;color:var(--muted);">&#x2022;&#x2022;&#x2022;</div>';
+  }
+
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
 </script>
 
 <!-- PANTALLA IMPRESION CITACION -->
