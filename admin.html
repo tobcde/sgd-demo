@@ -315,10 +315,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
   <div id="carga-progreso" style="display:none;flex:1;align-items:center;gap:8px;margin:0 12px;"></div>
   <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-    <a id="fs-counter" href="https://console.firebase.google.com/" target="_blank"
-      style="font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;text-decoration:none;cursor:pointer;" title="Ver uso en Firebase Console">
+    <span id="fs-counter"
+      style="font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;" title="Lecturas/escrituras sesión">
       &#x1F4D6; 0 | &#x270F; 0
-    </a>
+    </span>
     <button class="btn btn-secondary" onclick="refrescarDatos()" style="padding:6px 10px;font-size:12px;" title="Refrescar datos">&#x21BB;</button>
     <button class="btn btn-save" id="btn-nuevo-socio" onclick="abrirNuevoSocio()" style="padding:6px 12px;font-size:12px;">&#x2B; <span id="lbl-nuevo-socio">Socio</span></button>
   </div>
@@ -346,7 +346,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <option value="">Todos</option><option value="Activos" selected>Solo Activos</option><option value="Inactivos">Solo Inactivos</option></select></div>
     <div class="filter-group"><label class="filter-label">Genero</label>
       <select id="fGen" class="filter-select" onchange="renderPlayers()">
-        <option value="">Todos</option><option>Masculino</option></select></div>
+        <option value="">Todos</option><option>Masculino</option><option>Femenino</option></select></div>
     <div class="filter-group"><label class="filter-label" id="lbl-filtro-categoria">Categoria</label>
       <select id="fCat" class="filter-select" onchange="renderPlayers()"><option value="">Todas</option></select></div>
     <div class="filter-group"><label class="filter-label">Cuota</label>
@@ -377,6 +377,9 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="filter-group" style="flex:1;min-width:200px;">
         <label class="filter-label">Turno</label>
         <select id="asistTurno" class="filter-select" onchange="onCambioTurnoAsist()"><option value="">-- Seleccionar turno --</option></select>
+        <div id="asist-sin-turnos" style="display:none;background:rgba(201,162,39,.1);border:1px solid var(--secondary);border-radius:8px;padding:10px 14px;font-size:12px;color:#c9a227;margin-top:8px;">
+          &#x26A0; No hay horarios configurados para este día. Creá uno en <strong>ADMINISTRACIÓN → Horarios</strong>.
+        </div>
       </div>
       <button class="btn btn-save" onclick="guardarAsist()">GUARDAR ASISTENCIA</button>
     </div>
@@ -599,7 +602,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       </div>
       <div style="margin-bottom:10px;">
         <label class="filter-label">Observacion (opcional)</label>
-        <input id="masiva-obs" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Cuota abril 2025">
+        <input id="masiva-obs" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Cuota mayo 2026">
       </div>
       <div id="masiva-preview" style="display:none;background:var(--bg);border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;border:1px solid var(--border);"></div>
       <button class="btn btn-save" onclick="ejecutarMasiva()" id="btn-masiva" style="width:100%;">GENERAR INSCRIPCIONES</button>
@@ -630,7 +633,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div><label class="filter-label">Anio fin</label><input id="pAnioH" type="number" class="edit-input" style="width:100%;margin-top:4px;"></div>
         <div><label class="filter-label">Dia fin (0=ultimo)</label><input id="pDiaH" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="0"></div>
         <div><label class="filter-label">Dias gracia</label><input id="pGracia" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="5"></div>
-        <div style="grid-column:1/-1;"><label class="filter-label">Descripcion</label><input id="pDesc" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Enero 2025"></div>
+        <div style="grid-column:1/-1;"><label class="filter-label">Descripcion</label><input id="pDesc" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Enero 2026"></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-save" onclick="agregarPeriodo()">AGREGAR PERIODO</button>
@@ -1157,7 +1160,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <!-- Header -->
 <div style="background:linear-gradient(135deg,var(--primary-dark),#0a1a0a);border:1px solid var(--primary);border-radius:12px;padding:24px;margin-bottom:20px;text-align:center;">
   <div style="font-size:32px;margin-bottom:8px;">&#x1F4D6;</div>
-  <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;">Manual de Usuario</div>
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;" id="ayuda-titulo-main">Manual de Usuario</div>
   <div style="font-size:13px;color:var(--muted);margin-top:6px;">SGD — Sistema de Gestión Digital</div>
 </div>
 
@@ -1165,7 +1168,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
   <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text);text-transform:uppercase;margin-bottom:12px;">Contenido</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;">
-    <a href="#ayuda-socios" onclick="event.preventDefault();document.getElementById('ayuda-socios').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">1. Socios</a>
+    <a href="#ayuda-socios" onclick="event.preventDefault();document.getElementById('ayuda-socios').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;" id="ayuda-idx-socios">1. Miembros</a>
     <a href="#ayuda-inscripciones" onclick="event.preventDefault();document.getElementById('ayuda-inscripciones').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">2. Inscripciones</a>
     <a href="#ayuda-cobros" onclick="event.preventDefault();document.getElementById('ayuda-cobros').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">3. Cobros y pagos</a>
     <a href="#ayuda-cuotas" onclick="event.preventDefault();document.getElementById('ayuda-cuotas').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">4. Cuotas</a>
@@ -1374,7 +1377,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.25</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.27</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2656,7 +2659,7 @@ function renderPlayers() {
     html += '<div style="' + prStyle + '">';
     var catSecCard = (f[COL.CAT_SECUNDARIA]||'').toString().trim();
     var catSecBadge = catSecCard ? '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;font-weight:800;padding:1px 7px;border-radius:8px;margin-left:6px;font-family:\'Barlow Condensed\',sans-serif;">+' + catSecCard + '</span>' : '';
-    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + apellido + catSecBadge + '<br><span style="font-size:12px;color:var(--muted);">' + nombre + '</span></h4>';
+    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + esc(apellido) + catSecBadge + '<br><span style="font-size:12px;color:var(--muted);">' + esc(nombre) + '</span></h4>';
     html += '<p class="card-info" style="margin:0 0 6px 0;">Doc: ' + dni + (anioNac ? ' | Nac. ' + anioNac : '') + '</p>';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
     html += '<div><span class="status-dot ' + (act ? 'active-dot' : 'inactive-dot') + '"></span>';
@@ -2904,6 +2907,8 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   } else if(wrapEl) {
     wrapEl.style.display = 'none';
   }
+  var _mpErr = document.getElementById('mp-error') || document.getElementById('pago-error');
+  if(_mpErr){ _mpErr.style.display='none'; _mpErr.innerText=''; }
   document.getElementById('modalPago').classList.add('open');
 }
 function cerrarModalPago(){ document.getElementById('modalPago').classList.remove('open'); pagoCtx = null; }
@@ -2945,7 +2950,11 @@ function confirmarPago() {
   var _cobrador = document.getElementById('mp-cobrador').value;
   var _obs = document.getElementById('mp-obs').value;
   var _fecha = document.getElementById('mp-fecha').value;
-  if(!_fecha || !desde || !hasta) { pagoCtx._enviando = false; return alert('Completa fecha y periodo'); }
+  if(!_fecha || !desde || !hasta) { pagoCtx._enviando = false; return alert('Completá fecha y período'); }
+  if(desde > hasta) { pagoCtx._enviando = false; return alert('La fecha "Desde" no puede ser posterior a "Hasta"'); }
+  var _hoy = new Date().toISOString().split('T')[0];
+  var _limite = new Date(new Date().setDate(new Date().getDate()+7)).toISOString().split('T')[0];
+  if(_fecha > _limite) { pagoCtx._enviando = false; return alert('La fecha de pago no puede ser más de 7 días en el futuro'); }
 
   var periodo = periodoLabel(document.getElementById('cPeriodo') ? document.getElementById('cPeriodo').value : '');
 
@@ -2967,9 +2976,12 @@ function confirmarPago() {
 
   if(pagos.length === 0) {
     var _monto = Number(document.getElementById('mp-monto').value)||0;
-    if(!_monto) { pagoCtx._enviando = false; return alert('Ingresa un monto'); }
+    if(!_monto || _monto <= 0) { pagoCtx._enviando = false; return alert('El monto debe ser mayor a cero'); }
     pagos.push({plan: pagoCtx.planNom || 'Actividad', monto: _monto});
   }
+  // Verificar que ningún pago tenga monto negativo o cero
+  var _montoInvalido = pagos.find(function(p){ return !p.monto || p.monto <= 0; });
+  if(_montoInvalido) { pagoCtx._enviando = false; return alert('Todos los montos deben ser mayores a cero'); }
 
   var moTotal = pagos.reduce(function(s, p){ return s + p.monto; }, 0);
   if(!moTotal) { pagoCtx._enviando = false; return alert('El monto total no puede ser cero'); }
@@ -3123,8 +3135,12 @@ function poblarTurnosAsist() {
       var ligaLabel = (liga && liga !== 'Ambas') ? ' [' + liga + ']' : '';
       var lbl = diaSel + ' ' + hora + ' hs - ' + cat + ligaLabel + (sede ? ' (' + sede + ')' : '');
       sel.innerHTML += '<option value="' + tid + '">' + lbl + '</option>';
+      _hayTurnos = true;
     }
   });
+  // Mostrar aviso si no hay turnos configurados para ese día
+  var _asistBanner = document.getElementById('asist-sin-turnos');
+  if(_asistBanner) _asistBanner.style.display = (!DB.horarios.length || !_hayTurnos) ? '' : 'none';
 }
 
 // matcheaTurno: determina si la categoria de un jugador matchea el turno segun liga
@@ -3230,6 +3246,7 @@ function toggleAsist(dni, total) {
 
 function guardarAsist() {
   var turnoId = document.getElementById('asistTurno').value;
+  if(!turnoId) return toast('Seleccioná un turno antes de guardar', 'warn');
   var fecha = document.getElementById('asistFecha').value;
   if(!turnoId || !fecha) return alert('Selecciona fecha y turno');
   var partes = turnoId.split('_');
@@ -3557,23 +3574,39 @@ function abrirNuevoSocio() {
     var el = document.getElementById(id); if(el) el.value = '';
   });
   document.getElementById('ns-sexo').value = 'Masculino';
-  document.getElementById('ns-error').style.display = 'none';
+  var _nsErr = document.getElementById('ns-error');
+  if(_nsErr){ _nsErr.style.display = 'none'; _nsErr.innerText = ''; }
   var selCat = document.getElementById('ns-categoria');
   selCat.innerHTML = '<option value="">-- Sin asignar --</option>';
   (DB.categorias||[]).forEach(function(c){ selCat.innerHTML += '<option value="' + c[0] + '">' + c[0] + '</option>'; });
   document.getElementById('modalNuevoSocio').classList.add('open');
 }
-function cerrarNuevoSocio(){ document.getElementById('modalNuevoSocio').classList.remove('open'); }
+function cerrarNuevoSocio(){
+  document.getElementById('modalNuevoSocio').classList.remove('open');
+  // Limpiar error al cerrar
+  var _e = document.getElementById('ns-error');
+  if(_e){ _e.style.display='none'; _e.innerText=''; }
+}
 
 function guardarNuevoSocio() {
   var apellido = document.getElementById('ns-apellido').value.trim();
   var nombre = document.getElementById('ns-nombre').value.trim();
   var dni = document.getElementById('ns-dni').value.trim();
   var errEl = document.getElementById('ns-error');
-  function _err(msg){ errEl.innerText = msg; errEl.style.display = ''; return; }
+  function _err(msg){
+    errEl.innerText = msg; errEl.style.display = '';
+    errEl.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
   if(!apellido) return _err('El apellido es obligatorio');
   if(!nombre) return _err('El nombre es obligatorio');
-  if(!dni || dni.length < 4) return _err('Documento invalido');
+  if(!dni || dni.length < 4) return _err('Documento inválido');
+  var _fnac = document.getElementById('ns-fnac').value;
+  if(_fnac && _fnac > new Date().toISOString().split('T')[0]) return _err('La fecha de nacimiento no puede ser futura');
+  var _email = document.getElementById('ns-email').value.trim();
+  if(_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_email)) return _err('El email ingresado no es válido');
+  var _cel = document.getElementById('ns-celular').value.trim();
+  if(_cel && !/^[\d\s\-\+\(\)]{6,20}$/.test(_cel)) return _err('El teléfono solo puede contener números');
   var dup = DB.jugadores.slice(1).find(function(f){ return f && (f[COL.DNI]||f[COL.TARJETA]||'').toString() === dni; });
   if(dup) return _err('Ya existe un ' + T('socio') + ' con documento ' + dni);
   errEl.style.display = 'none';
