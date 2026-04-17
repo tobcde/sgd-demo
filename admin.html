@@ -3986,7 +3986,7 @@ function renderListActividades() {
         + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Actividades" data-row="' + a._row + '">X</button>'
         + '</div>';
     }).join('');
-  el.addEventListener('click', function(e){
+  el.onclick = function(e){
     var btn = e.target.closest('[data-action="borrar"]');
     if(btn) {
       sgdConfirm('Eliminar esta actividad?', function() {
@@ -4050,7 +4050,7 @@ function renderList(id, data, tabla) {
     return '<div class="item-row"><span>' + item[0] + '</span>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="' + tabla + '" data-row="' + item[item.length-1] + '">X</button></div>';
   }).join('');
-  el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, btn.dataset.row); });
+  el.onclick = function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, btn.dataset.row); };
 }
 
 function crearSimple(t, id) {
@@ -4090,14 +4090,14 @@ function renderListProfesores() {
       + '<span style="font-size:12px;color:var(--muted);">' + dni + email + '</span>'
       + '</div>';
   }).join('');
-  el.addEventListener('click', function(e) {
+  el.onclick = function(e) {
     var btn = e.target.closest('[data-action]'); if(!btn) return;
     if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, btn.dataset.row);
     if(btn.dataset.action === 'editprof') {
       var p = DB.profesores[parseInt(btn.dataset.idx)];
       cargarEditProfesor(p[p.length-1], p[0], p[1], p[2], p[3], p[4]);
     }
-  });
+  };
 }
 
 function cargarEditProfesor(idx, nombre, dni, fecha, email, pass) {
@@ -4229,14 +4229,14 @@ function renderListCat() {
       + '<div style="display:flex;gap:4px;"><button class="icon-btn" style="color:var(--muted);" data-action="editcat" data-idx="' + i + '">editar</button>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Config_Categorias" data-row="' + c[c.length-1] + '">X</button></div></div>';
   }).join('');
-  el.addEventListener('click', function(e){
+  el.onclick = function(e){
     var btn = e.target.closest('[data-action]'); if(!btn) return;
     if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, btn.dataset.row);
     if(btn.dataset.action === 'editcat'){
       var c = DB.categorias[parseInt(btn.dataset.idx)];
       cargarEditCat(c[c.length-1], c[0], c[1], c[2], c[3], c[4]||'Mixto', getCatActs(c));
     }
-  });
+  };
 }
 
 function cargarEditCat(idx, n, co, mi, ma, g, acts) {
@@ -4329,7 +4329,7 @@ function renderListPrecios() {
       + '<button class="icon-btn" style="color:var(--red);" data-action="delprecio" data-row="' + p._row + '">X</button>'
       + '</div></div>';
   }).join('');
-  el.addEventListener('click', function(e) {
+  el.onclick = function(e) {
     var btn = e.target.closest('[data-action]'); if(!btn) return;
     if(btn.dataset.action === 'delprecio') {
       var _rowDel = btn.dataset.row;
@@ -4355,7 +4355,7 @@ function renderListPrecios() {
       document.getElementById('cardPrecios').style.borderColor = 'var(--orange)';
       document.getElementById('btn-cancel-precio').style.display = '';
     }
-  });
+  };
 }
 
 function cancelarEditPrecio() {
@@ -4517,7 +4517,7 @@ function renderHorarios() {
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Horarios" data-row="' + h[h.length-1] + '">X</button></div>'
       + '<small style="color:var(--muted);">Sede: ' + (h[2]||'-') + ' | Instructores: ' + (h[3]||'-') + ' | ' + T('grupo') + ': ' + (h[4]||'-') + (h[5] ? ' | Actividad: ' + h[5] : '') + ' | Modalidad: ' + (h[6]||'Mixto') + '</small></div>';
   }).join('');
-  el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, btn.dataset.row); });
+  el.onclick = function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, btn.dataset.row); };
 }
 
 function crearHorario() {
