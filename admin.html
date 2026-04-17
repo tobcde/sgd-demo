@@ -3187,6 +3187,7 @@ function onCambioTurnoAsist() {
 function poblarTurnosAsist() {
   var fecha = document.getElementById('asistFecha').value;
   if(!fecha) return;
+  var _hayTurnos = false;
   var d = new Date(fecha + 'T12:00:00');
   var dias = ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'];
   var diaSel = dias[d.getDay()];
@@ -3982,14 +3983,14 @@ function renderListActividades() {
         + '<strong>' + a.nombre + '</strong>'
         + '<span style="width:14px;height:14px;border-radius:50%;background:' + (a.color||'#888') + ';display:inline-block;"></span>'
         + '</span>'
-        + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Actividades" data-row="' + (i+2) + '">X</button>'
+        + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Actividades" data-row="' + a._row + '">X</button>'
         + '</div>';
     }).join('');
   el.addEventListener('click', function(e){
     var btn = e.target.closest('[data-action="borrar"]');
     if(btn) {
       sgdConfirm('Eliminar esta actividad?', function() {
-        borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
+        borrar(btn.dataset.tabla, btn.dataset.row);
       }, 'ELIMINAR');
     }
   });
@@ -4049,7 +4050,7 @@ function renderList(id, data, tabla) {
     return '<div class="item-row"><span>' + item[0] + '</span>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="' + tabla + '" data-row="' + item[item.length-1] + '">X</button></div>';
   }).join('');
-  el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, parseInt(btn.dataset.row)); });
+  el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, btn.dataset.row); });
 }
 
 function crearSimple(t, id) {
@@ -4091,7 +4092,7 @@ function renderListProfesores() {
   }).join('');
   el.addEventListener('click', function(e) {
     var btn = e.target.closest('[data-action]'); if(!btn) return;
-    if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
+    if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, btn.dataset.row);
     if(btn.dataset.action === 'editprof') {
       var p = DB.profesores[parseInt(btn.dataset.idx)];
       cargarEditProfesor(p[p.length-1], p[0], p[1], p[2], p[3], p[4]);
@@ -4230,7 +4231,7 @@ function renderListCat() {
   }).join('');
   el.addEventListener('click', function(e){
     var btn = e.target.closest('[data-action]'); if(!btn) return;
-    if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, parseInt(btn.dataset.row));
+    if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, btn.dataset.row);
     if(btn.dataset.action === 'editcat'){
       var c = DB.categorias[parseInt(btn.dataset.idx)];
       cargarEditCat(c[c.length-1], c[0], c[1], c[2], c[3], c[4]||'Mixto', getCatActs(c));
@@ -4331,7 +4332,7 @@ function renderListPrecios() {
   el.addEventListener('click', function(e) {
     var btn = e.target.closest('[data-action]'); if(!btn) return;
     if(btn.dataset.action === 'delprecio') {
-      var _rowDel = parseInt(btn.dataset.row);
+      var _rowDel = btn.dataset.row;
       sgdConfirm('Eliminar este precio?', function() {
         mostrarLoader('Eliminando...');
         callScript({action:'deletePrecio', rowIndex:_rowDel, pass:TOKEN, _noRetry:true}, function(){
@@ -4516,7 +4517,7 @@ function renderHorarios() {
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Horarios" data-row="' + h[h.length-1] + '">X</button></div>'
       + '<small style="color:var(--muted);">Sede: ' + (h[2]||'-') + ' | Instructores: ' + (h[3]||'-') + ' | ' + T('grupo') + ': ' + (h[4]||'-') + (h[5] ? ' | Actividad: ' + h[5] : '') + ' | Modalidad: ' + (h[6]||'Mixto') + '</small></div>';
   }).join('');
-  el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, parseInt(btn.dataset.row)); });
+  el.addEventListener('click', function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, btn.dataset.row); });
 }
 
 function crearHorario() {
