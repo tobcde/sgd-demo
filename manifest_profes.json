@@ -1,8 +1,9 @@
 {
+  "id": "/sgd-demo/profes",
   "name": "SGD - Profes",
   "short_name": "Profes",
   "start_url": "https://tobcde.github.io/sgd-demo/profes.html",
-  "scope": "https://tobcde.github.io/sgd-demo/",
+  "scope": "https://tobcde.github.io/sgd-demo/profes.html",
   "display": "standalone",
   "background_color": "#0a0d0a",
   "theme_color": "#1a7a3c",
