@@ -300,7 +300,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v1.0</div>
+<div id="version-badge">v1.1</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
@@ -360,6 +360,8 @@ var CAMPOS = [
   {key:'c2nombre', label:'Contacto 2 - Nombre', tipo:'text', editable:true},
   {key:'c2tel',    label:'Contacto 2 - Tel',    tipo:'tel',  editable:true}
 ];
+
+var CATEGORIAS = [];  // cargadas desde config_categorias
 
 // ══════════════════════════════════════════════════════════════════
 // HELPERS UI
@@ -426,6 +428,39 @@ function cargarInstitucion() {
     .catch(function(e) { console.warn('Sin config institución:', e); });
 }
 
+function cargarCategorias() {
+  return db.collection('config_categorias').get()
+    .then(function(snap) {
+      CATEGORIAS = [];
+      snap.forEach(function(d) {
+        var f = d.data() || {};
+        CATEGORIAS.push({
+          id:     d.id,
+          nombre: f.nombre || '',
+          genero: f.genero || 'Mixto',
+          desde:  parseInt(f.edadDesde, 10) || 0,
+          hasta:  parseInt(f.edadHasta, 10) || 0
+        });
+      });
+    })
+    .catch(function(e) { console.warn('Sin categorias:', e); });
+}
+
+// Sugiere categoría en base al año de nacimiento y sexo del OCR.
+// edadDesde/edadHasta en config_categorias son AÑOS de nacimiento.
+function sugerirCategoriaPorEdad(fechaNac, sexo) {
+  if (!fechaNac || !CATEGORIAS.length) return '';
+  var anio = parseInt((fechaNac || '').substring(0, 4), 10);
+  if (!anio) return '';
+  var sexoNorm = normalizarSexo(sexo);
+  var match = CATEGORIAS.find(function(c) {
+    if (anio < c.desde || anio > c.hasta) return false;
+    if (c.genero === 'Mixto') return true;
+    return c.genero === sexoNorm;
+  });
+  return match ? match.nombre : '';
+}
+
 // ══════════════════════════════════════════════════════════════════
 // FIRESTORE — buscar socio por DNI
 // ══════════════════════════════════════════════════════════════════
@@ -463,7 +498,7 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
       vencimiento: '',
       fechaIngreso:hoy,
       creador:     'App',
-      categoriaApp:'',
+      categoriaApp:campos.categoriaApp || '',
       plan:        '',
       foto:        campos.fotoUrl     || '',
       dniFoto:     campos.dniFotoUrl  || '',
@@ -486,6 +521,7 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
     if (campos.aptoUrl)    upd.apto      = campos.aptoUrl;
     if (campos.contacto1)  upd.contacto1 = campos.contacto1;
     if (campos.contacto2)  upd.contacto2 = campos.contacto2;
+    if (campos.categoriaApp) upd.categoriaApp = campos.categoriaApp;
     return ref.update(upd).then(function(){ return {ok: true}; });
   }
 }
@@ -745,6 +781,7 @@ function inicializarPaso4() {
     + '</div></div>';
 
   // Campos editables
+  var sugerida = S.esNuevo ? sugerirCategoriaPorEdad(ocr.fechaNac, ocr.sexo) : '';
   CAMPOS.forEach(function(c) {
     var val = sis[c.key] || '';
     // Separar contacto1/2 del formato "Nombre|Tel"
@@ -752,10 +789,25 @@ function inicializarPaso4() {
     if (c.key === 'c1tel'    && sis.contacto1) val = sis.contacto1.split('|')[1] || '';
     if (c.key === 'c2nombre' && sis.contacto2) val = sis.contacto2.split('|')[0] || '';
     if (c.key === 'c2tel'    && sis.contacto2) val = sis.contacto2.split('|')[1] || '';
+    // Pre-llenar domicilio con lo leido del DNI si es socio nuevo
+    if (c.key === 'domicilio' && S.esNuevo && !val && ocr.domicilio) val = ocr.domicilio;
 
     html += '<div class="field"><label>' + c.label + '</label>'
       + '<input type="' + c.tipo + '" id="edit-' + c.key + '" value="' + escHtml(val) + '"></div>';
   });
+
+  // Select de categoría (auto-sugerida por edad + sexo del DNI)
+  var catActual = sis.categoriaApp || sugerida || '';
+  var catHtml = '<div class="field"><label>Categoría'
+    + (sugerida && catActual === sugerida ? ' <span style="color:var(--secondary);font-size:11px;font-weight:normal;">&#x2728; Sugerida por edad</span>' : '')
+    + '</label><select id="edit-categoriaApp" style="width:100%;padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;">';
+  catHtml += '<option value="">— Sin categoría —</option>';
+  CATEGORIAS.forEach(function(c) {
+    var sel = (c.nombre === catActual) ? ' selected' : '';
+    catHtml += '<option value="' + escHtml(c.nombre) + '"' + sel + '>' + escHtml(c.nombre) + '</option>';
+  });
+  catHtml += '</select></div>';
+  html += catHtml;
 
   document.getElementById('campos-editables').innerHTML = html;
 
@@ -855,7 +907,7 @@ function renderResumen() {
   var tSocio = INST.terminologiaSocio || 'Socio';
 
   var html = '<div class="resumen-section"><div class="resumen-title">Datos personales</div>';
-  var labels = {apellido:'Apellido',nombre:'Nombre',dni:'DNI',fechaNac:'Fecha Nac.',sexo:'Sexo',domicilio:'Domicilio',email:'Email',celular:'Celular'};
+  var labels = {apellido:'Apellido',nombre:'Nombre',dni:'DNI',fechaNac:'Fecha Nac.',sexo:'Sexo',domicilio:'Domicilio',email:'Email',celular:'Celular',categoriaApp:'Categoría',contacto1:'Contacto 1',contacto2:'Contacto 2'};
   var todos = Object.assign({}, {apellido:ocr.apellido,nombre:ocr.nombre,dni:ocr.dni,fechaNac:ocr.fechaNac,sexo:ocr.sexo}, campos);
   Object.keys(labels).forEach(function(k) {
     if (todos[k]) html += '<div class="resumen-row"><span class="resumen-label">'+labels[k]+'</span><span class="resumen-val">'+escHtml(todos[k])+'</span></div>';
@@ -994,6 +1046,8 @@ function getCamposEditados() {
   });
   out.contacto1 = [out.c1nombre||'', out.c1tel||''].filter(Boolean).join('|');
   out.contacto2 = [out.c2nombre||'', out.c2tel||''].filter(Boolean).join('|');
+  var catEl = document.getElementById('edit-categoriaApp');
+  if (catEl) out.categoriaApp = catEl.value;
   out.dni = normalizarDni((S.ocrData && S.ocrData.dni) || '');
   if (S.esNuevo) {
     if (!out.apellido) out.apellido = (S.ocrData && S.ocrData.apellido) || '';
@@ -1012,7 +1066,7 @@ window.onload = function() {
   // Auth anónimo — necesario para acceder a Firestore
   auth.signInAnonymously()
     .then(function() {
-      return cargarInstitucion();
+      return Promise.all([cargarInstitucion(), cargarCategorias()]);
     })
     .then(function() {
       ocultarLoader();
