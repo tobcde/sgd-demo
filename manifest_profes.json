@@ -1,20 +1,13 @@
 {
-  "name": "SGD DEMO - Personal",
-  "short_name": "Personal",
-  "start_url": "/profes.html",
+  "name": "SGD - Profes",
+  "short_name": "Profes",
+  "start_url": "https://tobcde.github.io/sgd-demo/profes.html",
+  "scope": "https://tobcde.github.io/sgd-demo/",
   "display": "standalone",
-  "background_color": "#0d1117",
+  "background_color": "#0a0d0a",
   "theme_color": "#1a7a3c",
   "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    {"src": "icons/profes/icon-profes-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/profes/icon-profes-512.png", "sizes": "512x512", "type": "image/png"}
   ]
 }
