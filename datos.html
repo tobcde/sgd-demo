@@ -307,7 +307,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v1.1</div>
+<div id="version-badge">v1.2</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
@@ -536,7 +536,8 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
 // ══════════════════════════════════════════════════════════════════
 // GAS — OCR (único endpoint que queda en GAS)
 // ══════════════════════════════════════════════════════════════════
-function callOCR(imgFront, imgBack, cb, cbErr) {
+function callOCR(imgFront, imgBack, cb, cbErr, intento) {
+  intento = intento || 1;
   var body = {
     action:   'ocrDocumento',
     token:    GAS_OCR_KEY,
@@ -544,6 +545,7 @@ function callOCR(imgFront, imgBack, cb, cbErr) {
     imgBack:  imgBack  || null,
     tipoDoc:  'DNI argentino'
   };
+  if (intento > 1) mostrarLoader('Reintentando... (' + intento + '/3)');
   fetch(GAS_URL, {
     method:  'POST',
     headers: {'Content-Type': 'text/plain'},
@@ -555,7 +557,14 @@ function callOCR(imgFront, imgBack, cb, cbErr) {
     if(d && d.error){ if(cbErr) cbErr(d.error); else toast(d.error,'err'); }
     else { if(cb) cb(d); }
   })
-  .catch(function(){ if(cbErr) cbErr('Sin conexión con el servidor OCR'); });
+  .catch(function(){
+    // Red movil puede cortar en OCR largo (cold start Gemini) — reintento hasta 3
+    if (intento < 3) {
+      setTimeout(function() { callOCR(imgFront, imgBack, cb, cbErr, intento + 1); }, 1500);
+    } else {
+      if (cbErr) cbErr('Sin conexión con el servidor OCR');
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -676,7 +685,7 @@ function comprimirImagen(dataUrl, maxW, maxH, calidad, cb) {
 }
 
 function setImagen(n, data) {
-  comprimirImagen(data, 1200, 1200, 0.75, function(compressed) {
+  comprimirImagen(data, 900, 900, 0.6, function(compressed) {
     if (n === 1) S.imgFront = compressed;
     else         S.imgBack  = compressed;
 
