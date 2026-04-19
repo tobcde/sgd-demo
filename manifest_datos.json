@@ -1,8 +1,9 @@
 {
+  "id": "/sgd-demo/datos",
   "name": "SGD - Datos",
   "short_name": "Datos",
   "start_url": "https://tobcde.github.io/sgd-demo/datos.html",
-  "scope": "https://tobcde.github.io/sgd-demo/",
+  "scope": "https://tobcde.github.io/sgd-demo/datos.html",
   "display": "standalone",
   "background_color": "#0a0d0a",
   "theme_color": "#1a7a3c",
