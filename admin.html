@@ -730,6 +730,8 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <input id="inpPFecha" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Fecha de nacimiento (ej: 01/05/1990)">
       <input id="inpPEmail" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Email">
       <input id="inpPPass" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Contrasena (para login)">
+      <input id="inpPTgUser" class="edit-input" style="width:100%;margin-bottom:6px;" placeholder="Usuario Telegram (sin @) - opcional">
+      <input id="inpPTgChatId" class="edit-input" style="width:100%;margin-bottom:6px;background:var(--bg);color:var(--muted);" placeholder="Telegram Chat ID (se autocompleta)" readonly>
       <div style="display:flex;gap:8px;">
         <button id="btnProfesor" class="btn btn-save" style="flex:1;" onclick="guardarProfesor()">AGREGAR</button>
         <button id="btnCancelProfesor" class="btn" style="display:none;background:var(--muted);color:#fff;" onclick="cancelarEditProfesor()">CANCELAR</button>
@@ -1442,7 +1444,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.28</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.29</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1810,7 +1812,7 @@ function inicializar(passReal) {
 
     // Profesores
     DB.profesores = [];
-    profSnap.forEach(function(doc){ var d=doc.data(); DB.profesores.push([d.nombre||'',d.dni||doc.id,d.fechaNac||'',d.email||'',d.contrasena||'',doc.id]); });
+    profSnap.forEach(function(doc){ var d=doc.data(); DB.profesores.push([d.nombre||'',d.dni||doc.id,d.fechaNac||'',d.email||'',d.contrasena||'',doc.id,d.telegramUsername||'',d.telegramChatId||'']); });
 
     // Sedes
     DB.sedes = [];
@@ -2154,7 +2156,9 @@ function _fsDispatch(action, p, ok, err) {
       };
       var col = tabMap[p.tabName] || p.tabName.toLowerCase().replace(/[^a-z0-9]/g,'_');
       var docId = (p.rowIndex||'').toString();
-      db.collection(col).doc(docId).set(_rowToDoc(p.tabName, p.rowArray||[]))
+      // merge:true preserva campos escritos por otros procesos (ej: bot Telegram
+      // persiste telegramChatId en profesores al recibir /start)
+      db.collection(col).doc(docId).set(_rowToDoc(p.tabName, p.rowArray||[]), {merge:true})
         .then(function(){ cb({ok:true}); })
         .catch(function(e){ cbErr(e.message); });
       break;
@@ -2345,7 +2349,12 @@ function _rowToDoc(tabName, row) {
         auth.createUserWithEmailAndPassword(dniP+'@sgd.app', row[4]||dniP)
           .catch(function(e){ if(e.code!=='auth/email-already-in-use') console.warn('Profe auth:', e.message); });
       }
-      return {nombre:row[0]||'',dni:dniP,fechaNac:row[2]||'',email:row[3]||'',contrasena:row[4]||dniP,esPrimerLogin:!row[4]};
+      return {
+        nombre:row[0]||'', dni:dniP, fechaNac:row[2]||'',
+        email:row[3]||'', contrasena:row[4]||dniP, esPrimerLogin:!row[4],
+        telegramUsername: (row[5]||'').replace(/^@/, ''),
+        telegramChatId:   row[6]||''
+      };
     }
     case 'Config_Categorias': return {nombre:row[0]||'',color:row[1]||'',edadDesde:String(row[2]||''),edadHasta:String(row[3]||''),genero:row[4]||'Mixto',actividades:row[5]||''};
     case 'Sedes': return {nombre:row[0]||''};
@@ -4079,15 +4088,17 @@ function renderListProfesores() {
     var nombre = p[0] || '';
     var dni = p[1] ? (' &bull; DNI: ' + p[1]) : '';
     var email = p[3] ? (' &bull; ' + p[3]) : '';
-    var row = p[p.length - 1];
+    var tgChip = p[7] ? ' &bull; <span style="color:var(--secondary);">TG:&nbsp;' + esc(p[7]) + '</span>'
+                      : (p[6] ? ' &bull; <span style="color:var(--muted);">@' + esc(p[6]) + '</span>' : '');
+    var row = p[5];
     return '<div class="item-row" style="flex-direction:column;align-items:flex-start;gap:4px;">'
       + '<div style="display:flex;width:100%;justify-content:space-between;align-items:center;">'
-      + '<span style="font-weight:600;">' + nombre + '</span>'
+      + '<span style="font-weight:600;">' + esc(nombre) + '</span>'
       + '<div style="display:flex;gap:6px;">'
       + '<button class="icon-btn" style="color:var(--muted);font-size:13px;" data-action="editprof" data-idx="' + i + '">editar</button>'
       + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Profesores" data-row="' + row + '">X</button>'
       + '</div></div>'
-      + '<span style="font-size:12px;color:var(--muted);">' + dni + email + '</span>'
+      + '<span style="font-size:12px;color:var(--muted);">' + dni + email + tgChip + '</span>'
       + '</div>';
   }).join('');
   el.onclick = function(e) {
@@ -4095,18 +4106,20 @@ function renderListProfesores() {
     if(btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, btn.dataset.row);
     if(btn.dataset.action === 'editprof') {
       var p = DB.profesores[parseInt(btn.dataset.idx)];
-      cargarEditProfesor(p[p.length-1], p[0], p[1], p[2], p[3], p[4]);
+      cargarEditProfesor(p[5], p[0], p[1], p[2], p[3], p[4], p[6], p[7]);
     }
   };
 }
 
-function cargarEditProfesor(idx, nombre, dni, fecha, email, pass) {
+function cargarEditProfesor(idx, nombre, dni, fecha, email, pass, tgUser, tgChatId) {
   profEditIdx = idx;
   document.getElementById('inpPNombre').value = nombre || '';
   document.getElementById('inpPDNI').value = dni || '';
   document.getElementById('inpPFecha').value = fecha || '';
   document.getElementById('inpPEmail').value = email || '';
   document.getElementById('inpPPass').value = pass || '';
+  document.getElementById('inpPTgUser').value = tgUser || '';
+  document.getElementById('inpPTgChatId').value = tgChatId || '';
   document.getElementById('btnProfesor').innerText = 'ACTUALIZAR';
   document.getElementById('btnProfesor').style.background = 'var(--orange)';
   document.getElementById('cardProfesor').style.borderColor = 'var(--orange)';
@@ -4121,6 +4134,8 @@ function cancelarEditProfesor() {
   document.getElementById('inpPFecha').value = '';
   document.getElementById('inpPEmail').value = '';
   document.getElementById('inpPPass').value = '';
+  document.getElementById('inpPTgUser').value = '';
+  document.getElementById('inpPTgChatId').value = '';
   document.getElementById('btnProfesor').innerText = 'AGREGAR';
   document.getElementById('btnProfesor').style.background = '';
   document.getElementById('cardProfesor').style.borderColor = '';
@@ -4130,15 +4145,34 @@ function cancelarEditProfesor() {
 function guardarProfesor() {
   var nombre = document.getElementById('inpPNombre').value.trim();
   if(!nombre) return alert('El nombre es obligatorio');
+  var tgUser = document.getElementById('inpPTgUser').value.trim().replace(/^@/, '');
+  var tgChatId = document.getElementById('inpPTgChatId').value.trim();
   var rowArray = [
     nombre,
     document.getElementById('inpPDNI').value.trim(),
     document.getElementById('inpPFecha').value.trim(),
     document.getElementById('inpPEmail').value.trim(),
-    document.getElementById('inpPPass').value.trim()
+    document.getElementById('inpPPass').value.trim(),
+    tgUser,
+    tgChatId
   ];
   mostrarLoader('Guardando...');
-  var cb = function() { cancelarEditProfesor(); renderListProfesores(); poblarSelects(); poblarTurnosAsist(); ocultarLoader(); toast('Instructor guardado', 'ok'); };
+  var editing = profEditIdx;
+  var cb = function(r) {
+    // Reflejar el cambio en DB.profesores sin releer Firestore
+    var dniN = (rowArray[1]||'').toString();
+    var nuevo = [rowArray[0], dniN, rowArray[2], rowArray[3], rowArray[4],
+                 editing || (r && r.fila) || dniN, rowArray[5], tgChatId];
+    if (editing) {
+      for (var i=0; i<DB.profesores.length; i++) {
+        if (DB.profesores[i][5] === editing) { DB.profesores[i] = nuevo; break; }
+      }
+    } else {
+      DB.profesores.push(nuevo);
+    }
+    cancelarEditProfesor(); renderListProfesores(); poblarSelects(); poblarTurnosAsist();
+    ocultarLoader(); toast('Instructor guardado', 'ok');
+  };
   var err = function(e) { ocultarLoader(); alert('Error: ' + e); };
   if(profEditIdx) {
     callScript({action:'updateAdminItem', tabName:'Profesores', rowIndex:profEditIdx, rowArray:rowArray, pass:TOKEN, _noRetry:true}, cb, err);
