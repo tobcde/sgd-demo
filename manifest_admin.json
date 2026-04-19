@@ -1,20 +1,14 @@
 {
-  "name": "Excursionistas - Admin",
+  "id": "/sgd-demo/admin",
+  "name": "SGD - Admin",
   "short_name": "Admin",
-  "start_url": "/admin.html",
+  "start_url": "https://tobcde.github.io/sgd-demo/admin.html",
+  "scope": "https://tobcde.github.io/sgd-demo/admin.html",
   "display": "standalone",
   "background_color": "#0a0d0a",
-  "theme_color": "#2563eb",
+  "theme_color": "#1a7a3c",
   "icons": [
-    {
-      "src": "icons/admin/icon-admin-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/admin/icon-admin-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    {"src": "icons/admin/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/admin/icon-512.png", "sizes": "512x512", "type": "image/png"}
   ]
 }
