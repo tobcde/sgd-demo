@@ -1,0 +1,13 @@
+{
+  "name": "SGD - Datos",
+  "short_name": "Datos",
+  "start_url": "https://tobcde.github.io/sgd-demo/datos.html",
+  "scope": "https://tobcde.github.io/sgd-demo/",
+  "display": "standalone",
+  "background_color": "#0a0d0a",
+  "theme_color": "#1a7a3c",
+  "icons": [
+    {"src": "icons/datos/icon-datos-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/datos/icon-datos-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}
