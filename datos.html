@@ -281,6 +281,16 @@ video{width:100%;display:block;}
     </div>
   </div>
 
+  <!-- DATOS MEDICOS (colapsable) -->
+  <div class="card">
+    <div class="card-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="toggleMedico()">
+      <span>&#x1FA7A; Datos médicos <span style="color:var(--muted);font-size:11px;font-weight:normal;">(opcional)</span></span>
+      <span id="medico-chev" style="font-size:14px;">&#x25BC;</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:-6px;margin-bottom:4px;">Podés completarlo ahora o más adelante volviendo a escanear el DNI.</div>
+    <div id="medico-body" style="display:none;margin-top:10px;"></div>
+  </div>
+
   <div class="btn-row">
     <button class="btn btn-outline" onclick="irPaso(3)">&#x2190; Volver</button>
     <button class="btn btn-primary" onclick="irPaso(5)">Continuar &#x2192;</button>
@@ -369,6 +379,21 @@ var CAMPOS = [
 ];
 
 var CATEGORIAS = [];  // cargadas desde config_categorias
+
+// Campos médicos (opcionales). Se guardan como objeto `medico` en Firestore.
+var MEDICO_CAMPOS = [
+  {key:'grupoSangre',  label:'Grupo sanguíneo', tipo:'select',
+    opciones:['','No sabe','A+','A-','B+','B-','AB+','AB-','0+','0-']},
+  {key:'obraSocial',   label:'Obra social',     tipo:'text'},
+  {key:'nroAfiliado',  label:'N° afiliado',     tipo:'text'},
+  {key:'alergias',     label:'Alergias (medicamentos, alimentos, otros)', tipo:'textarea'},
+  {key:'medicacion',   label:'Medicación habitual',                        tipo:'textarea'},
+  {key:'cronicas',     label:'Enfermedades crónicas (asma, diabetes, etc.)', tipo:'textarea'},
+  {key:'cirugias',     label:'Cirugías previas (con año aprox.)',          tipo:'textarea'},
+  {key:'lesiones',     label:'Lesiones deportivas previas',                tipo:'textarea'},
+  {key:'antecedentes', label:'Antecedentes familiares (muerte súbita, cardiopatías)', tipo:'textarea'},
+  {key:'obsMedicas',   label:'Observaciones médicas',                      tipo:'textarea'}
+];
 
 // ══════════════════════════════════════════════════════════════════
 // HELPERS UI
@@ -514,7 +539,8 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
       actividades: '',
       catSecundaria:'',
       contacto1:   campos.contacto1  || '',
-      contacto2:   campos.contacto2  || ''
+      contacto2:   campos.contacto2  || '',
+      medico:      campos.medico     || {}
     };
     return ref.set(doc).then(function(){ return {ok: true}; });
   } else {
@@ -530,6 +556,7 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
     if (campos.contacto1)  upd.contacto1 = campos.contacto1;
     if (campos.contacto2)  upd.contacto2 = campos.contacto2;
     if (campos.categoriaApp) upd.categoriaApp = campos.categoriaApp;
+    if (campos.medico)     upd.medico    = campos.medico;
     return ref.update(upd).then(function(){ return {ok: true}; });
   }
 }
@@ -1073,7 +1100,67 @@ function getCamposEditados() {
     out.sexo     = (S.ocrData && S.ocrData.sexo)     || '';
     out.domicilio= out.domicilio || (S.ocrData && S.ocrData.domicilio) || '';
   }
+  out.medico = getMedico();
   return out;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DATOS MÉDICOS (colapsable, opcional)
+// ══════════════════════════════════════════════════════════════════
+function renderMedico() {
+  var sis = S.sistemaData || {};
+  var med = sis.medico || {};
+  var html = '';
+  MEDICO_CAMPOS.forEach(function(c) {
+    var val = med[c.key] || '';
+    html += '<div class="field"><label>' + c.label + '</label>';
+    if (c.tipo === 'select') {
+      html += '<select id="med-' + c.key + '" style="width:100%;padding:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;">';
+      c.opciones.forEach(function(o) {
+        var sel = (o === val) ? ' selected' : '';
+        html += '<option value="' + escHtml(o) + '"' + sel + '>' + (o || '— Seleccionar —') + '</option>';
+      });
+      html += '</select>';
+    } else if (c.tipo === 'textarea') {
+      html += '<textarea id="med-' + c.key + '" rows="2" style="width:100%;padding:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;resize:vertical;font-family:inherit;">' + escHtml(val) + '</textarea>';
+    } else {
+      html += '<input type="text" id="med-' + c.key + '" value="' + escHtml(val) + '">';
+    }
+    html += '</div>';
+  });
+  document.getElementById('medico-body').innerHTML = html;
+}
+
+function toggleMedico() {
+  var body = document.getElementById('medico-body');
+  var chev = document.getElementById('medico-chev');
+  var abierto = body.style.display !== 'none';
+  if (abierto) {
+    body.style.display = 'none';
+    chev.innerHTML = '&#x25BC;';
+  } else {
+    if (!body.innerHTML) renderMedico();
+    body.style.display = 'block';
+    chev.innerHTML = '&#x25B2;';
+  }
+}
+
+function getMedico() {
+  var med = {};
+  var tocado = false;
+  MEDICO_CAMPOS.forEach(function(c) {
+    var el = document.getElementById('med-' + c.key);
+    if (!el) return;
+    var v = (el.value || '').trim();
+    med[c.key] = v;
+    if (v) tocado = true;
+  });
+  // Si el usuario no abrió la sección, no hay inputs → devolvemos lo que ya había (se conserva)
+  if (!document.getElementById('med-' + MEDICO_CAMPOS[0].key)) {
+    var sis = S.sistemaData || {};
+    return sis.medico || null;
+  }
+  return tocado ? med : null;
 }
 
 // ══════════════════════════════════════════════════════════════════
