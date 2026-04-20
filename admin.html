@@ -182,6 +182,13 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .r-card{background:var(--surface);border-radius:10px;padding:14px 16px;text-align:center;border:1px solid var(--border);}
 .r-card-val{font-size:22px;font-weight:800;font-family:'Barlow Condensed',sans-serif;}
 .r-card-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+/* Pills de reportes */
+.r-pill-cat{background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:22px;padding:9px 18px;cursor:pointer;font-size:13px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-weight:600;transition:all .15s;}
+.r-pill-cat:hover{border-color:var(--secondary);color:var(--text);}
+.r-pill-cat.active{background:var(--secondary);color:#0a0d0a;border-color:var(--secondary);font-weight:800;box-shadow:0 2px 8px rgba(26,122,60,.35);}
+.r-pill-sub{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:14px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:'Barlow',sans-serif;transition:all .15s;}
+.r-pill-sub:hover{color:var(--text);border-color:var(--secondary);}
+.r-pill-sub.active{background:rgba(26,122,60,.18);color:var(--secondary);border-color:var(--secondary);font-weight:700;}
 
 /* INSTITUCION */
 .inst-field{margin-bottom:14px;}
@@ -767,28 +774,30 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <!-- TAB REPORTES -->
 <div id="tab-reportes" class="tab-content" style="display:none;">
   <div style="padding:20px;max-width:1200px;margin:0 auto;">
+    <!-- Pills por categoría -->
+    <div id="r-pills-cat" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <button type="button" class="r-pill-cat active" data-cat="pagos" onclick="selectRptCat('pagos')">&#x1F4B0; Pagos &amp; cuotas</button>
+      <button type="button" class="r-pill-cat" data-cat="asist" onclick="selectRptCat('asist')">&#x1F4CB; Asistencias</button>
+      <button type="button" class="r-pill-cat" data-cat="socios" onclick="selectRptCat('socios')">&#x1F465; Socios</button>
+    </div>
+    <!-- Pills de sub-reportes -->
+    <div id="r-pills-sub" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;"></div>
+
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;align-items:flex-end;">
-      <div class="filter-group">
-        <label class="filter-label">Reporte</label>
-        <select id="rTipo" class="filter-select" onchange="renderReporte()">
-          <optgroup label="Pagos y cuotas">
-            <option value="pagos_mes">Pagos del periodo</option>
-            <option value="deudores">Deben cuota</option>
-            <option value="al_dia">Al d&iacute;a</option>
-            <option value="tipo_pago">Por tipo de pago</option>
-            <option value="caja_dia">Caja del d&iacute;a</option>
-            <option value="auditoria">Auditor&iacute;a de pagos</option>
-          </optgroup>
-          <optgroup label="Asistencias">
-            <option value="asistencia">Asistencia</option>
-            <option value="asist_matriz">Matriz de asistencia</option>
-            <option value="asist_por_dia">Asistencia por d&iacute;a</option>
-            <option value="ranking_asist">Ranking asistencia</option>
-          </optgroup>
-          <optgroup label="Socios">
-            <option value="jugadores">Listado completo</option>
-          </optgroup>
-        </select></div>
+      <!-- Select oculto: mantiene compat con renderReporte() -->
+      <select id="rTipo" style="display:none;" onchange="renderReporte()">
+        <option value="pagos_mes">Pagos del periodo</option>
+        <option value="deudores">Deben cuota</option>
+        <option value="al_dia">Al dia</option>
+        <option value="tipo_pago">Por tipo de pago</option>
+        <option value="caja_dia">Caja del dia</option>
+        <option value="auditoria">Auditoria de pagos</option>
+        <option value="asistencia">Asistencia</option>
+        <option value="asist_matriz">Matriz de asistencia</option>
+        <option value="asist_por_dia">Asistencia por dia</option>
+        <option value="ranking_asist">Ranking asistencia</option>
+        <option value="jugadores">Listado completo</option>
+      </select>
       <div class="filter-group" id="r-filter-mes">
         <label class="filter-label">Mes</label><select id="rMes" class="filter-select" onchange="renderReporte()"></select></div>
       <div class="filter-group" id="r-filter-desde" style="display:none;">
@@ -800,6 +809,9 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="filter-group" id="r-filter-cat">
         <label class="filter-label" id="lbl-r-categoria">Categoria</label>
         <select id="rCat" class="filter-select" onchange="renderReporte()"><option value="">Todas</option></select></div>
+      <div class="filter-group" id="r-filter-plan">
+        <label class="filter-label">Plan / Inscripci&oacute;n</label>
+        <select id="rPlan" class="filter-select" onchange="renderReporte()"><option value="">Todos</option></select></div>
       <button class="btn btn-secondary" onclick="exportarReporteCSV()" style="height:36px;">&#x2193; CSV</button>
     </div>
     <div id="r-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;"></div>
@@ -4798,10 +4810,18 @@ function iniciarReportes() {
   sel.innerHTML = opts;
   var rCat = document.getElementById('rCat');
   if(rCat) rCat.innerHTML = '<option value="">Todas</option>' + DB.categorias.map(function(c){ return '<option value="' + c[0] + '">' + c[0] + '</option>'; }).join('');
+  var rPlan = document.getElementById('rPlan');
+  if(rPlan){
+    var planSet = {};
+    (DB.inscripciones||[]).forEach(function(i){ var p = (i.plan||'').trim(); if(p) planSet[p] = true; });
+    (CUOTAS_DB.cuotas||[]).forEach(function(c){ var p = (c[2]||'').trim(); if(p) planSet[p] = true; });
+    var planes = Object.keys(planSet).sort();
+    rPlan.innerHTML = '<option value="">Todos</option>' + planes.map(function(p){ return '<option value="'+esc(p)+'">'+esc(p)+'</option>'; }).join('');
+  }
   document.getElementById('rDesde').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   document.getElementById('rHasta').value = now.toISOString().split('T')[0];
   document.getElementById('rCajaFecha').value = now.toISOString().split('T')[0];
-  renderReporte();
+  selectRptCat('pagos');
 }
 
 function renderReporte() {
@@ -4815,12 +4835,15 @@ function renderReporte() {
   if (_rTabla && !document.getElementById('r-thead')) {
     _rTabla.innerHTML = '<thead id="r-thead" style="background:var(--bg);"></thead><tbody id="r-tbody"></tbody>';
   }
+  // Destruir chart previo y ocultar wrap — cada reporte que quiera chart lo re-crea
+  hideRptChart();
   var _sd = function(id,v){ var e = document.getElementById(id); if(e) e.style.display = v; };
   _sd('r-filter-mes', tipo === 'tipo_pago' ? '' : 'none');
   _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
   _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
   _sd('r-filter-caja-fecha', tipo === 'caja_dia' ? '' : 'none');
-  _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-plan', ['pagos_mes','deudores','al_dia','tipo_pago','caja_dia','jugadores'].includes(tipo) ? '' : 'none');
   if(tipo === 'deudores') rptDeudores();
   else if(tipo === 'al_dia') rptAlDia();
   else if(tipo === 'jugadores') rptJugadores();
@@ -4834,10 +4857,73 @@ function renderReporte() {
   else if(tipo === 'auditoria') rptAuditoria();
 }
 
+// ── Pills + charts ───────────────────────────────────────────────
+var R_CAT_MAP = {
+  pagos:  [
+    {v:'pagos_mes',  l:'Pagos del periodo'},
+    {v:'deudores',   l:'Deben cuota'},
+    {v:'al_dia',     l:'Al d\u00EDa'},
+    {v:'tipo_pago',  l:'Por tipo de pago'},
+    {v:'caja_dia',   l:'Caja del d\u00EDa'},
+    {v:'auditoria',  l:'Auditor\u00EDa'}
+  ],
+  asist:  [
+    {v:'asistencia',    l:'Asistencia'},
+    {v:'asist_matriz',  l:'Matriz'},
+    {v:'asist_por_dia', l:'Por d\u00EDa'},
+    {v:'ranking_asist', l:'Ranking'}
+  ],
+  socios: [
+    {v:'jugadores', l:'Listado completo'}
+  ]
+};
+function selectRptCat(cat){
+  var btns = document.querySelectorAll('#r-pills-cat .r-pill-cat');
+  for(var i=0;i<btns.length;i++) btns[i].classList.toggle('active', btns[i].getAttribute('data-cat') === cat);
+  var subs = R_CAT_MAP[cat] || [];
+  var wrap = document.getElementById('r-pills-sub');
+  wrap.innerHTML = subs.map(function(s,i){
+    return '<button type="button" class="r-pill-sub'+(i===0?' active':'')+'" data-v="'+s.v+'" onclick="selectRptSub(\''+s.v+'\')">'+s.l+'</button>';
+  }).join('');
+  if(subs.length){ document.getElementById('rTipo').value = subs[0].v; renderReporte(); }
+}
+function selectRptSub(v){
+  var btns = document.querySelectorAll('#r-pills-sub .r-pill-sub');
+  for(var i=0;i<btns.length;i++) btns[i].classList.toggle('active', btns[i].getAttribute('data-v') === v);
+  document.getElementById('rTipo').value = v;
+  renderReporte();
+}
+
+var _rptChart = null;
+function hideRptChart(){
+  if(_rptChart){ try{ _rptChart.destroy(); }catch(e){} _rptChart = null; }
+  var w = document.getElementById('r-grafico-wrap'); if(w) w.style.display = 'none';
+}
+function showRptChart(cfg){
+  if(typeof Chart === 'undefined') return;
+  var w = document.getElementById('r-grafico-wrap'); if(!w) return;
+  w.style.display = '';
+  var ctx = document.getElementById('rChart').getContext('2d');
+  if(_rptChart){ try{ _rptChart.destroy(); }catch(e){} _rptChart = null; }
+  _rptChart = new Chart(ctx, cfg);
+}
+function _rptChartColors(n){
+  var base = ['#1a7a3c','#c9a227','#6de097','#e07a5f','#5f8de0','#b45f9e','#e0c25f','#5fe0c2','#e05f8d','#8d5fe0','#5fe08d','#c25fe0'];
+  var out = []; for(var i=0;i<n;i++) out.push(base[i % base.length]); return out;
+}
+
 function setTablaHeaders(cols){ document.getElementById('r-thead').innerHTML = '<tr>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr>'; }
 function setTablaRows(rows){ document.getElementById('r-tbody').innerHTML = rows.join(''); document.getElementById('r-empty').style.display = rows.length ? 'none' : ''; }
 function setCards(cards){ document.getElementById('r-cards').innerHTML = cards.map(function(c){ return '<div class="r-card"><div class="r-card-val" style="color:' + (c.color||'var(--secondary)') + ';">' + c.val + '</div><div class="r-card-lbl">' + c.lbl + '</div></div>'; }).join(''); }
 function getMesSeleccionado(){ return document.getElementById('rMes').value; }
+function getPlanFiltro(){ var e = document.getElementById('rPlan'); return e ? (e.value||'').trim() : ''; }
+function socioTienePlan(dni, plan){
+  if(!plan) return true;
+  var d = (dni||'').toString().trim();
+  return (DB.inscripciones||[]).some(function(i){
+    return (i.dni||'').toString().trim() === d && String(i.plan||'').trim() === plan;
+  });
+}
 function td(txt, cls){ return '<td' + (cls?' class="'+cls+'"':'') + '>' + txt + '</td>'; }
 function getRangoFechas(){ return {desde:document.getElementById('rDesde').value, hasta:document.getElementById('rHasta').value}; }
 function periodoLabel(p){ var a = p.split('-'); var m = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']; return m[parseInt(a[1])-1] + ' ' + a[0]; }
@@ -4861,27 +4947,47 @@ function enRango(f, desde, hasta){ var fn = normFecha(f); return (!desde || fn >
 
 function rptDeudores() {
   var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
   var rows = [];
   var total = 0;
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     var cv = estadoCuotaV2(f);
     if(cv.estado !== 'debe' && cv.estado !== 'parcial') return;
     if(cat && String(f[COL.CATEGORIA_APP]||'').trim() !== String(cat).trim()) return;
+    if(plan && !socioTienePlan(f[COL.DNI]||f[COL.TARJETA]||'', plan)) return;
     total += cv.deuda;
     rows.push('<tr>' + td((f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'')) + td(f[COL.DNI]||f[COL.TARJETA]||'','muted') + td(f[COL.CATEGORIA_APP]||'','muted') + td(cv.planNom||'-','muted') + td('$'+Number(cv.deuda).toLocaleString('es-AR'),'debe num') + '</tr>');
   });
   setCards([{val:rows.length, lbl:'Deudores', color:'var(--red)'}, {val:'$'+total.toLocaleString('es-AR'), lbl:'Deuda total', color:'var(--red)'}]);
   setTablaHeaders([T('socio'),'Documento',T('grupo'),'Plan','Deuda']);
   setTablaRows(rows);
+  // Chart: donut deuda por categoria
+  var porCat = {};
+  DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
+    var cv = estadoCuotaV2(f);
+    if(cv.estado !== 'debe' && cv.estado !== 'parcial') return;
+    var c = f[COL.CATEGORIA_APP] || 'Sin categoria';
+    porCat[c] = (porCat[c]||0) + cv.deuda;
+  });
+  var labels = Object.keys(porCat);
+  if(labels.length){
+    showRptChart({
+      type:'doughnut',
+      data:{labels:labels, datasets:[{data:labels.map(function(k){return porCat[k];}), backgroundColor:_rptChartColors(labels.length), borderWidth:0}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{color:'#ccc'}}, title:{display:true, text:'Deuda por '+T('grupo'), color:'#ccc'}}}
+    });
+  }
 }
 
 function rptAlDia() {
   var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
   var rows = [];
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     var cv = estadoCuotaV2(f);
     if(cv.estado !== 'ok' && cv.estado !== 'vence') return;
     if(cat && String(f[COL.CATEGORIA_APP]||'').trim() !== String(cat).trim()) return;
+    if(plan && !socioTienePlan(f[COL.DNI]||f[COL.TARJETA]||'', plan)) return;
     rows.push('<tr>' + td((f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'')) + td(f[COL.DNI]||f[COL.TARJETA]||'','muted') + td(f[COL.CATEGORIA_APP]||'','muted') + td(cv.planNom||'-','muted') + td(cv.hasta?formatDate(cv.hasta):'-','ok') + '</tr>');
   });
   setCards([{val:rows.length, lbl:'Al dia', color:'#6de097'}]);
@@ -4891,9 +4997,11 @@ function rptAlDia() {
 
 function rptJugadores() {
   var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
   var rows = [];
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     if(cat && String(f[COL.CATEGORIA_APP]||'').trim() !== String(cat).trim()) return;
+    if(plan && !socioTienePlan(f[COL.DNI]||f[COL.TARJETA]||'', plan)) return;
     var cv = estadoCuotaV2(f);
     var cl = cv.estado==='ok'||cv.estado==='vence'?'ok':cv.estado==='debe'||cv.estado==='parcial'?'debe':'muted';
     rows.push('<tr>' + td((f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'')) + td(f[COL.DNI]||f[COL.TARJETA]||'','muted') + td(f[COL.CATEGORIA_APP]||'','muted') + td(f[COL.EMAIL]||'-','muted') + td(f[COL.CELULAR]||'-','muted') + td(cv.estado,cl) + '</tr>');
@@ -4905,7 +5013,23 @@ function rptJugadores() {
 
 function rptPagosMes() {
   var rango = getRangoFechas();
-  var pagos = CUOTAS_DB.cuotas.filter(function(c){ return enRango(c[5]||'', rango.desde, rango.hasta); });
+  var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
+  var dniByCat = null;
+  if(cat){
+    dniByCat = {};
+    DB.jugadores.slice(1).forEach(function(f){
+      if(String(f[COL.CATEGORIA_APP]||'').trim() === String(cat).trim()){
+        dniByCat[(f[COL.DNI]||f[COL.TARJETA]||'').toString().trim()] = true;
+      }
+    });
+  }
+  var pagos = CUOTAS_DB.cuotas.filter(function(c){
+    if(!enRango(c[5]||'', rango.desde, rango.hasta)) return false;
+    if(plan && String(c[2]||'').trim() !== plan) return false;
+    if(dniByCat && !dniByCat[(c[0]||'').toString().trim()]) return false;
+    return true;
+  });
   var total = pagos.reduce(function(s,c){ return s + Number(c[6]||0); }, 0);
   var rows = pagos.sort(function(a,b){ return (b[5]||'').localeCompare(a[5]||''); }).map(function(c){
     return '<tr>' + td(c[5]||'-','muted') + td(c[1]||c[0]||'-') + td(c[2]||'-','muted') + td(c[7]||'-','muted') + td('$'+Number(c[6]).toLocaleString('es-AR'),'ok num') + '</tr>';
@@ -4913,17 +5037,45 @@ function rptPagosMes() {
   setCards([{val:pagos.length, lbl:'Pagos'}, {val:'$'+total.toLocaleString('es-AR'), lbl:'Total recaudado', color:'#6de097'}]);
   setTablaHeaders(['Fecha',T('socio'),'Plan','Metodo','Monto']);
   setTablaRows(rows);
+  // Chart: barras por día en el rango
+  var porFecha = {};
+  pagos.forEach(function(c){
+    var f = normFecha(c[5]||''); if(!f) return;
+    porFecha[f] = (porFecha[f]||0) + Number(c[6]||0);
+  });
+  var labels = Object.keys(porFecha).sort();
+  if(labels.length){
+    showRptChart({
+      type:'bar',
+      data:{labels:labels, datasets:[{label:'Recaudado $', data:labels.map(function(k){return porFecha[k];}), backgroundColor:'#1a7a3c', borderRadius:4}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{color:'#aaa'}, grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aaa'}, grid:{display:false}}}}
+    });
+  }
 }
 
 function rptTipoPago() {
   var mes = getMesSeleccionado();
-  var pagos = CUOTAS_DB.cuotas.filter(function(c){ return (c[5]||'').startsWith(mes.replace('-','/')||mes); });
+  var plan = getPlanFiltro();
+  var pagos = CUOTAS_DB.cuotas.filter(function(c){
+    if(!(c[5]||'').startsWith(mes.replace('-','/')||mes)) return false;
+    if(plan && String(c[2]||'').trim() !== plan) return false;
+    return true;
+  });
   var por = {};
   pagos.forEach(function(c){ var m = c[7]||'Sin especificar'; por[m] = (por[m]||0) + Number(c[6]||0); });
   var rows = Object.keys(por).map(function(m){ return '<tr>' + td(m) + td('$'+por[m].toLocaleString('es-AR'),'ok num') + '</tr>'; });
   setCards([{val:pagos.length, lbl:'Pagos del mes'}]);
   setTablaHeaders(['Metodo','Total']);
   setTablaRows(rows);
+  // Chart: pie por método
+  var labels = Object.keys(por);
+  if(labels.length){
+    showRptChart({
+      type:'doughnut',
+      data:{labels:labels, datasets:[{data:labels.map(function(k){return por[k];}), backgroundColor:_rptChartColors(labels.length), borderWidth:0}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{color:'#ccc'}}}}
+    });
+  }
 }
 
 function rptAsistencia() {
@@ -5176,8 +5328,22 @@ function rptAsistenciaMatriz() {
 
 function rptRankingAsist() {
   var rango = getRangoFechas();
+  var cat = document.getElementById('rCat').value;
+  var dniByCat = null;
+  if(cat){
+    dniByCat = {};
+    DB.jugadores.slice(1).forEach(function(f){
+      if(String(f[COL.CATEGORIA_APP]||'').trim() === String(cat).trim()){
+        dniByCat[(f[COL.DNI]||f[COL.TARJETA]||'').toString().trim()] = true;
+      }
+    });
+  }
   var stats = {};
-  asistencias.filter(function(r){ return enRango(r[0], rango.desde, rango.hasta); }).forEach(function(r){
+  asistencias.filter(function(r){
+    if(!enRango(r[0], rango.desde, rango.hasta)) return false;
+    if(dniByCat && !dniByCat[(r[3]||'').toString().trim()]) return false;
+    return true;
+  }).forEach(function(r){
     var dni = r[3]; if(!stats[dni]) stats[dni] = {total:0, pres:0, nombre:r[4]||''};
     stats[dni].total++;
     if(r[5]===true||String(r[5]).toLowerCase()==='true') stats[dni].pres++;
@@ -5191,6 +5357,15 @@ function rptRankingAsist() {
   setCards([{val:arr.length, lbl:'Con registros'}, {val:arr[0]?arr[0].pres:0, lbl:'Mayor asistencia', color:'#6de097'}]);
   setTablaHeaders(['#','Nombre','Presentes','Clases','%']);
   setTablaRows(rows);
+  // Chart: barras horizontales top 10
+  var top = arr.slice(0,10);
+  if(top.length){
+    showRptChart({
+      type:'bar',
+      data:{labels:top.map(function(s){return s.nombre;}), datasets:[{label:'Presentes', data:top.map(function(s){return s.pres;}), backgroundColor:'#c9a227', borderRadius:4}]},
+      options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{color:'#aaa'}, grid:{color:'rgba(255,255,255,.05)'}}, y:{ticks:{color:'#ccc'}, grid:{display:false}}}}
+    });
+  }
 }
 
 function rptAuditoria() {
@@ -5226,7 +5401,23 @@ function rptAuditoria() {
 function rptCajaDia() {
   var fecha = document.getElementById('rCajaFecha').value;
   if(!fecha) return;
-  var pagos = CUOTAS_DB.cuotas.filter(function(c){ return (c[5]||'') === fecha; });
+  var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
+  var dniByCat = null;
+  if(cat){
+    dniByCat = {};
+    DB.jugadores.slice(1).forEach(function(f){
+      if(String(f[COL.CATEGORIA_APP]||'').trim() === String(cat).trim()){
+        dniByCat[(f[COL.DNI]||f[COL.TARJETA]||'').toString().trim()] = true;
+      }
+    });
+  }
+  var pagos = CUOTAS_DB.cuotas.filter(function(c){
+    if((c[5]||'') !== fecha) return false;
+    if(plan && String(c[2]||'').trim() !== plan) return false;
+    if(dniByCat && !dniByCat[(c[0]||'').toString().trim()]) return false;
+    return true;
+  });
   var total = pagos.reduce(function(s,c){ return s + Number(c[6]||0); }, 0);
   var rows = pagos.map(function(c){
     return '<tr>' + td(c[1]||c[0]||'-') + td(c[2]||'-','muted') + td(c[7]||'-','muted') + td(c[8]||'-','muted') + td('$'+Number(c[6]).toLocaleString('es-AR'),'ok num') + '</tr>';
@@ -5234,6 +5425,17 @@ function rptCajaDia() {
   setCards([{val:pagos.length, lbl:'Cobros'}, {val:'$'+total.toLocaleString('es-AR'), lbl:'Total del dia', color:'#6de097'}]);
   setTablaHeaders([T('socio'),'Plan','Metodo','Cobrador','Monto']);
   setTablaRows(rows);
+  // Chart: pie por método de cobro
+  var porMet = {};
+  pagos.forEach(function(c){ var m = c[7]||'Sin especificar'; porMet[m] = (porMet[m]||0) + Number(c[6]||0); });
+  var labels = Object.keys(porMet);
+  if(labels.length){
+    showRptChart({
+      type:'pie',
+      data:{labels:labels, datasets:[{data:labels.map(function(k){return porMet[k];}), backgroundColor:_rptChartColors(labels.length), borderWidth:0}]},
+      options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{color:'#ccc'}}}}
+    });
+  }
 }
 
 function exportarReporteCSV() {
