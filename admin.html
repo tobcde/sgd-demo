@@ -538,8 +538,8 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div><label class="filter-label">Nombre</label><input id="cNom" class="edit-input" style="width:100%;margin-top:4px;"></div>
         <div><label class="filter-label">Color</label><input id="cCol" type="color" class="edit-input" value="#1a7a3c" style="width:100%;margin-top:4px;height:37px;padding:2px;"></div>
-        <div><label class="filter-label">Anio desde</label><input id="cMin" type="number" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: 2010"></div>
-        <div><label class="filter-label">Anio hasta</label><input id="cMax" type="number" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: 2014"></div>
+        <div><label class="filter-label">A&ntilde;o desde</label><input id="cMin" type="number" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: 2010"></div>
+        <div><label class="filter-label">A&ntilde;o hasta</label><input id="cMax" type="number" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: 2014"></div>
         <div><label class="filter-label">Genero</label>
           <select id="cGen" class="edit-input" style="width:100%;margin-top:4px;">
             <option>Masculino</option><option>Femenino</option><option>Mixto</option></select></div>
@@ -642,9 +642,9 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="admin-title">Periodos de pago</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;">
         <div><label class="filter-label">Mes (1-12)</label><input id="pMes" type="number" min="1" max="12" class="edit-input" style="width:100%;margin-top:4px;"></div>
-        <div><label class="filter-label">Anio inicio</label><input id="pAnioD" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="2025"></div>
+        <div><label class="filter-label">A&ntilde;o inicio</label><input id="pAnioD" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="2025"></div>
         <div><label class="filter-label">Dia inicio</label><input id="pDiaD" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="1"></div>
-        <div><label class="filter-label">Anio fin</label><input id="pAnioH" type="number" class="edit-input" style="width:100%;margin-top:4px;"></div>
+        <div><label class="filter-label">A&ntilde;o fin</label><input id="pAnioH" type="number" class="edit-input" style="width:100%;margin-top:4px;"></div>
         <div><label class="filter-label">Dia fin (0=ultimo)</label><input id="pDiaH" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="0"></div>
         <div><label class="filter-label">Dias gracia</label><input id="pGracia" type="number" class="edit-input" style="width:100%;margin-top:4px;" value="5"></div>
         <div style="grid-column:1/-1;"><label class="filter-label">Descripcion</label><input id="pDesc" class="edit-input" style="width:100%;margin-top:4px;" placeholder="ej: Enero 2026"></div>
@@ -909,7 +909,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="modal-section">
         <div class="modal-section-title">Datos personales</div>
         <div class="modal-grid">
-          <div class="modal-field"><span class="modal-field-label">Edad / Anio nac.</span><div class="modal-field-value" id="m-edad"></div></div>
+          <div class="modal-field"><span class="modal-field-label">Edad / A&ntilde;o nac.</span><div class="modal-field-value" id="m-edad"></div></div>
           <div class="modal-field"><span class="modal-field-label">Email</span><div class="modal-field-value" id="m-email"></div><input class="modal-field-input" id="mi-email" type="email" placeholder="Email"></div>
           <div class="modal-field"><span class="modal-field-label">Telefono</span><div class="modal-field-value" id="m-celular"></div><input class="modal-field-input" id="mi-celular" type="tel" placeholder="Tel&eacute;fono"></div>
           <div class="modal-field"><span class="modal-field-label">Domicilio</span><div class="modal-field-value" id="m-domicilio"></div><input class="modal-field-input" id="mi-domicilio" type="text" placeholder="Domicilio"></div>
@@ -3144,7 +3144,7 @@ function agregarPeriodo() {
   var diaD = document.getElementById('pDiaD').value, anioH = document.getElementById('pAnioH').value||anioD;
   var diaH = document.getElementById('pDiaH').value, gracia = document.getElementById('pGracia').value;
   var desc = document.getElementById('pDesc').value.trim();
-  if(!mes || !anioD) return alert('Completa mes y anio de inicio');
+  if(!mes || !anioD) return alert('Completa mes y a\u00f1o de inicio');
   PERIODOS_EDIT.push({mes:mes, anioD:anioD, diaD:diaD, anioH:parseInt(anioH), diaH:diaH, gracia:gracia, desc:desc});
   renderPeriodosAdmin();
 }
@@ -3366,7 +3366,7 @@ function abrirM(ai) {
   document.getElementById('m-nombre').innerText = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
   document.getElementById('m-dni-sub').innerText = 'Doc: ' + dni + (f[COL.FECHA_NAC] ? ' | Nac: ' + f[COL.FECHA_NAC] : '');
   var anioNac = extraerAnioNac(f[COL.FECHA_NAC]);
-  document.getElementById('m-edad').innerText = anioNac ? anioNac + ' (' + calcularEdad(f[COL.FECHA_NAC]) + ' anios)' : '-';
+  document.getElementById('m-edad').innerText = anioNac ? anioNac + ' (' + calcularEdad(f[COL.FECHA_NAC]) + ' a\u00f1os)' : '-';
   document.getElementById('m-genero').value = f[COL.SEXO]||'Masculino';
   document.getElementById('m-cat-m').value = f[COL.CATEGORIA_APP]||'';
   // Poblar y cargar categoría secundaria
@@ -3602,7 +3602,7 @@ function autoCat() {
   if(!anioNac) return alert('Sin fecha de nacimiento registrada');
   var s = DB.categorias.find(function(c){ return anioNac>=parseInt(c[2]) && anioNac<=parseInt(c[3]) && (c[4]===gen||c[4]==='Mixto'); });
   if(s) document.getElementById('m-cat-m').value = s[0];
-  else alert('Sin ' + T('grupo') + ' para anio ' + anioNac + ' / ' + gen);
+  else alert('Sin ' + T('grupo') + ' para a\u00f1o ' + anioNac + ' / ' + gen);
 }
 
 function guardarJ() {
