@@ -1012,6 +1012,13 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
         <input type="file" id="fileInput" accept="image/*,.pdf" style="display:none;" onchange="procesarArchivo(event)">
       </div>
+      <div class="modal-section">
+        <div class="modal-section-title" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;" onclick="toggleMedicoAdmin()">
+          <span>&#x1FA7A; Datos médicos</span>
+          <span id="med-chev-adm" style="font-size:12px;color:var(--muted);">&#x25BC;</span>
+        </div>
+        <div id="med-body-adm" style="display:none;margin-top:12px;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -3463,7 +3470,91 @@ function abrirM(ai) {
     document.getElementById('btn-guardar-actividades').style.display = 'none';
   }
   document.getElementById('modalEdicion').classList.add('open');
+  // Datos médicos — reset + fetch async desde Firestore
+  _medicoActual = null;
+  document.getElementById('med-body-adm').innerHTML = '';
+  document.getElementById('med-body-adm').style.display = 'none';
+  document.getElementById('med-chev-adm').innerHTML = '&#x25BC;';
+  db.collection('socios').doc(dni).get().then(function(d) {
+    _medicoActual = (d.exists && d.data().medico) ? d.data().medico : {};
+  }).catch(function(){ _medicoActual = {}; });
 }
+
+// ══════════════════════════════════════════════════════════════════
+// DATOS MÉDICOS — ficha admin (colapsable)
+// ══════════════════════════════════════════════════════════════════
+var MEDICO_CAMPOS_ADM = [
+  {key:'grupoSangre',  label:'Grupo sanguíneo', tipo:'select',
+    opciones:['','No sabe','A+','A-','B+','B-','AB+','AB-','0+','0-']},
+  {key:'obraSocial',   label:'Obra social',     tipo:'text'},
+  {key:'nroAfiliado',  label:'N° afiliado',     tipo:'text'},
+  {key:'alergias',     label:'Alergias',                    tipo:'textarea'},
+  {key:'medicacion',   label:'Medicación habitual',         tipo:'textarea'},
+  {key:'cronicas',     label:'Enfermedades crónicas',       tipo:'textarea'},
+  {key:'cirugias',     label:'Cirugías previas',            tipo:'textarea'},
+  {key:'lesiones',     label:'Lesiones deportivas previas', tipo:'textarea'},
+  {key:'antecedentes', label:'Antecedentes familiares',     tipo:'textarea'},
+  {key:'obsMedicas',   label:'Observaciones médicas',       tipo:'textarea'}
+];
+var _medicoActual = null;
+
+function renderMedicoAdmin() {
+  var med = _medicoActual || {};
+  var html = '';
+  MEDICO_CAMPOS_ADM.forEach(function(c) {
+    var val = med[c.key] || '';
+    html += '<div class="modal-field full" style="margin-bottom:8px;"><span class="modal-field-label">' + c.label + '</span>';
+    if (c.tipo === 'select') {
+      html += '<select class="edit-input med-adm-inp" data-k="' + c.key + '" style="width:100%;">';
+      c.opciones.forEach(function(o) {
+        var sel = (o === val) ? ' selected' : '';
+        html += '<option value="' + o + '"' + sel + '>' + (o || '— Seleccionar —') + '</option>';
+      });
+      html += '</select>';
+    } else if (c.tipo === 'textarea') {
+      html += '<textarea class="edit-input med-adm-inp" data-k="' + c.key + '" rows="2" style="width:100%;resize:vertical;font-family:inherit;">' + (val || '').replace(/</g,'&lt;') + '</textarea>';
+    } else {
+      html += '<input type="text" class="edit-input med-adm-inp" data-k="' + c.key + '" value="' + (val || '').replace(/"/g,'&quot;') + '" style="width:100%;">';
+    }
+    html += '</div>';
+  });
+  html += '<button class="btn btn-save" onclick="guardarMedicoAdmin()" style="width:100%;margin-top:8px;">&#x1F4BE; Guardar datos médicos</button>';
+  document.getElementById('med-body-adm').innerHTML = html;
+}
+
+function toggleMedicoAdmin() {
+  var body = document.getElementById('med-body-adm');
+  var chev = document.getElementById('med-chev-adm');
+  var abierto = body.style.display !== 'none';
+  if (abierto) {
+    body.style.display = 'none';
+    chev.innerHTML = '&#x25BC;';
+  } else {
+    renderMedicoAdmin();
+    body.style.display = 'block';
+    chev.innerHTML = '&#x25B2;';
+  }
+}
+
+function guardarMedicoAdmin() {
+  if (!itemSel) return;
+  var med = {};
+  document.querySelectorAll('.med-adm-inp').forEach(function(el) {
+    med[el.getAttribute('data-k')] = (el.value || '').trim();
+  });
+  mostrarLoader('Guardando datos médicos...');
+  db.collection('socios').doc(itemSel.dni).update({medico: med})
+    .then(function() {
+      _medicoActual = med;
+      ocultarLoader();
+      toast('Datos médicos guardados', 'ok');
+    })
+    .catch(function(e) {
+      ocultarLoader();
+      alert('Error: ' + (e.message || e));
+    });
+}
+
 function toggleEditarFicha() {
   var modal = document.querySelector('#modalEdicion .modal');
   var btn = document.getElementById('btn-editar-ficha');
