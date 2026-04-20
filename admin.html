@@ -4803,6 +4803,12 @@ function renderReporte() {
   // Limpiar notas/extras del reporte anterior antes de renderizar el nuevo
   var _notaPrev = document.getElementById('r-nota');
   if (_notaPrev) _notaPrev.remove();
+  // La matriz sobrescribe todo el contenido de r-tabla — restauramos la estructura
+  // para que los demas reportes encuentren r-thead/r-tbody donde escribir.
+  var _rTabla = document.getElementById('r-tabla');
+  if (_rTabla && !document.getElementById('r-thead')) {
+    _rTabla.innerHTML = '<thead id="r-thead" style="background:var(--bg);"></thead><tbody id="r-tbody"></tbody>';
+  }
   var _sd = function(id,v){ var e = document.getElementById(id); if(e) e.style.display = v; };
   _sd('r-filter-mes', tipo === 'tipo_pago' ? '' : 'none');
   _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
