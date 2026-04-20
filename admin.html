@@ -771,18 +771,24 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="filter-group">
         <label class="filter-label">Reporte</label>
         <select id="rTipo" class="filter-select" onchange="renderReporte()">
-          <option value="pagos_mes">Pagos del periodo</option>
-          <option value="deudores">Deben cuota</option>
-          <option value="al_dia">Al dia</option>
-          <option value="tipo_pago">Por tipo de pago</option>
-          <option value="asistencia">Asistencia</option>
+          <optgroup label="Pagos y cuotas">
+            <option value="pagos_mes">Pagos del periodo</option>
+            <option value="deudores">Deben cuota</option>
+            <option value="al_dia">Al d&iacute;a</option>
+            <option value="tipo_pago">Por tipo de pago</option>
+            <option value="caja_dia">Caja del d&iacute;a</option>
+            <option value="auditoria">Auditor&iacute;a de pagos</option>
+          </optgroup>
+          <optgroup label="Asistencias">
+            <option value="asistencia">Asistencia</option>
             <option value="asist_matriz">Matriz de asistencia</option>
             <option value="asist_por_dia">Asistencia por d&iacute;a</option>
-          <option value="ranking_asist">Ranking asistencia</option>
-          <option value="jugadores">Listado completo</option>
-          <option value="caja_dia">Caja del dia</option>
-        <option value="auditoria">Auditoría de pagos</option>
-</select></div>
+            <option value="ranking_asist">Ranking asistencia</option>
+          </optgroup>
+          <optgroup label="Socios">
+            <option value="jugadores">Listado completo</option>
+          </optgroup>
+        </select></div>
       <div class="filter-group" id="r-filter-mes">
         <label class="filter-label">Mes</label><select id="rMes" class="filter-select" onchange="renderReporte()"></select></div>
       <div class="filter-group" id="r-filter-desde" style="display:none;">
