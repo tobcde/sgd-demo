@@ -852,6 +852,11 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           <input id="inst-logoUrl" class="inst-input" placeholder="https://drive.google.com/...">
           <p style="font-size:10px;color:var(--muted);margin-top:4px;">Compartir imagen como "cualquiera con el link puede ver"</p>
         </div>
+        <div class="inst-field" style="grid-column:1/-1;">
+          <div class="inst-label">Carpeta de Drive para documentos (DNI, fotos, aptos)</div>
+          <input id="inst-driveFolder" class="inst-input" placeholder="ID de la carpeta de Drive">
+          <p style="font-size:10px;color:var(--muted);margin-top:4px;">En la URL <code>drive.google.com/drive/folders/<b>ID</b></code>, copi&aacute; solo el ID. La carpeta debe tener permisos para la cuenta de servicio del GAS.</p>
+        </div>
         <div class="inst-field">
           <div class="inst-label">Color primario <span id="inst-color1-preview" class="color-preview" style="background:#1a7a3c;"></span></div>
           <input id="inst-colorPrimario" class="inst-input" type="color" value="#1a7a3c" oninput="document.getElementById('inst-color1-preview').style.background=this.value; aplicarBrandingPreview(this.value, null);" style="height:40px;padding:2px 8px;">
@@ -919,6 +924,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div class="modal-subtitle" id="m-dni-sub"></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-editar" id="btn-convertir-profe" onclick="convertirSocioAProfe()" title="Crear profesor con el mismo DNI">&#x1F464; A Profesor</button>
         <button class="btn-editar" id="btn-editar-ficha" onclick="toggleEditarFicha()">&#x270F; Editar</button>
         <button class="modal-close" onclick="cerrarModal()">&#x2715;</button>
       </div>
@@ -1511,7 +1517,7 @@ document.body.style.visibility='visible';
 var DB = {jugadores:[], profesores:[], sedes:[], categorias:[], horarios:[], configPagos:[], institucion:{}, actividades:[], inscripciones:[], precios:[]};
 var CUOTAS_DB = {planes:[], cuotas:[]};
 // Flags de carga lazy — evitan recargar datos que ya están en memoria
-var _cargado = {cuotas: false, asistencias: false, inscripciones: false, citaciones: false, inactivos: false};
+var _cargado = {cuotas: false, asistencias: false, inscripciones: false, citaciones: false, inactivos: true};
 
 // ── CONTADOR DE LECTURAS ──────────────────────────────────────────
 var _lecturas = parseInt(sessionStorage.getItem('fs_lecturas')||'0');
@@ -1758,7 +1764,7 @@ function refrescarDatos() {
   // Cuotas: 2 meses atrás para capturar históricos del mes anterior
   var corteFecha = new Date(yyyy, hoy.getMonth()-1, 1).toLocaleDateString('sv');
   Promise.all([
-    db.collection('socios').where('activo','==',true).get(),  // ~350
+    db.collection('socios').get(), // todos — incluye auto-registros pendientes (activo:false)
     db.collection('cuotas').where('fechaPago','>=', corteFecha).get() // ~350-700
   ]).then(function(results) {
     // Socios
@@ -1796,7 +1802,7 @@ function inicializar(passReal) {
     db.collection('config_periodos').get(),             // ~12
     db.collection('config_actividades').get(),          // ~2
     db.collection('config_precios').get(),              // ~8
-    db.collection('socios').where('activo','==',true).get(), // solo activos ~90
+    db.collection('socios').get(), // todos — incluye auto-registros pendientes (activo:false)
     db.collection('inscripciones').get(), // necesario para calcular estado cuota
     // Cuotas del mes actual — filtrar por fechaPago (formato yyyy-MM-dd)
     (function(){
@@ -2009,8 +2015,8 @@ function _fsDispatch(action, p, ok, err) {
       var upd = {};
       var fieldMap = {
         apellido:'apellido', nombre:'nombre', email:'email', celular:'celular',
-        telefono:'telefono', fechaNac:'fechaNac', sexo:'sexo', domicilio:'domicilio',
-        obs:'obs', categoriaApp:'categoriaApp', catSecundaria:'catSecundaria',
+        telefono:'telefono', fechaNac:'fechaNac', sexo:'sexo', genero:'sexo', domicilio:'domicilio',
+        obs:'obs', categoriaApp:'categoriaApp', categoria:'categoriaApp', catSecundaria:'catSecundaria',
         plan:'plan', membresia:'membresia', vencimiento:'vencimiento',
         foto:'foto', dniFoto:'dniFoto', apto:'apto', dniDorso:'dniDorso',
         actividades:'actividades', activo:'activo',
@@ -4251,6 +4257,63 @@ function cancelarEditProfesor() {
   document.getElementById('btnCancelProfesor').style.display = 'none';
 }
 
+function convertirSocioAProfe() {
+  if (!itemSel || !itemSel.dni) return alert('Abr\u00ed primero la ficha de un jugador');
+  var dni = itemSel.dni.toString();
+  var f = DB.jugadores[itemSel.arrIdx]; if (!f) return;
+  var nombreCompleto = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
+  if (DB.profesores.some(function(p){ return (p[5]||'').toString() === dni || (p[1]||'').toString() === dni; })) {
+    return alert('Ya existe un profesor con DNI ' + dni);
+  }
+  sgdConfirm('Convertir a <b>' + nombreCompleto + '</b> (DNI ' + dni + ') en profesor?<br><br>El socio se mantiene en la base. Vas a necesitar definir una contrase\u00f1a para que pueda entrar en la app de personal.', function() {
+    var pass = prompt('Contrase\u00f1a para el profesor (m\u00ednimo 6 caracteres):', dni);
+    if (!pass) return;
+    if (pass.length < 6) return alert('La contrase\u00f1a debe tener al menos 6 caracteres');
+    _convertirSocioAProfeConfirmado(dni, nombreCompleto, pass, f);
+  }, 'CONVERTIR');
+}
+
+function _convertirSocioAProfeConfirmado(dni, nombreCompleto, pass, f) {
+  mostrarLoader('Creando profesor...');
+  var apiKey = FIREBASE_CONFIG.apiKey || '';
+  fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + apiKey, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({email: dni + '@sgd.app', password: pass, returnSecureToken: false})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {status:r.status, data:d}; }); })
+  .then(function(res) {
+    var errCode = res.data && res.data.error && res.data.error.message;
+    if (res.status !== 200 && errCode !== 'EMAIL_EXISTS') {
+      throw new Error(errCode || ('HTTP ' + res.status));
+    }
+    var doc = {
+      nombre: nombreCompleto,
+      dni: dni,
+      fechaNac: f[COL.FECHA_NAC] || '',
+      email: f[COL.EMAIL] || '',
+      contrasena: pass,
+      esPrimerLogin: false,
+      telegramUsername: '',
+      telegramChatId: ''
+    };
+    return db.collection('profesores').doc(dni).set(doc);
+  })
+  .then(function() {
+    _contarEscrituras(1);
+    DB.profesores.push([nombreCompleto, dni, f[COL.FECHA_NAC]||'', f[COL.EMAIL]||'', pass, dni, '', '']);
+    renderListProfesores();
+    poblarSelects();
+    poblarTurnosAsist();
+    ocultarLoader();
+    toast('Convertido en profesor. Ya puede entrar a la app de personal.', 'ok');
+  })
+  .catch(function(e) {
+    ocultarLoader();
+    alert('Error al convertir: ' + (e.message || e));
+  });
+}
+
 function guardarProfesor() {
   var nombre = document.getElementById('inpPNombre').value.trim();
   if(!nombre) return alert('El nombre es obligatorio');
@@ -4724,7 +4787,7 @@ function aplicarBrandingPreview(primario, secundario) {
 }
 
 function cargarFormInstitucion() {
-  var campos = ['nombre','nombreCorto','logoUrl','colorPrimario','colorSecundario','terminologiaSocio','terminologiaSocios','terminologiaGrupo','terminologiaGrupos','emailRemitente'];
+  var campos = ['nombre','nombreCorto','logoUrl','driveFolder','colorPrimario','colorSecundario','terminologiaSocio','terminologiaSocios','terminologiaGrupo','terminologiaGrupos','emailRemitente'];
   campos.forEach(function(c){
     var el = document.getElementById('inst-' + c); if(!el) return;
     el.value = INST[c] || '';
@@ -4740,6 +4803,7 @@ function guardarInstitucion() {
     nombre: document.getElementById('inst-nombre').value.trim(),
     nombreCorto: document.getElementById('inst-nombreCorto').value.trim(),
     logoUrl: document.getElementById('inst-logoUrl').value.trim(),
+    driveFolder: document.getElementById('inst-driveFolder').value.trim(),
     colorPrimario: document.getElementById('inst-colorPrimario').value,
     colorSecundario: document.getElementById('inst-colorSecundario').value,
     terminologiaSocio: document.getElementById('inst-terminologiaSocio').value.trim() || 'Socio',
