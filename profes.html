@@ -316,7 +316,10 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 
   <!-- JUGADORES -->
   <div class="app-section" id="sec-jugadores">
-    <input type="search" class="search-bar" id="jug-search" placeholder="Buscar jugador..." oninput="filtrarJugadores(this.value)">
+    <input type="search" class="search-bar" id="jug-search" placeholder="Buscar jugador..." oninput="aplicarFiltrosJugadores()">
+    <select id="jug-cat-filter" class="search-bar" style="margin-top:6px;" onchange="aplicarFiltrosJugadores()">
+      <option value="">Todas las categor&iacute;as</option>
+    </select>
     <div id="jug-grid" class="jug-grid"></div>
     <div class="empty-state" id="jug-empty" style="display:none;">No hay jugadores en tus grupos</div>
   </div>
@@ -400,7 +403,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 </div>
 
 <div id="toast"></div>
-<div id="vbadge">v1.0</div>
+<div id="vbadge">v1.1</div>
 
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -885,6 +888,21 @@ function renderJugadoresGrid() {
     return an.localeCompare(bn);
   });
 
+  // Poblar dropdown de categorias a partir de los jugadores cargados
+  var sel = document.getElementById('jug-cat-filter');
+  if (sel) {
+    var prev = sel.value;
+    var cats = {};
+    ordenados.forEach(function(f){
+      var c = (f.categoriaApp||'').toString().trim();
+      if (c) cats[c] = true;
+    });
+    var sorted = Object.keys(cats).sort(function(a,b){ return a.localeCompare(b); });
+    sel.innerHTML = '<option value="">Todas las categor\u00edas</option>' +
+      sorted.map(function(c){ return '<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>'; }).join('');
+    if (prev && cats[prev]) sel.value = prev;
+  }
+
   grid.innerHTML = ordenados.map(function(f){
     var nombre = ((f.apellido||'') + ', ' + (f.nombre||'')).replace(/^,\s*/, '').replace(/,\s*$/,'') || '\u2014';
     var cat = (f.categoriaApp||'').toString() || '\u2014';
@@ -895,22 +913,36 @@ function renderJugadoresGrid() {
     var fotoHtml = foto
       ? '<img class="jug-foto" src="'+foto+'" alt="" onerror="this.outerHTML=\'<div class=&quot;jug-foto-ph&quot;>&#x1F464;</div>\'">'
       : '<div class="jug-foto-ph">&#x1F464;</div>';
-    return '<div class="jug-card" onclick="abrirFichaJugador(\''+dni+'\')">'+
+    return '<div class="jug-card" data-cat="'+escapeHtml(cat)+'" onclick="abrirFichaJugador(\''+dni+'\')">'+
       fotoHtml +
       '<div class="jug-nombre">'+escapeHtml(nombre)+'</div>'+
       '<div class="jug-meta">'+escapeHtml(cat)+'<br>Nac: '+escapeHtml(fn)+'</div>'+
       '<span class="jug-estado '+(activo?'activo':'inactivo')+'">'+(activo?'Activo':'Inactivo')+'</span>'+
     '</div>';
   }).join('');
+
+  aplicarFiltrosJugadores();
 }
 
-function filtrarJugadores(q) {
-  var qn = (q||'').toString().toLowerCase().trim();
+function aplicarFiltrosJugadores() {
+  var q = (document.getElementById('jug-search')||{}).value || '';
+  var cat = (document.getElementById('jug-cat-filter')||{}).value || '';
+  var qn = q.toString().toLowerCase().trim();
   var cards = document.querySelectorAll('#jug-grid .jug-card');
   cards.forEach(function(c){
     var txt = c.innerText.toLowerCase();
-    c.style.display = (!qn || txt.indexOf(qn) !== -1) ? '' : 'none';
+    var cCat = c.getAttribute('data-cat') || '';
+    var okTxt = (!qn || txt.indexOf(qn) !== -1);
+    var okCat = (!cat || cCat === cat);
+    c.style.display = (okTxt && okCat) ? '' : 'none';
   });
+}
+
+// Compat: llamadas antiguas a filtrarJugadores siguen funcionando
+function filtrarJugadores(q) {
+  var i = document.getElementById('jug-search');
+  if (i && q != null) i.value = q;
+  aplicarFiltrosJugadores();
 }
 
 function abrirFichaJugador(dni) {
@@ -941,13 +973,47 @@ function abrirFichaJugador(dni) {
   }
   document.getElementById('ficha-ddjj').innerText = ddjjTxt;
 
-  document.getElementById('ficha-email').innerText    = f.email || '\u2014';
-  document.getElementById('ficha-celular').innerText  = f.celular || '\u2014';
+  document.getElementById('ficha-email').innerHTML    = mailLink(f.email);
+  document.getElementById('ficha-celular').innerHTML  = waLink(f.celular);
   document.getElementById('ficha-domicilio').innerText= f.domicilio || '\u2014';
-  document.getElementById('ficha-c1').innerText       = f.contacto1 || '\u2014';
-  document.getElementById('ficha-c2').innerText       = f.contacto2 || '\u2014';
+  document.getElementById('ficha-c1').innerHTML       = waLink(f.contacto1);
+  document.getElementById('ficha-c2').innerHTML       = waLink(f.contacto2);
 
   document.getElementById('modal-ficha').classList.add('open');
+}
+
+// Convierte un valor (tel o "Nombre 351 555-5555") en link wa.me con normalizacion AR.
+// Si no hay suficientes digitos o no se puede parsear -> devuelve texto plano.
+function waLink(val) {
+  if (!val) return '\u2014';
+  var display = escapeHtml(String(val));
+  var d = String(val).replace(/\D/g, '');
+  if (d.length < 8) return display;
+  if (d.indexOf('549') === 0) {
+    // ya esta normalizado
+  } else if (d.indexOf('54') === 0) {
+    d = '549' + d.slice(2);
+  } else {
+    if (d.indexOf('0') === 0) d = d.slice(1);
+    // Heuristica: sacar '15' despues del area code si esta presente
+    if (d.length >= 11) {
+      for (var p = 2; p <= 4; p++) {
+        if (d.substr(p, 2) === '15' && (d.length - 2) >= 10) {
+          d = d.substr(0, p) + d.substr(p + 2);
+          break;
+        }
+      }
+    }
+    d = '549' + d;
+  }
+  return '<a href="https://wa.me/' + d + '" target="_blank" rel="noopener" style="color:var(--secondary);text-decoration:none;">' + display + ' &#x1F4AC;</a>';
+}
+
+function mailLink(val) {
+  if (!val) return '\u2014';
+  var display = escapeHtml(String(val));
+  if (String(val).indexOf('@') < 0) return display;
+  return '<a href="mailto:' + display + '" style="color:var(--secondary);text-decoration:none;">' + display + '</a>';
 }
 
 function cerrarFichaJugador() {
