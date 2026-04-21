@@ -101,8 +101,9 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
 .card-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:14px;color:var(--secondary);}
 
 /* CAMARA */
-.cam-wrap{position:relative;background:#000;border-radius:10px;overflow:hidden;display:none;}
-.cam-guide{position:absolute;inset:10% 7.5%;border:2px solid rgba(26,122,60,.7);border-radius:6px;pointer-events:none;}
+.cam-wrap{position:relative;background:#000;border-radius:10px;overflow:hidden;display:none;aspect-ratio:1.585/1;}
+.cam-wrap video{width:100%;height:100%;object-fit:cover;display:block;}
+.cam-guide{position:absolute;inset:6% 4%;border:2px solid rgba(26,122,60,.7);border-radius:6px;pointer-events:none;}
 .cam-guide::before,.cam-guide::after{content:'';position:absolute;width:16px;height:16px;border-color:var(--primary);border-style:solid;}
 .cam-guide::before{top:-2px;left:-2px;border-width:2px 0 0 2px;}
 .cam-guide::after{bottom:-2px;right:-2px;border-width:0 2px 2px 0;}
@@ -825,12 +826,24 @@ function detenerCam(n) {
 function capturar(n) {
   var video = document.getElementById('cam'+n+'-video');
   var vw = video.videoWidth || 640, vh = video.videoHeight || 480;
-  var cropW = Math.round(vw * 0.85), cropH = Math.round(vh * 0.65);
-  var cropX = Math.round((vw-cropW)/2), cropY = Math.round((vh-cropH)/2);
+  // DNI aspect ratio ~1.585:1 — extraer el rect\u00e1ngulo m\u00e1s grande posible
+  // con esa proporci\u00f3n centrado en el frame del video.
+  var targetRatio = 1.585;
+  var vRatio = vw / vh;
+  var cropW, cropH;
+  if (vRatio >= targetRatio) {
+    cropH = Math.round(vh * 0.90);
+    cropW = Math.round(cropH * targetRatio);
+  } else {
+    cropW = Math.round(vw * 0.94);
+    cropH = Math.round(cropW / targetRatio);
+  }
+  var cropX = Math.round((vw - cropW) / 2);
+  var cropY = Math.round((vh - cropH) / 2);
   var canvas = document.createElement('canvas');
   canvas.width = cropW; canvas.height = cropH;
   canvas.getContext('2d').drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-  setImagen(n, canvas.toDataURL('image/jpeg', 0.90));
+  setImagen(n, canvas.toDataURL('image/jpeg', 0.92));
   detenerCam(n);
 }
 
