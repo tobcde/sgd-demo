@@ -44,8 +44,42 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-
 /* HEADER */
 .app-header{background:var(--surface);border-bottom:2px solid var(--primary);padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;}
 .app-header img{width:38px;height:38px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;}
-.app-header h1{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;}
+.app-header h1{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;flex:1;}
 .app-header h1 span{color:var(--secondary);}
+.help-btn{width:34px;height:34px;border-radius:50%;background:var(--secondary-dim);border:1px solid var(--secondary-border);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+.help-btn:hover{background:var(--secondary);color:#000;}
+
+/* AYUDA MODAL */
+.ayuda-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.ayuda-overlay.open{display:flex;}
+.ayuda-modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:560px;width:100%;padding:0;margin:20px auto;}
+.ayuda-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);border-radius:14px 14px 0 0;z-index:2;}
+.ayuda-head h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--secondary);}
+.ayuda-close{background:transparent;border:none;color:var(--text);font-size:24px;cursor:pointer;padding:0 4px;line-height:1;}
+.ayuda-body{padding:20px;}
+.ayuda-section{margin-bottom:22px;}
+.ayuda-section h3{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:10px;border-left:3px solid var(--primary);padding-left:8px;}
+.ayuda-section p{font-size:14px;line-height:1.5;color:var(--text);margin-bottom:8px;}
+.ayuda-section ul{list-style:none;padding:0;}
+.ayuda-section li{font-size:13.5px;line-height:1.5;color:var(--text);padding:6px 0 6px 22px;position:relative;}
+.ayuda-section li::before{content:'';position:absolute;left:4px;top:14px;width:6px;height:6px;border-radius:50%;background:var(--secondary);}
+.ayuda-step{display:flex;gap:12px;margin-bottom:10px;padding:10px;background:var(--surface2);border-radius:8px;}
+.ayuda-step-num{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ayuda-step-body{font-size:13.5px;line-height:1.45;}
+.ayuda-step-body b{color:var(--secondary);}
+.ayuda-tip{background:var(--primary-dim);border:1px solid var(--primary-border);border-radius:8px;padding:10px 12px;font-size:13px;color:#6de097;margin-top:8px;}
+.ayuda-nota{background:var(--secondary-dim);border:1px solid var(--secondary-border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--secondary);margin-top:8px;}
+
+/* DDJJ */
+.ddjj-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;}
+.ddjj-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;color:var(--secondary);margin-bottom:10px;letter-spacing:.05em;}
+.ddjj-texto{font-size:12.5px;line-height:1.5;color:var(--text);margin-bottom:12px;}
+.ddjj-check{display:flex;gap:10px;align-items:flex-start;cursor:pointer;user-select:none;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;transition:border-color .2s;}
+.ddjj-check:hover{border-color:var(--primary);}
+.ddjj-check input{width:20px;height:20px;accent-color:var(--primary);margin-top:1px;flex-shrink:0;cursor:pointer;}
+.ddjj-check-label{font-size:13px;line-height:1.45;color:var(--text);}
+.ddjj-check-label b{color:var(--secondary);}
+.ddjj-box.firmada{border-color:var(--primary-border);background:var(--primary-dim);}
 
 /* PROGRESS */
 .progress-bar{display:flex;align-items:center;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--border);gap:0;overflow-x:auto;}
@@ -152,6 +186,95 @@ video{width:100%;display:block;}
 <div class="app-header">
   <img id="header-logo" src="" alt="Logo" onerror="this.style.display='none'">
   <h1 id="header-titulo">Sistema de <span>Registro</span></h1>
+  <button class="help-btn" onclick="toggleAyuda()" aria-label="Ayuda">?</button>
+</div>
+
+<!-- AYUDA MODAL -->
+<div class="ayuda-overlay" id="ayuda-overlay" onclick="if(event.target===this)toggleAyuda()">
+  <div class="ayuda-modal">
+    <div class="ayuda-head">
+      <h2>&#x2139; Gu&iacute;a de uso</h2>
+      <button class="ayuda-close" onclick="toggleAyuda()" aria-label="Cerrar">&#x2715;</button>
+    </div>
+    <div class="ayuda-body">
+
+      <div class="ayuda-section">
+        <h3>&#x1F4CC; &iquest;Qu&eacute; hace esta app?</h3>
+        <p>Esta app sirve para <b>registrar o actualizar tus datos</b> en el club a partir del DNI. Escanea el documento con la c&aacute;mara, lee autom&aacute;ticamente los datos y te deja completar el resto.</p>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1F4CB; Qu&eacute; necesit&aacute;s a mano</h3>
+        <ul>
+          <li>DNI (frente y dorso)</li>
+          <li>Foto tipo carnet (opcional)</li>
+          <li>Certificado m&eacute;dico / apto f&iacute;sico (opcional &mdash; imagen o PDF)</li>
+          <li>Email y celular de contacto</li>
+          <li>Datos de 1 o 2 contactos de emergencia</li>
+        </ul>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1F4DD; Paso a paso</h3>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">1</div>
+          <div class="ayuda-step-body"><b>Frente del DNI.</b> Toc&aacute; "Usar c&aacute;mara" y captur&aacute;, o sub&iacute; una foto desde la galer&iacute;a.</div>
+        </div>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">2</div>
+          <div class="ayuda-step-body"><b>Dorso del DNI.</b> Mismo procedimiento. Sirve para leer domicilio. Opcional pero recomendado.</div>
+        </div>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">3</div>
+          <div class="ayuda-step-body"><b>Verificar.</b> El sistema lee los datos con IA y busca si ya exist&iacute;s. Revis&aacute; que apellido, nombre y DNI coincidan con el documento.</div>
+        </div>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">4</div>
+          <div class="ayuda-step-body"><b>Completar.</b> Carg&aacute; email, celular, domicilio, contactos de emergencia y categor&iacute;a. Pod&eacute;s sumar foto y apto m&eacute;dico.</div>
+        </div>
+
+        <div class="ayuda-step">
+          <div class="ayuda-step-num">5</div>
+          <div class="ayuda-step-body"><b>Confirmar.</b> Revis&aacute; el resumen y toc&aacute; <b>ENVIAR DATOS</b>. Listo.</div>
+        </div>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1F4F8; Tips para las fotos del DNI</h3>
+        <ul>
+          <li>Buena luz, sin reflejos ni sombras</li>
+          <li>DNI plano sobre una superficie lisa</li>
+          <li>Encuadr&aacute; todo el documento dentro del marco verde</li>
+          <li>Enfocado &mdash; sin movimiento, sin borrosidad</li>
+        </ul>
+        <div class="ayuda-tip">&#x1F4A1; Si la lectura falla, volv&eacute; al paso 1 y sac&aacute; la foto de nuevo con mejor luz.</div>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1FA7A; Datos m&eacute;dicos</h3>
+        <p>En el paso 4 hay una secci&oacute;n colapsable con datos m&eacute;dicos (grupo sangu&iacute;neo, alergias, medicaci&oacute;n, etc.). Es <b>opcional</b> pero muy &uacute;til para el cuerpo t&eacute;cnico en caso de emergencia.</p>
+        <p>Pod&eacute;s completarla ahora o m&aacute;s adelante volviendo a escanear tu DNI.</p>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x2753; Preguntas frecuentes</h3>
+        <p><b>&iquest;Y si ya estoy registrado?</b><br>La app detecta tu DNI y te deja actualizar los datos existentes.</p>
+        <p><b>&iquest;Tengo que subir todo de una?</b><br>No. Pod&eacute;s volver a entrar otra vez y completar lo que falte.</p>
+        <p><b>&iquest;La foto del DNI la ve alguien?</b><br>Solo el admin del club. Se guarda en una carpeta privada de Google Drive del club.</p>
+        <p><b>No me lee bien el DNI, &iquest;qu&eacute; hago?</b><br>Sac&aacute; la foto de nuevo con mejor luz. Si sigue fallando, pod&eacute;s editar los campos manualmente en el paso 4.</p>
+      </div>
+
+      <div class="ayuda-section">
+        <h3>&#x1F512; Privacidad</h3>
+        <div class="ayuda-nota">Tus datos se usan <b>&uacute;nicamente</b> para la gesti&oacute;n deportiva del club. No se comparten con terceros. Las im&aacute;genes del DNI se guardan cifradas en Google Drive y solo tiene acceso la direcci&oacute;n del club.</div>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 <!-- PROGRESS BAR -->
@@ -303,7 +426,22 @@ video{width:100%;display:block;}
     <div class="card-title">&#x2705; Confirmar envío</div>
     <div id="resumen-datos"></div>
   </div>
-  <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarGuardar()">&#x1F4BE; ENVIAR DATOS</button>
+
+  <!-- DDJJ DE SALUD -->
+  <div class="card">
+    <div class="card-title">&#x1FA7A; Declaraci&oacute;n Jurada de Salud</div>
+    <div class="ddjj-box" id="ddjj-box">
+      <div class="ddjj-texto">
+        Declaro bajo juramento que se encuentra en perfecto estado de salud f&iacute;sica y/o mental para entrenamiento y/o competencia. Del mismo modo expreso no tener conocimiento a la fecha de ning&uacute;n impedimento f&iacute;sico o deficiencia en el que pudiera provocarle lesiones y cualquier otro da&ntilde;o corporal como consecuencia de la participaci&oacute;n en actividades deportivas.
+      </div>
+      <label class="ddjj-check" for="ddjj-check">
+        <input type="checkbox" id="ddjj-check" onchange="toggleDdjj()">
+        <span class="ddjj-check-label">He le&iacute;do y <b>acepto la declaraci&oacute;n jurada de salud</b>. Confirmo que los datos consignados son ver&iacute;dicos.</span>
+      </label>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarGuardar()" disabled>&#x1F4BE; ENVIAR DATOS</button>
   <button class="btn btn-outline" onclick="irPaso(4)" style="margin-top:10px;">&#x2190; Volver</button>
 </div>
 
@@ -519,7 +657,7 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
       nombre:      (campos.nombre   || '').toUpperCase(),
       email:       campos.email     || '',
       celular:     campos.celular   || '',
-      activo:      true,
+      activo:      false, // auto-registros pendientes de activaci\u00f3n por el admin
       tipoDoc:     'DNI',
       dni:         dniNorm,
       fechaNac:    campos.fechaNac  || '',
@@ -540,7 +678,8 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
       catSecundaria:'',
       contacto1:   campos.contacto1  || '',
       contacto2:   campos.contacto2  || '',
-      medico:      campos.medico     || {}
+      medico:      campos.medico     || {},
+      ddjjSalud:   campos.ddjjSalud  || null
     };
     return ref.set(doc).then(function(){ return {ok: true}; });
   } else {
@@ -557,6 +696,7 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
     if (campos.contacto2)  upd.contacto2 = campos.contacto2;
     if (campos.categoriaApp) upd.categoriaApp = campos.categoriaApp;
     if (campos.medico)     upd.medico    = campos.medico;
+    if (campos.ddjjSalud)  upd.ddjjSalud = campos.ddjjSalud;
     return ref.update(upd).then(function(){ return {ok: true}; });
   }
 }
@@ -600,6 +740,7 @@ function callOCR(imgFront, imgBack, cb, cbErr, intento) {
 // ══════════════════════════════════════════════════════════════════
 function callUploadDrive(dniNorm, cb, cbErr) {
   if (!S.imgFront && !S.foto && !S.apto) { cb({}); return; }
+  if (!INST.driveFolder) { if (cbErr) cbErr('Drive no configurado &mdash; ped&iacute;le al admin que reinstale la app'); return; }
   mostrarLoader('Subiendo imágenes...');
   var body = {
     action:    'saveFotosDrive',
@@ -652,7 +793,7 @@ function irPaso(n) {
   document.getElementById('step' + n).classList.add('activo');
   window.scrollTo(0, 0);
   if (n === 4) inicializarPaso4();
-  if (n === 5) renderResumen();
+  if (n === 5) { renderResumen(); inicializarDdjj(); }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1051,6 +1192,12 @@ function reiniciar() {
   document.getElementById('prev-foto-wrap').style.display='none';
   var zonaLabel = document.querySelector('.upload-zone-label-apto');
   if (zonaLabel) zonaLabel.innerText='Subir imagen o PDF del certificado';
+  var ddjjChk = document.getElementById('ddjj-check');
+  if (ddjjChk) ddjjChk.checked = false;
+  var ddjjBox = document.getElementById('ddjj-box');
+  if (ddjjBox) ddjjBox.classList.remove('firmada');
+  var btnConf = document.getElementById('btn-confirmar');
+  if (btnConf) btnConf.disabled = true;
 
   // Ir al paso 1 sin animar progress (reset total)
   for (var i=1; i<=5; i++){
@@ -1101,6 +1248,10 @@ function getCamposEditados() {
     out.domicilio= out.domicilio || (S.ocrData && S.ocrData.domicilio) || '';
   }
   out.medico = getMedico();
+  var _ddjjChk = document.getElementById('ddjj-check');
+  if (_ddjjChk && _ddjjChk.checked) {
+    out.ddjjSalud = {firmado: true, fecha: new Date().toISOString()};
+  }
   return out;
 }
 
@@ -1129,6 +1280,38 @@ function renderMedico() {
     html += '</div>';
   });
   document.getElementById('medico-body').innerHTML = html;
+}
+
+function toggleDdjj() {
+  var chk = document.getElementById('ddjj-check');
+  var btn = document.getElementById('btn-confirmar');
+  var box = document.getElementById('ddjj-box');
+  if (btn) btn.disabled = !chk.checked;
+  if (box) box.classList.toggle('firmada', chk.checked);
+}
+
+function inicializarDdjj() {
+  var chk = document.getElementById('ddjj-check');
+  var btn = document.getElementById('btn-confirmar');
+  var box = document.getElementById('ddjj-box');
+  var yaFirmado = S.sistemaData && S.sistemaData.ddjjSalud && S.sistemaData.ddjjSalud.firmado;
+  if (chk) {
+    chk.checked = !!yaFirmado;
+    if (btn) btn.disabled = !chk.checked;
+    if (box) box.classList.toggle('firmada', chk.checked);
+  }
+}
+
+function toggleAyuda() {
+  var ov = document.getElementById('ayuda-overlay');
+  if (ov.classList.contains('open')) {
+    ov.classList.remove('open');
+    document.body.style.overflow = '';
+  } else {
+    ov.classList.add('open');
+    ov.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function toggleMedico() {
