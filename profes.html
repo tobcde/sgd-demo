@@ -137,6 +137,32 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 .btn-bio-perfil{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:11px 16px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;width:100%;}
 .btn-logout{background:var(--red-dim);border:1px solid var(--red-border);color:var(--red);border-radius:10px;padding:12px;width:100%;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;}
 
+/* Jugadores grid + ficha */
+.jug-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px;}
+.jug-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;transition:border-color .15s;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.jug-card:hover{border-color:var(--secondary);}
+.jug-foto{width:72px;height:72px;border-radius:50%;object-fit:cover;background:var(--surface2);border:2px solid var(--border);margin-bottom:8px;}
+.jug-foto-ph{width:72px;height:72px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);margin-bottom:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:24px;}
+.jug-nombre{font-size:13px;font-weight:600;line-height:1.2;margin-bottom:4px;word-break:break-word;}
+.jug-meta{font-size:11px;color:var(--muted);line-height:1.4;}
+.jug-estado{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;margin-top:4px;text-transform:uppercase;letter-spacing:.03em;}
+.jug-estado.activo{background:var(--primary-dim);color:#6de097;border:1px solid var(--primary-border);}
+.jug-estado.inactivo{background:var(--red-dim);color:var(--red);border:1px solid var(--red-border);}
+.ficha-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;}
+.ficha-header{display:flex;gap:12px;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.ficha-foto{width:64px;height:64px;border-radius:50%;object-fit:cover;background:var(--surface2);border:2px solid var(--secondary);flex-shrink:0;}
+.ficha-foto-ph{width:64px;height:64px;border-radius:50%;background:var(--surface2);border:2px solid var(--secondary);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:22px;}
+.ficha-title-wrap{flex:1;min-width:0;}
+.ficha-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;text-transform:uppercase;line-height:1.2;}
+.ficha-sub{color:var(--muted);font-size:12px;margin-top:2px;}
+.ficha-section{margin-bottom:14px;}
+.ficha-section-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--secondary);margin-bottom:8px;}
+.ficha-row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);gap:10px;}
+.ficha-row:last-child{border-bottom:none;}
+.ficha-row-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;}
+.ficha-row-v{font-size:13px;font-weight:500;text-align:right;word-break:break-word;}
+.ficha-close{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;width:100%;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px;text-transform:uppercase;letter-spacing:.05em;}
+
 /* Modal reset pass */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:200;}
 .modal-overlay.open{display:flex;}
@@ -229,6 +255,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
   <div class="app-tabs">
     <button class="app-tab active" id="tab-asist"    onclick="irTab('asist')">&#x1F4CB; Asistencia</button>
     <button class="app-tab"        id="tab-historial" onclick="irTab('historial')">&#x1F4CA; Historial</button>
+    <button class="app-tab"        id="tab-jugadores" onclick="irTab('jugadores')">&#x26BD; Jugadores</button>
     <button class="app-tab"        id="tab-perfil"    onclick="irTab('perfil')">&#x1F464; Perfil</button>
   </div>
 
@@ -287,6 +314,13 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
     <div class="empty-state" id="hist-empty">Sin registros en el período</div>
   </div>
 
+  <!-- JUGADORES -->
+  <div class="app-section" id="sec-jugadores">
+    <input type="search" class="search-bar" id="jug-search" placeholder="Buscar jugador..." oninput="filtrarJugadores(this.value)">
+    <div id="jug-grid" class="jug-grid"></div>
+    <div class="empty-state" id="jug-empty" style="display:none;">No hay jugadores en tus grupos</div>
+  </div>
+
   <!-- PERFIL -->
   <div class="app-section" id="sec-perfil">
     <div class="perfil-card">
@@ -330,6 +364,38 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
       <button class="btn btn-primary" style="flex:1;" onclick="doResetPass()">Enviar</button>
       <button class="btn" style="flex:1;background:var(--surface2);border:1px solid var(--border);" onclick="cerrarReset()">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL FICHA JUGADOR -->
+<div class="modal-overlay" id="modal-ficha">
+  <div class="ficha-modal">
+    <div class="ficha-header">
+      <img id="ficha-foto" class="ficha-foto" src="" alt="" style="display:none;" onerror="document.getElementById('ficha-foto').style.display='none';document.getElementById('ficha-foto-ph').style.display='flex';">
+      <div id="ficha-foto-ph" class="ficha-foto-ph">&#x1F464;</div>
+      <div class="ficha-title-wrap">
+        <div class="ficha-title" id="ficha-nombre">&mdash;</div>
+        <div class="ficha-sub" id="ficha-sub">&mdash;</div>
+      </div>
+    </div>
+
+    <div class="ficha-section">
+      <div class="ficha-section-title">&#x1FA7A; Datos m&eacute;dicos</div>
+      <div class="ficha-row"><span class="ficha-row-l">Apto f&iacute;sico</span><span class="ficha-row-v" id="ficha-apto">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Obs. m&eacute;dicas</span><span class="ficha-row-v" id="ficha-medico">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">DDJJ salud</span><span class="ficha-row-v" id="ficha-ddjj">&mdash;</span></div>
+    </div>
+
+    <div class="ficha-section">
+      <div class="ficha-section-title">&#x1F4DE; Datos de contacto</div>
+      <div class="ficha-row"><span class="ficha-row-l">Email</span><span class="ficha-row-v" id="ficha-email">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Celular</span><span class="ficha-row-v" id="ficha-celular">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Domicilio</span><span class="ficha-row-v" id="ficha-domicilio">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Contacto 1</span><span class="ficha-row-v" id="ficha-c1">&mdash;</span></div>
+      <div class="ficha-row"><span class="ficha-row-l">Contacto 2</span><span class="ficha-row-v" id="ficha-c2">&mdash;</span></div>
+    </div>
+
+    <button class="ficha-close" onclick="cerrarFichaJugador()">Cerrar</button>
   </div>
 </div>
 
@@ -729,7 +795,7 @@ function cargarDatos() {
 
     // Query por activo=true y luego filtrar por categoría en cliente
     // (Firestore no permite .where('categoriaApp', 'in', misGrupos) con prefijos)
-    return db.collection('socios').where('activo', '==', true).get()
+    return db.collection('socios').get() // todos — incluye auto-registros pendientes (activo:false)
       .then(function(sociosSnap) {
         DB.jugadores = [];
         sociosSnap.forEach(function(doc) {
@@ -797,6 +863,101 @@ function irTab(tab) {
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('sec-'+tab).classList.add('active');
   if (tab === 'historial') iniciarHistorial();
+  if (tab === 'jugadores') renderJugadoresGrid();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// JUGADORES — grid + ficha reducida
+// ══════════════════════════════════════════════════════════════════
+function renderJugadoresGrid() {
+  var grid = document.getElementById('jug-grid');
+  var empty = document.getElementById('jug-empty');
+  if (!DB.jugadores || !DB.jugadores.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  var ordenados = DB.jugadores.slice().sort(function(a,b){
+    var an = ((a.apellido||'') + ' ' + (a.nombre||'')).toLowerCase();
+    var bn = ((b.apellido||'') + ' ' + (b.nombre||'')).toLowerCase();
+    return an.localeCompare(bn);
+  });
+
+  grid.innerHTML = ordenados.map(function(f){
+    var nombre = ((f.apellido||'') + ', ' + (f.nombre||'')).replace(/^,\s*/, '').replace(/,\s*$/,'') || '\u2014';
+    var cat = (f.categoriaApp||'').toString() || '\u2014';
+    var fn  = (f.fechaNac||'').toString() || '\u2014';
+    var activo = !!f.activo;
+    var foto = (f.foto||'').toString();
+    var dni = (f.dni||f.id||'').toString();
+    var fotoHtml = foto
+      ? '<img class="jug-foto" src="'+foto+'" alt="" onerror="this.outerHTML=\'<div class=&quot;jug-foto-ph&quot;>&#x1F464;</div>\'">'
+      : '<div class="jug-foto-ph">&#x1F464;</div>';
+    return '<div class="jug-card" onclick="abrirFichaJugador(\''+dni+'\')">'+
+      fotoHtml +
+      '<div class="jug-nombre">'+escapeHtml(nombre)+'</div>'+
+      '<div class="jug-meta">'+escapeHtml(cat)+'<br>Nac: '+escapeHtml(fn)+'</div>'+
+      '<span class="jug-estado '+(activo?'activo':'inactivo')+'">'+(activo?'Activo':'Inactivo')+'</span>'+
+    '</div>';
+  }).join('');
+}
+
+function filtrarJugadores(q) {
+  var qn = (q||'').toString().toLowerCase().trim();
+  var cards = document.querySelectorAll('#jug-grid .jug-card');
+  cards.forEach(function(c){
+    var txt = c.innerText.toLowerCase();
+    c.style.display = (!qn || txt.indexOf(qn) !== -1) ? '' : 'none';
+  });
+}
+
+function abrirFichaJugador(dni) {
+  var f = DB.jugadores.find(function(j){ return (j.dni||j.id||'').toString() === dni.toString(); });
+  if (!f) return;
+  var nombre = ((f.apellido||'') + ', ' + (f.nombre||'')).replace(/^,\s*/, '').replace(/,\s*$/,'') || '\u2014';
+  document.getElementById('ficha-nombre').innerText = nombre;
+  document.getElementById('ficha-sub').innerText = (f.categoriaApp||'\u2014') + ' \u00b7 Nac: ' + (f.fechaNac||'\u2014') + ' \u00b7 ' + (f.activo?'Activo':'Inactivo');
+
+  var fotoImg = document.getElementById('ficha-foto');
+  var fotoPh  = document.getElementById('ficha-foto-ph');
+  if (f.foto) {
+    fotoImg.src = f.foto;
+    fotoImg.style.display = 'block';
+    fotoPh.style.display = 'none';
+  } else {
+    fotoImg.style.display = 'none';
+    fotoPh.style.display = 'flex';
+  }
+
+  document.getElementById('ficha-apto').innerText    = f.apto || '\u2014';
+  document.getElementById('ficha-medico').innerText  = f.medico || '\u2014';
+  var ddjj = f.ddjjSalud;
+  var ddjjTxt = '\u2014';
+  if (ddjj && ddjj.firmado) {
+    var fecha = ddjj.fecha ? new Date(ddjj.fecha).toLocaleDateString() : '';
+    ddjjTxt = '\u2713 Firmada' + (fecha ? ' (' + fecha + ')' : '');
+  }
+  document.getElementById('ficha-ddjj').innerText = ddjjTxt;
+
+  document.getElementById('ficha-email').innerText    = f.email || '\u2014';
+  document.getElementById('ficha-celular').innerText  = f.celular || '\u2014';
+  document.getElementById('ficha-domicilio').innerText= f.domicilio || '\u2014';
+  document.getElementById('ficha-c1').innerText       = f.contacto1 || '\u2014';
+  document.getElementById('ficha-c2').innerText       = f.contacto2 || '\u2014';
+
+  document.getElementById('modal-ficha').classList.add('open');
+}
+
+function cerrarFichaJugador() {
+  document.getElementById('modal-ficha').classList.remove('open');
+}
+
+function escapeHtml(s) {
+  return (s==null?'':String(s)).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
