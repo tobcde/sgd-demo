@@ -765,11 +765,18 @@ function callUploadDrive(dniNorm, cb, cbErr) {
   })
   .then(function(r){ return r.text(); })
   .then(function(t){
-    var d; try{ d=JSON.parse(t); } catch(e){ d={error:'Respuesta inválida'}; }
-    if(d && d.error){ if(cbErr) cbErr(d.error); else toast(d.error,'err'); }
+    var d; try{ d=JSON.parse(t); } catch(e){ d={error:'Respuesta inválida del servidor'}; }
+    if(d && d.error){
+      try { console.error('[callUploadDrive] error GAS:', d.error, '| dni=', dniNorm, '| folderID=', INST.driveFolder, '| raw=', t); } catch(_){}
+      var msg = 'Error al subir fotos: ' + d.error + ' (DNI ' + dniNorm + ')';
+      if (cbErr) cbErr(msg); else toast(msg, 'err');
+    }
     else { if(cb) cb(d.urls || {}); }
   })
-  .catch(function(){ if(cbErr) cbErr('Sin conexión para subir imágenes'); });
+  .catch(function(e){
+    try { console.error('[callUploadDrive] fetch falló:', e); } catch(_){}
+    if(cbErr) cbErr('Sin conexión para subir imágenes');
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
