@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.5</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.6</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -5047,11 +5047,32 @@ function _ejecutarMasivaConfirmada(catNom, actividades, desde, hasta, obs) {
   });
 }
 
+// Los nombres de profesor se guardan como "Apellido, Nombre" (con coma), y el
+// campo horarios.profesores es un CSV separado por ", " — choque de separadores.
+// Parseamos matcheando contra DB.profesores: si el nombre completo aparece como
+// substring del CSV, el profe está asignado a ese horario.
+function _parseProfesCsv(csv) {
+  var s = (csv||'').toString();
+  if (!s.trim()) return [];
+  var found = [];
+  var all = (DB.profesores||[]).map(function(p){ return p[0]; }).filter(Boolean);
+  // Ordenar por longitud desc evita falsos positivos si un nombre es prefijo de otro.
+  all.sort(function(a,b){ return b.length - a.length; });
+  var remaining = s;
+  all.forEach(function(n){
+    if (remaining.indexOf(n) >= 0 && found.indexOf(n) < 0) {
+      found.push(n);
+      remaining = remaining.split(n).join(''); // consumir el match
+    }
+  });
+  return found;
+}
+
 function renderHorarios() {
   var el = document.getElementById('listH'); if(!el) return;
   el.innerHTML = DB.horarios.map(function(h){
     var rowId = h[h.length-1];
-    var profesList = (h[3]||'').toString().split(',').map(function(p){return p.trim();}).filter(Boolean);
+    var profesList = _parseProfesCsv(h[3]);
     var profesChips = profesList.length
       ? profesList.map(function(p){
           return '<span style="background:var(--primary-dim,#1a7a3c22);color:var(--primary,#1a7a3c);padding:2px 6px;border-radius:10px;font-size:11px;display:inline-flex;align-items:center;gap:2px;">'
@@ -5108,7 +5129,7 @@ function addProfeHorario(rowId, profNombre) {
     if (String(DB.horarios[i][DB.horarios[i].length-1]) === String(rowId)) { idx = i; break; }
   }
   if (idx < 0) return;
-  var actuales = (DB.horarios[idx][3]||'').toString().split(',').map(function(p){return p.trim();}).filter(Boolean);
+  var actuales = _parseProfesCsv(DB.horarios[idx][3]);
   if (actuales.indexOf(profNombre) < 0) actuales.push(profNombre);
   _updateProfesHorario(rowId, actuales);
 }
@@ -5119,7 +5140,7 @@ function removeProfeHorario(rowId, profNombre) {
     if (String(DB.horarios[i][DB.horarios[i].length-1]) === String(rowId)) { idx = i; break; }
   }
   if (idx < 0) return;
-  var actuales = (DB.horarios[idx][3]||'').toString().split(',').map(function(p){return p.trim();}).filter(Boolean);
+  var actuales = _parseProfesCsv(DB.horarios[idx][3]);
   actuales = actuales.filter(function(p){ return p !== profNombre; });
   _updateProfesHorario(rowId, actuales);
 }
