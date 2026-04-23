@@ -698,7 +698,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
         <div><label class="filter-label">Color</label><input id="actColor" type="color" class="edit-input" value="#1a7a3c" style="width:100%;margin-top:4px;height:37px;padding:2px;"></div>
       </div>
-      <button class="btn btn-save" onclick="guardarActividad()" style="margin-top:10px;">AGREGAR ACTIVIDAD</button>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-save" id="btn-act-guardar" onclick="guardarActividad()" style="flex:1;">AGREGAR ACTIVIDAD</button>
+        <button class="btn btn-secondary" id="btn-act-cancelar" onclick="cancelarEdicionActividad()" style="display:none;">CANCELAR</button>
+      </div>
       <div class="item-list" id="listActividades"></div>
     </div>
 
@@ -2775,11 +2778,19 @@ function renderPlayers() {
     var fotoHtml = fotoUrl ? '<img src="' + fotoUrl + '" loading="lazy" style="width:80px;height:90px;border-radius:8px;object-fit:cover;border:2px solid ' + bc + ';position:absolute;top:34px;right:8px;" onerror="this.parentNode.removeChild(this)">' : '';
     var prStyle = fotoUrl ? 'padding-right:96px;' : '';
     html += '<div class="cat-badge" style="background:' + bc + '">' + cat + rango + '</div>';
-    html += fotoHtml;
-    html += '<div style="' + prStyle + '">';
     var catSecCard = (f[COL.CAT_SECUNDARIA]||'').toString().trim();
-    var catSecBadge = catSecCard ? '<span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;font-weight:800;padding:1px 7px;border-radius:8px;margin-left:6px;font-family:\'Barlow Condensed\',sans-serif;">+' + catSecCard + '</span>' : '';
-    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + esc(apellido) + catSecBadge + '<br><span style="font-size:12px;color:var(--muted);">' + esc(nombre) + '</span></h4>';
+    var fotoTop = 34;
+    if(catSecCard){
+      var catSecObj = DB.categorias.find(function(c){ return c[0] === catSecCard; });
+      var catSecColor = catSecObj ? catSecObj[1] : 'var(--secondary)';
+      var catSecRango = catSecObj ? ' (' + catSecObj[2] + '-' + catSecObj[3] + ')' : '';
+      html += '<div class="cat-badge" style="background:' + catSecColor + ';top:24px;">' + catSecCard + catSecRango + '</div>';
+      fotoTop = 56;
+    }
+    var fotoHtmlAdj = fotoUrl ? fotoHtml.replace('top:34px', 'top:' + fotoTop + 'px') : '';
+    html += fotoHtmlAdj;
+    html += '<div style="' + prStyle + '">';
+    html += '<h4 class="card-nombre" style="margin:0 0 2px 0;">' + esc(apellido) + '<br><span style="font-size:12px;color:var(--muted);">' + esc(nombre) + '</span></h4>';
     html += '<p class="card-info" style="margin:0 0 6px 0;">Doc: ' + dni + (anioNac ? ' | Nac. ' + anioNac : '') + '</p>';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
     html += '<div><span class="status-dot ' + (act ? 'active-dot' : 'inactive-dot') + '"></span>';
@@ -4112,6 +4123,8 @@ function seleccionarEmoji(emoji) {
 }
 
 // -- ACTIVIDADES ------------------------------------------------
+var _actEditandoRow = null;
+
 function renderListActividades() {
   var el = document.getElementById('listActividades'); if(!el) return;
   var acts = DB.actividades || [];
@@ -4120,21 +4133,91 @@ function renderListActividades() {
       return '<div class="item-row">'
         + '<span style="display:flex;align-items:center;gap:8px;">'
         + '<span class="emoji" style="font-size:20px;">' + iconoHTML(a.icono, 22) + '</span>'
-        + '<strong>' + a.nombre + '</strong>'
+        + '<strong>' + esc(a.nombre) + '</strong>'
         + '<span style="width:14px;height:14px;border-radius:50%;background:' + (a.color||'#888') + ';display:inline-block;"></span>'
         + '</span>'
+        + '<span style="display:flex;gap:4px;">'
+        + '<button class="icon-btn" title="Editar icono y color" data-action="editar" data-row="' + a._row + '">&#x270F;</button>'
         + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Actividades" data-row="' + a._row + '">X</button>'
+        + '</span>'
         + '</div>';
     }).join('');
   el.onclick = function(e){
-    var btn = e.target.closest('[data-action="borrar"]');
-    if(btn) {
+    var btn = e.target.closest('[data-action]');
+    if(!btn) return;
+    if(btn.dataset.action === 'editar'){
+      editarActividad(btn.dataset.row);
+    } else if(btn.dataset.action === 'borrar') {
       sgdConfirm('Eliminar esta actividad?', function() {
         borrar(btn.dataset.tabla, btn.dataset.row);
       }, 'ELIMINAR');
     }
   };
   poblarSelectActividad();
+}
+
+function editarActividad(row){
+  var a = (DB.actividades||[]).find(function(x){ return String(x._row) === String(row); });
+  if(!a) return;
+  _actEditandoRow = a._row;
+  var nomEl = document.getElementById('actNom');
+  nomEl.value = a.nombre || '';
+  nomEl.readOnly = true;
+  nomEl.style.opacity = '0.7';
+  var iconoVal = a.icono || '';
+  var urlInput = document.getElementById('actIconoUrl');
+  var disp = document.getElementById('emoji-selected');
+  if(iconoEsUrl(iconoVal)){
+    if(urlInput) urlInput.value = iconoVal;
+    document.getElementById('actIcono').value = iconoVal;
+    if(disp) disp.innerHTML = iconoHTML(iconoVal, 22);
+  } else {
+    if(urlInput) urlInput.value = '';
+    document.getElementById('actIcono').value = iconoVal;
+    if(disp) disp.textContent = iconoVal || '\u26BD';
+  }
+  document.getElementById('actColor').value = a.color || '#1a7a3c';
+  document.getElementById('btn-act-guardar').textContent = 'GUARDAR CAMBIOS';
+  document.getElementById('btn-act-cancelar').style.display = '';
+  renderEmojiGrid(_emojiTodos);
+  nomEl.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cancelarEdicionActividad(){
+  _actEditandoRow = null;
+  var nomEl = document.getElementById('actNom');
+  nomEl.value = '';
+  nomEl.readOnly = false;
+  nomEl.style.opacity = '';
+  document.getElementById('actIcono').value = '';
+  var urlInput = document.getElementById('actIconoUrl'); if(urlInput) urlInput.value = '';
+  var disp = document.getElementById('emoji-selected'); if(disp) disp.textContent = '\u26BD';
+  document.getElementById('actColor').value = '#1a7a3c';
+  document.getElementById('btn-act-guardar').textContent = 'AGREGAR ACTIVIDAD';
+  document.getElementById('btn-act-cancelar').style.display = 'none';
+  renderEmojiGrid(_emojiTodos);
+}
+
+function guardarEdicionActividad(){
+  var row = _actEditandoRow;
+  if(!row) return;
+  var urlImg = (document.getElementById('actIconoUrl')||{}).value;
+  urlImg = urlImg ? urlImg.trim() : '';
+  var icono = iconoEsUrl(urlImg) ? urlImg : document.getElementById('actIcono').value.trim();
+  var color = document.getElementById('actColor').value;
+  mostrarLoader('Actualizando...');
+  db.collection('config_actividades').doc(row).update({icono:icono, color:color})
+    .then(function(){
+      var a = (DB.actividades||[]).find(function(x){ return String(x._row) === String(row); });
+      if(a){ a.icono = icono; a.color = color; }
+      cancelarEdicionActividad();
+      renderListActividades();
+      poblarSelects(); poblarSelectActividad(); poblarSelectsPrecios();
+      poblarSelectMasiva(); renderCatActsCheckboxes('');
+      ocultarLoader();
+      toast('Actividad actualizada', 'ok');
+    })
+    .catch(function(e){ ocultarLoader(); alert('Error: '+(e.message||e)); });
 }
 
 function onActIconoUrlInput(){
@@ -4153,6 +4236,7 @@ function onActIconoUrlInput(){
   }
 }
 function guardarActividad() {
+  if(_actEditandoRow){ return guardarEdicionActividad(); }
   var nom   = document.getElementById('actNom').value.trim();
   var urlImg = (document.getElementById('actIconoUrl')||{}).value;
   urlImg = urlImg ? urlImg.trim() : '';
