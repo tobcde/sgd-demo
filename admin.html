@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.3</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.4</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -6974,6 +6974,70 @@ function citCerrarPrint() {
   document.getElementById('cit-print-screen').style.display = 'none';
 }
 
+// Descarga la citación como imagen JPG de alta calidad (para compartir por WhatsApp, etc).
+// Usa html2canvas cargado lazy desde CDN la primera vez que se llama.
+function citDescargarJPG() {
+  var bar = document.getElementById('cit-print-bar');
+  var content = document.getElementById('cit-print-content');
+  if (!content) return;
+
+  function doCapture() {
+    var prevDisplay = bar ? bar.style.display : '';
+    if (bar) bar.style.display = 'none';
+    try { window.scrollTo(0, 0); } catch(_){}
+    setTimeout(function(){
+      window.html2canvas(content, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: content.scrollWidth,
+        windowHeight: content.scrollHeight
+      }).then(function(canvas){
+        if (bar) bar.style.display = prevDisplay;
+        canvas.toBlob(function(blob){
+          if (!blob) { alert('No se pudo generar la imagen.'); return; }
+          var info = document.getElementById('cit-print-info');
+          var infoText = info ? (info.innerText || info.textContent || 'citacion') : 'citacion';
+          var safe = String(infoText).toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+            .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'citacion';
+          var fname = 'citacion-' + safe + '.jpg';
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = fname;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(function(){ try { URL.revokeObjectURL(a.href); } catch(_){} }, 2000);
+        }, 'image/jpeg', 0.95);
+      }).catch(function(err){
+        if (bar) bar.style.display = prevDisplay;
+        try { console.error('[citDescargarJPG]', err); } catch(_){}
+        alert('No se pudo generar la imagen: ' + (err && err.message ? err.message : err));
+      });
+    }, 80);
+  }
+
+  if (typeof window.html2canvas === 'function') { doCapture(); return; }
+  if (bar) {
+    var btn = document.getElementById('cit-btn-jpg');
+    if (btn) { btn.disabled = true; btn.style.opacity = '.6'; btn.innerText = 'Cargando...'; }
+  }
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  s.onload = function(){
+    var btn = document.getElementById('cit-btn-jpg');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '&#128247; JPG'; }
+    doCapture();
+  };
+  s.onerror = function(){
+    var btn = document.getElementById('cit-btn-jpg');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '&#128247; JPG'; }
+    alert('No se pudo cargar el modulo para generar la imagen. Verifica la conexion a internet.');
+  };
+  document.head.appendChild(s);
+}
+
 // --- HISTORIAL ---
 function citCargarHistorial() {
   callScript({ action: 'getCitaciones', pass: TOKEN }, function(res) {
@@ -7224,6 +7288,7 @@ function ejecutarRecategorizacion() {
     <span id="cit-print-info" style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:white;"></span>
     <div style="margin-left:auto;display:flex;gap:10px;">
       <button onclick="window.print()" style="background:#22c55e;border:none;color:white;border-radius:6px;padding:10px 20px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;">&#128424; Imprimir / PDF</button>
+      <button id="cit-btn-jpg" onclick="citDescargarJPG()" style="background:#3b82f6;border:none;color:white;border-radius:6px;padding:10px 20px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;">&#128247; JPG</button>
       <button onclick="citCerrarPrint()" style="background:rgba(255,255,255,.15);border:none;color:white;border-radius:6px;padding:10px 20px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;">&#10005; Cerrar</button>
     </div>
   </div>
