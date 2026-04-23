@@ -523,6 +523,20 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
         <div id="cit-jugadores-list"></div>
       </div>
+
+      <!-- CUERPO TECNICO (profesores) -->
+      <div class="asist-lista" style="margin-top:14px;">
+        <div class="asist-lista-header">
+          <span class="asist-lista-title">&#x1F464; Cuerpo t&eacute;cnico que acompa&ntilde;a</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span id="cit-prof-contador" style="font-size:12px;color:var(--muted);">0 seleccionados</span>
+            <button onclick="citProfSelAll()"   style="font-size:11px;padding:5px 10px;background:var(--primary-dim);border:1px solid var(--primary-border);color:#6de097;border-radius:6px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;">Todos</button>
+            <button onclick="citProfDeselAll()" style="font-size:11px;padding:5px 10px;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:6px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;">Ninguno</button>
+          </div>
+        </div>
+        <div id="cit-profes-list"></div>
+      </div>
+
       <div style="padding:20px 0;display:flex;justify-content:flex-end;">
         <button onclick="citGenerarLista()" style="background:var(--primary);border:none;color:white;border-radius:8px;padding:12px 24px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;">&#128196; Generar Lista de Citacion</button>
       </div>
@@ -1493,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.2.29</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.0</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -6552,7 +6566,7 @@ function toggleFinanzas() {
 // ═══════════════════════════════════════════════════════════
 // MODULO CITACIONES
 // ═══════════════════════════════════════════════════════════
-var CIT = { jugadoresDisp: [], seleccionados: {}, citaciones: [], act: '', cat: '' };
+var CIT = { jugadoresDisp: [], seleccionados: {}, profesDisp: [], profesSel: {}, citaciones: [], act: '', cat: '' };
 
 function citEsc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -6650,6 +6664,94 @@ function citCargarJugadores() {
   document.getElementById('cit-lista-title').innerText =
     CIT.act + ' \u2014 ' + CIT.cat + ' (' + CIT.jugadoresDisp.length + ' jugadores activos)';
   citRenderJugadores();
+  citCargarProfes();
+}
+
+// ── CUERPO TECNICO ────────────────────────────────────────────────
+function citCargarProfes() {
+  CIT.profesDisp = [];
+  CIT.profesSel = {};
+  var jugByDni = {};
+  DB.jugadores.slice(1).forEach(function(f) {
+    var d = String(f[COL.DNI] || f[COL.TARJETA] || '').trim();
+    if (d) jugByDni[d] = f;
+  });
+
+  (DB.profesores || []).forEach(function(p, i) {
+    var dni = String(p[1] || p[5] || '').trim();
+    if (!dni) return;
+    var fila = jugByDni[dni];
+    var apellido = '', pnombre = '', foto = '', fechaNac = p[2] || '';
+    if (fila) {
+      apellido = String(fila[COL.APELLIDO] || '').trim();
+      pnombre  = String(fila[COL.NOMBRE]   || '').trim();
+      foto     = getDriveDisplay(fila[COL.FOTO] || '');
+      fechaNac = String(fila[COL.FECHA_NAC] || '').trim() || fechaNac;
+    } else {
+      var nm = String(p[0] || '').trim();
+      if (nm.indexOf(',') >= 0) {
+        var partes = nm.split(',');
+        apellido = (partes[0] || '').trim();
+        pnombre  = (partes.slice(1).join(',') || '').trim();
+      } else {
+        apellido = nm;
+      }
+    }
+    CIT.profesDisp.push({
+      idx: i,
+      dni: dni,
+      apellido: apellido,
+      pnombre: pnombre,
+      nombre: (apellido + (pnombre ? ', ' + pnombre : '')).trim() || (p[0] || ''),
+      foto: foto,
+      fechaNac: fechaNac
+    });
+    CIT.profesSel[dni] = false;
+  });
+
+  CIT.profesDisp.sort(function(a, b) { return a.apellido.localeCompare(b.apellido); });
+  citRenderProfes();
+}
+
+function citRenderProfes() {
+  var html = '';
+  CIT.profesDisp.forEach(function(p) {
+    var sel = !!CIT.profesSel[p.dni];
+    var fotoHtml = p.foto
+      ? '<img src="' + citEsc(p.foto) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentNode.innerHTML=\'<div style=&quot;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;&quot;>&#128100;</div>\'">'
+      : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;">&#128100;</div>';
+    var dniEsc = citEsc(p.dni);
+    html += '<div class="asist-row" style="cursor:pointer;' + (sel ? 'background:rgba(201,162,39,.18);' : '') + '" onclick="citProfToggle(\'' + dniEsc + '\')">'
+      + '<div style="display:flex;align-items:center;gap:12px;">'
+      + '<div style="width:38px;height:38px;border-radius:50%;overflow:hidden;background:var(--surface);flex-shrink:0;border:2px solid var(--secondary-border);">' + fotoHtml + '</div>'
+      + '<div>'
+      + '<div class="asist-nombre">' + citEsc(p.nombre)
+      + ' <span style="background:rgba(201,162,39,.22);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;">CT</span></div>'
+      + '<div class="asist-info">DNI ' + dniEsc + (p.fechaNac ? ' &middot; ' + citEsc(p.fechaNac) : '') + '</div>'
+      + '</div></div>'
+      + '<div style="width:28px;height:28px;border-radius:50%;border:2px solid ' + (sel ? 'var(--secondary)' : 'var(--border)') + ';background:' + (sel ? 'var(--secondary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:white;">'
+      + (sel ? '&#10003;' : '') + '</div>'
+      + '</div>';
+  });
+  var el = document.getElementById('cit-profes-list');
+  if (el) {
+    el.innerHTML = html
+      || '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">Sin profesores cargados. Carg&aacute; al cuerpo t&eacute;cnico como jugador y despu&eacute;s convert&iacute;lo a profesor desde su ficha.</div>';
+  }
+  citProfActualizarContador();
+}
+
+function citProfToggle(dni) {
+  CIT.profesSel[dni] = !CIT.profesSel[dni];
+  citRenderProfes();
+}
+function citProfSelAll()   { CIT.profesDisp.forEach(function(p){ CIT.profesSel[p.dni] = true;  }); citRenderProfes(); }
+function citProfDeselAll() { CIT.profesDisp.forEach(function(p){ CIT.profesSel[p.dni] = false; }); citRenderProfes(); }
+
+function citProfActualizarContador() {
+  var n = CIT.profesDisp.filter(function(p){ return CIT.profesSel[p.dni]; }).length;
+  var el = document.getElementById('cit-prof-contador');
+  if (el) el.innerText = n + ' seleccionados';
 }
 
 function citRenderJugadores() {
@@ -6711,6 +6813,11 @@ function citGenerarLista() {
     return { apellido: j.apellido, pnombre: j.pnombre, nombre: j.nombre, dni: j.dni, foto: j.foto, fechaNac: j.fechaNac };
   });
 
+  var profesCitados = CIT.profesDisp.filter(function(p){ return CIT.profesSel[p.dni]; });
+  var profesParaGuardar = profesCitados.map(function(p){
+    return { apellido: p.apellido, pnombre: p.pnombre, nombre: p.nombre, dni: p.dni, foto: p.foto, fechaNac: p.fechaNac };
+  });
+
   mostrarLoader('Guardando citacion...');
   callScript({
     action: 'saveCitacion',
@@ -6724,7 +6831,8 @@ function citGenerarLista() {
     observaciones:   obs,
     actividad:       CIT.act,
     categoria:       CIT.cat,
-    jugadores:       jugParaGuardar
+    jugadores:       jugParaGuardar,
+    profesores:      profesParaGuardar
   }, function() {
     ocultarLoader();
     toast('Citacion guardada', 'ok');
@@ -6732,7 +6840,8 @@ function citGenerarLista() {
     citMostrarPrint(jugParaGuardar, {
       fecha: fechaDisplay, horarioPartido: horarioPartido, horarioCitacion: horarioCitacion,
       rival: rival, estadio: estadio, direccion: direccion,
-      obs: obs, cat: CIT.cat, act: CIT.act
+      obs: obs, cat: CIT.cat, act: CIT.act,
+      profesores: profesParaGuardar
     });
   }, function(e) {
     ocultarLoader();
@@ -6745,15 +6854,23 @@ function citMostrarPrint(jugadores, info) {
   var logoSrc = INST.logoUrl ? getDriveDisplay(INST.logoUrl) : '';
   var clubNombre = INST.nombre || INST.nombreCorto || 'SGD';
   var fecha = new Date().toLocaleDateString('es-AR');
+  var profes = (info && info.profesores) ? info.profesores : [];
   var total = jugadores.length;
+  var totalCT = profes.length;
 
-  function cardHTML(j) {
+  function cardHTML(j, isCT) {
+    // Cards un poco mas chicas cuando hay muchos jugadores + CT, para que entre todo en A4 apaisado
+    var altoFoto = isCT ? 110 : 130;
     var fotoHtml = j.foto
       ? '<img src="' + citEsc(j.foto) + '" style="width:100%;height:100%;object-fit:cover;object-position:center 30%;" onerror="this.style.display=\'none\'">'
       : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>';
-    return '<div style="border:1px solid #ccc;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;">'
-      + '<div style="width:100%;height:130px;background:#f0f0f0;overflow:hidden;flex-shrink:0;">' + fotoHtml + '</div>'
-      + '<div style="padding:5px 6px;background:#f8f8f8;flex:1;">'
+    var borderColor = isCT ? '#c9a227' : '#ccc';
+    var ribbon = isCT
+      ? '<div style="position:absolute;top:4px;right:4px;background:#c9a227;color:white;font-size:7px;font-weight:800;padding:1px 4px;border-radius:2px;letter-spacing:.05em;">CT</div>'
+      : '';
+    return '<div style="border:1px solid ' + borderColor + ';border-radius:6px;overflow:hidden;display:flex;flex-direction:column;position:relative;">'
+      + '<div style="width:100%;height:' + altoFoto + 'px;background:#f0f0f0;overflow:hidden;flex-shrink:0;position:relative;">' + fotoHtml + ribbon + '</div>'
+      + '<div style="padding:5px 6px;background:' + (isCT ? '#fcf6e3' : '#f8f8f8') + ';flex:1;">'
       + '<div style="font-size:8.5px;font-weight:800;text-transform:uppercase;color:#111;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + citEsc(j.apellido || j.nombre) + '</div>'
       + (j.pnombre ? '<div style="font-size:7.5px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + citEsc(j.pnombre) + '</div>' : '')
       + '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px;">'
@@ -6762,7 +6879,20 @@ function citMostrarPrint(jugadores, info) {
       + '</div></div></div>';
   }
 
-  var gridCards = jugadores.map(cardHTML).join('');
+  var gridCards = jugadores.map(function(j){ return cardHTML(j, false); }).join('');
+  var gridProfesCards = profes.map(function(p){ return cardHTML(p, true); }).join('');
+
+  // Bloque cuerpo tecnico (solo si hay profesores)
+  var bloqueProfes = '';
+  if (totalCT > 0) {
+    bloqueProfes =
+      '<div style="margin-top:14px;display:flex;align-items:center;gap:10px;">'
+      + '<div style="flex:1;border-top:2px solid #c9a227;"></div>'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#8a6e10;letter-spacing:.1em;background:#fcf6e3;border:1px solid #c9a227;border-radius:4px;padding:2px 10px;">Cuerpo t&eacute;cnico (' + totalCT + ')</div>'
+      + '<div style="flex:1;border-top:2px solid #c9a227;"></div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:6px;">' + gridProfesCards + '</div>';
+  }
 
   var html =
     '<div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #1a7a3c;padding-bottom:10px;margin-bottom:14px;">'
@@ -6781,22 +6911,25 @@ function citMostrarPrint(jugadores, info) {
     + '<div style="text-align:right;flex-shrink:0;">'
     + '<strong style="display:block;font-size:28px;color:#1a7a3c;font-weight:800;line-height:1;">' + total + '</strong>'
     + '<span style="font-size:10px;color:#888;">citados</span>'
+    + (totalCT > 0 ? '<div style="font-size:10px;color:#8a6e10;font-weight:700;margin-top:2px;">+' + totalCT + ' CT</div>' : '')
     + '<div style="font-size:11px;font-weight:700;color:#333;margin-top:4px;">' + citEsc(info.fecha) + '</div>'
     + '</div></div>'
     + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:8px;">' + gridCards + '</div>'
-    + '<div style="margin-top:50px;border-top:1px solid #ccc;padding-top:8px;display:flex;justify-content:space-between;align-items:flex-end;">'
+    + bloqueProfes
+    + '<div style="margin-top:30px;border-top:1px solid #ccc;padding-top:8px;display:flex;justify-content:space-between;align-items:flex-end;">'
     + '<div style="font-size:8px;color:#aaa;">' + citEsc(clubNombre) + ' &mdash; ' + citEsc(info.act) + '</div>'
     + '<div style="font-size:10px;font-weight:800;color:#1a7a3c;letter-spacing:.05em;">CITACION OFICIAL</div>'
     + '<div style="font-size:8px;color:#aaa;">Generado: ' + fecha + '</div>'
     + '</div>'
-    + '<div style="margin-top:40px;display:flex;gap:40px;justify-content:space-around;">'
+    + '<div style="margin-top:30px;display:flex;gap:40px;justify-content:space-around;">'
     + ['Director Tecnico','Delegado','Coordinador'].map(function(r){
         return '<div style="text-align:center;min-width:120px;"><div style="border-top:1px solid #999;padding-top:4px;font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.05em;">' + r + '</div></div>';
       }).join('')
     + '</div>';
 
   document.getElementById('cit-print-content').innerHTML = html;
-  document.getElementById('cit-print-info').innerText = info.cat + ' \u2014 vs ' + info.rival + ' \u2014 ' + total + ' citados';
+  var infoTxt = info.cat + ' \u2014 vs ' + info.rival + ' \u2014 ' + total + ' citados' + (totalCT > 0 ? ' + ' + totalCT + ' CT' : '');
+  document.getElementById('cit-print-info').innerText = infoTxt;
   document.getElementById('cit-print-screen').style.display = 'block';
   window.scrollTo(0, 0);
 }
@@ -6855,7 +6988,8 @@ function citVerHistorico(rowIndex) {
   citMostrarPrint(c.jugadores || [], {
     fecha: c.fechaPartido, horarioPartido: c.horarioPartido, horarioCitacion: c.horarioCitacion,
     rival: c.rival, estadio: c.estadio, direccion: c.direccion,
-    obs: c.observaciones, cat: c.categoria, act: c.actividad
+    obs: c.observaciones, cat: c.categoria, act: c.actividad,
+    profesores: c.profesores || []
   });
 }
 
