@@ -4002,7 +4002,8 @@ function enviarComprobanteEmail() {
   mostrarLoader('Enviando comprobante...');
   callScript({action:'sendEmail', emailDest:email, logoUrl:(INST.logoUrl||''), asunto:'Comprobante de pago - ' + (INST.nombre||''), htmlBody:
     (function(){
-      var _logo = '<img src="cid:logo" style="width:80px;height:80px;object-fit:contain;background:white;border-radius:10px;padding:6px;" alt="">';
+      var _logoUrl = INST.logoUrl ? getDriveDisplay(INST.logoUrl) : '';
+      var _logo = _logoUrl ? '<img src="' + _logoUrl + '" style="width:80px;height:80px;object-fit:contain;background:white;border-radius:10px;padding:6px;" alt="">' : '';
       var _nombre = INST.nombre || INST.nombreCorto || 'SGD';
       var _plan = (datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : '');
       var _monto = '$' + Number(datos.moTotal||0).toLocaleString('es-AR');
