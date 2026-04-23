@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.4</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.5</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -5050,12 +5050,78 @@ function _ejecutarMasivaConfirmada(catNom, actividades, desde, hasta, obs) {
 function renderHorarios() {
   var el = document.getElementById('listH'); if(!el) return;
   el.innerHTML = DB.horarios.map(function(h){
+    var rowId = h[h.length-1];
+    var profesList = (h[3]||'').toString().split(',').map(function(p){return p.trim();}).filter(Boolean);
+    var profesChips = profesList.length
+      ? profesList.map(function(p){
+          return '<span style="background:var(--primary-dim,#1a7a3c22);color:var(--primary,#1a7a3c);padding:2px 6px;border-radius:10px;font-size:11px;display:inline-flex;align-items:center;gap:2px;">'
+            + p
+            + '<button title="Quitar" data-action="rem-prof" data-row="' + rowId + '" data-prof="' + p + '" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;margin-left:2px;">&times;</button>'
+            + '</span>';
+        }).join(' ')
+      : '<span style="color:var(--muted);font-size:11px;font-style:italic;">sin instructores</span>';
+    var avail = (DB.profesores||[]).map(function(p){ return p[0]; }).filter(function(n){ return n && profesList.indexOf(n) < 0; });
+    var addSelect = avail.length
+      ? '<select data-row="' + rowId + '" onchange="if(this.value){addProfeHorario(this.dataset.row,this.value);this.value=\'\';}" style="font-size:11px;padding:2px 4px;border-radius:4px;background:var(--surface2);border:1px solid var(--primary-border,#1a7a3c55);color:var(--primary,#1a7a3c);cursor:pointer;"><option value="">+ Profe</option>'
+        + avail.map(function(n){ return '<option value="' + n + '">' + n + '</option>'; }).join('')
+        + '</select>'
+      : '';
     return '<div class="item-row" style="border-left:4px solid var(--secondary);flex-direction:column;align-items:flex-start;">'
       + '<div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;"><strong>' + h[0] + ' ' + h[1] + ' hs</strong>'
-      + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Horarios" data-row="' + h[h.length-1] + '">X</button></div>'
-      + '<small style="color:var(--muted);">Sede: ' + (h[2]||'-') + ' | Instructores: ' + (h[3]||'-') + ' | ' + T('grupo') + ': ' + (h[4]||'-') + (h[5] ? ' | Actividad: ' + h[5] : '') + ' | Modalidad: ' + (h[6]||'Mixto') + '</small></div>';
+      + '<button class="icon-btn" style="color:var(--red);" data-action="borrar" data-tabla="Horarios" data-row="' + rowId + '">X</button></div>'
+      + '<small style="color:var(--muted);">Sede: ' + (h[2]||'-') + ' | ' + T('grupo') + ': ' + (h[4]||'-') + (h[5] ? ' | Actividad: ' + h[5] : '') + ' | Modalidad: ' + (h[6]||'Mixto') + '</small>'
+      + '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;width:100%;"><small style="color:var(--muted);margin-right:4px;">Instructores:</small>' + profesChips + ' ' + addSelect + '</div>'
+      + '</div>';
   }).join('');
-  el.onclick = function(e){ var btn = e.target.closest('[data-action="borrar"]'); if(btn) borrar(btn.dataset.tabla, btn.dataset.row); };
+  el.onclick = function(e){
+    var btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    if (btn.dataset.action === 'borrar') borrar(btn.dataset.tabla, btn.dataset.row);
+    else if (btn.dataset.action === 'rem-prof') removeProfeHorario(btn.dataset.row, btn.dataset.prof);
+  };
+}
+
+// Helpers para editar profesores de un horario existente sin tocar los
+// otros campos. Rápido: chip con X para sacar, dropdown "+ Profe" para sumar.
+function _updateProfesHorario(rowId, newProfesList) {
+  var idx = -1;
+  for (var i=0; i<DB.horarios.length; i++) {
+    if (String(DB.horarios[i][DB.horarios[i].length-1]) === String(rowId)) { idx = i; break; }
+  }
+  if (idx < 0) return;
+  var h = DB.horarios[idx];
+  var newCsv = newProfesList.join(', ');
+  var row = [h[0]||'', h[1]||'', h[2]||'', newCsv, h[4]||'', h[5]||'', h[6]||'Mixto'];
+  mostrarLoader('Actualizando instructores...');
+  callScript({action:'updateAdminItem', tabName:'Horarios', rowIndex: rowId, rowArray: row, pass:TOKEN, _noRetry:true}, function(r){
+    DB.horarios[idx][3] = newCsv;
+    renderHorarios();
+    if (typeof poblarTurnosAsist === 'function') poblarTurnosAsist();
+    ocultarLoader();
+    toast('Instructores actualizados','ok');
+  }, function(e){ ocultarLoader(); alert('Error: '+e); });
+}
+
+function addProfeHorario(rowId, profNombre) {
+  var idx = -1;
+  for (var i=0; i<DB.horarios.length; i++) {
+    if (String(DB.horarios[i][DB.horarios[i].length-1]) === String(rowId)) { idx = i; break; }
+  }
+  if (idx < 0) return;
+  var actuales = (DB.horarios[idx][3]||'').toString().split(',').map(function(p){return p.trim();}).filter(Boolean);
+  if (actuales.indexOf(profNombre) < 0) actuales.push(profNombre);
+  _updateProfesHorario(rowId, actuales);
+}
+
+function removeProfeHorario(rowId, profNombre) {
+  var idx = -1;
+  for (var i=0; i<DB.horarios.length; i++) {
+    if (String(DB.horarios[i][DB.horarios[i].length-1]) === String(rowId)) { idx = i; break; }
+  }
+  if (idx < 0) return;
+  var actuales = (DB.horarios[idx][3]||'').toString().split(',').map(function(p){return p.trim();}).filter(Boolean);
+  actuales = actuales.filter(function(p){ return p !== profNombre; });
+  _updateProfesHorario(rowId, actuales);
 }
 
 function crearHorario() {
