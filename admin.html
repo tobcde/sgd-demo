@@ -690,6 +690,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
               <button type="button" class="emoji-cat-btn" onclick="filtrarEmojisCat('educacion')">&#x1F4DA; Edu</button>
             </div>
             <div class="emoji-grid" id="emoji-grid"></div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+              <label class="filter-label" style="font-size:10px;">O peg&aacute; URL de imagen (Drive p&uacute;blico u otra)</label>
+              <input id="actIconoUrl" type="text" class="edit-input" placeholder="https://drive.google.com/file/d/..." style="width:100%;margin-top:4px;font-size:11px;" oninput="onActIconoUrlInput()">
+            </div>
           </div>
         </div>
         <div><label class="filter-label">Color</label><input id="actColor" type="color" class="edit-input" value="#1a7a3c" style="width:100%;margin-top:4px;height:37px;padding:2px;"></div>
@@ -2438,6 +2442,17 @@ function getDriveDisplay(url) {
   return 'https://lh3.googleusercontent.com/d/' + m[1];
 }
 
+// Icono de actividad: puede ser emoji (texto) o URL de imagen (Drive o externa)
+function iconoEsUrl(s){ return typeof s === 'string' && /^https?:\/\//i.test(s.trim()); }
+function iconoHTML(icono, size){
+  if(!icono) return '';
+  size = size || 20;
+  if(iconoEsUrl(icono)){
+    return '<img src="' + getDriveDisplay(icono.trim()) + '" style="width:' + size + 'px;height:' + size + 'px;object-fit:cover;border-radius:4px;vertical-align:middle;" loading="lazy" onerror="this.style.display=\'none\'">';
+  }
+  return icono;
+}
+
 // -- PERIODOS DE PAGO ---------------------------------------------
 function getFechaDesde(p){ return new Date(p.anioD, p.mes-1, parseInt(p.diaD)||1); }
 function getFechaHasta(p){ var anioH = p.anioH||p.anioD, diaH = parseInt(p.diaH)||0; if(diaH===0) diaH = ultimoDiaMes(anioH, p.mes); return new Date(anioH, p.mes-1, diaH); }
@@ -2488,7 +2503,7 @@ function renderInscripcionesModal(dni) {
     var badgeHno = i.hnoDe ? ' <span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;">HNO DE ' + i.hnoDe + '</span>' : '';
     var badgeDesc = descHno > 0 ? '<div style="font-size:10px;color:var(--muted);">Base $' + montoBase.toLocaleString('es-AR') + ' - $' + descHno.toLocaleString('es-AR') + '</div>' : '';
     return '<div class="insc-row' + (baja ? ' insc-baja' : '') + '">'
-      + '<span style="font-size:18px;">' + (icono||'&#x1F4CB;') + '</span>'
+      + '<span style="font-size:18px;">' + (icono ? iconoHTML(icono, 22) : '&#x1F4CB;') + '</span>'
       + '<div style="flex:1;">'
       + '<div class="insc-plan">' + i.plan + (baja ? ' <span style="color:var(--red);font-size:10px;">[BAJA]</span>' : '') + badgeHno + '</div>'
       + '<div class="insc-fechas">Desde ' + i.desde + ' &middot; ' + hastaStr + (i.obs ? ' &middot; ' + i.obs : '') + '</div>'
@@ -2508,7 +2523,7 @@ function abrirModalInscripcion() {
   sel.innerHTML = '<option value="">-- Seleccionar --</option>'
     + (DB.actividades||[]).map(function(a){
         var monto = a.monto || 0;
-        return '<option value="' + a.nombre + '" data-monto="' + monto + '">' + (a.icono ? a.icono + ' ' : '') + a.nombre + (monto ? ' ($' + Number(monto).toLocaleString('es-AR') + ')' : '') + '</option>';
+        return '<option value="' + a.nombre + '" data-monto="' + monto + '">' + (a.icono && !iconoEsUrl(a.icono) ? a.icono + ' ' : '') + a.nombre + (monto ? ' ($' + Number(monto).toLocaleString('es-AR') + ')' : '') + '</option>';
       }).join('');
   document.getElementById('mi-monto').value = '';
   document.getElementById('mi-desde').value = new Date().toISOString().split('T')[0];
@@ -2790,7 +2805,7 @@ html += '<div class="cuota-badge"><span class="cuota-pill ' + cl + '" title="'+_
           var actObj = (DB.actividades||[]).find(function(a){ return a.nombre === nombre; });
           var color = actObj ? actObj.color : '#555';
           var icono = actObj ? actObj.icono : '';
-          html += '<span class="act-chip" style="background:' + color + ';" title="' + nombre + '">' + (icono||nombre.substring(0,2)) + '</span>';
+          html += '<span class="act-chip" style="background:' + color + ';" title="' + nombre + '">' + (iconoHTML(icono, 14) || esc(nombre.substring(0,2))) + '</span>';
         });
         html += '</div>';
       }
@@ -2976,7 +2991,8 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
     wrapEl.style.display = 'block';
     listaEl.innerHTML = inscVig.map(function(i, idx){
       var actObj = (DB.actividades||[]).find(function(a){ return a.nombre === i.plan; });
-      var icono = actObj ? actObj.icono : '&#x1F4CB;';
+      var iconoRaw = actObj ? actObj.icono : '';
+      var icono = iconoRaw ? iconoHTML(iconoRaw, 18) : '&#x1F4CB;';
       var _sc = calcularSaldoPorInscripcion(i);
       var _badge = '';
       var _montoSugerido = Number(i.monto);
@@ -3472,7 +3488,7 @@ function abrirM(ai) {
         var ao = (DB.actividades||[]).find(function(a){ return a.nombre === nombre; });
         var color = ao ? ao.color : '#555';
         var icono = ao ? ao.icono : '';
-        return '<span class="act-chip" style="background:' + color + ';">' + (icono||'') + ' ' + nombre + '</span>';
+        return '<span class="act-chip" style="background:' + color + ';">' + iconoHTML(icono, 14) + ' ' + esc(nombre) + '</span>';
       }).join('') + '</div>';
     } else {
       actListEl.innerHTML = '<span style="color:var(--muted);font-size:12px;">Sin actividades asignadas</span>';
@@ -3485,7 +3501,7 @@ function abrirM(ai) {
       var checked = actSocio.indexOf(a.nombre) >= 0;
       return '<label class="act-check-row">'
         + '<input type="checkbox" name="act_check" value="' + a.nombre + '"' + (checked ? ' checked' : '') + '>'
-        + '<span class="act-check-icono">' + (a.icono||'') + '</span>'
+        + '<span class="act-check-icono">' + iconoHTML(a.icono, 18) + '</span>'
         + '<span class="act-check-label">' + a.nombre + '</span>'
         + '<span style="width:12px;height:12px;border-radius:50%;background:' + (a.color||'#888') + ';display:inline-block;margin-left:auto;"></span>'
         + '</label>';
@@ -4103,7 +4119,7 @@ function renderListActividades() {
     acts.map(function(a, i){
       return '<div class="item-row">'
         + '<span style="display:flex;align-items:center;gap:8px;">'
-        + '<span class="emoji" style="font-size:20px;">' + (a.icono||'') + '</span>'
+        + '<span class="emoji" style="font-size:20px;">' + iconoHTML(a.icono, 22) + '</span>'
         + '<strong>' + a.nombre + '</strong>'
         + '<span style="width:14px;height:14px;border-radius:50%;background:' + (a.color||'#888') + ';display:inline-block;"></span>'
         + '</span>'
@@ -4121,9 +4137,26 @@ function renderListActividades() {
   poblarSelectActividad();
 }
 
+function onActIconoUrlInput(){
+  var url = (document.getElementById('actIconoUrl').value||'').trim();
+  var disp = document.getElementById('emoji-selected');
+  if(url && iconoEsUrl(url)){
+    document.getElementById('actIcono').value = url;
+    if(disp) disp.innerHTML = iconoHTML(url, 22);
+  } else if(!url){
+    // Volver al emoji elegido en el grid (si habia)
+    var emojiActual = (document.getElementById('actIcono').value||'').trim();
+    if(iconoEsUrl(emojiActual)){
+      document.getElementById('actIcono').value = '';
+      if(disp) disp.textContent = '\u26BD';
+    }
+  }
+}
 function guardarActividad() {
   var nom   = document.getElementById('actNom').value.trim();
-  var icono = document.getElementById('actIcono').value.trim();
+  var urlImg = (document.getElementById('actIconoUrl')||{}).value;
+  urlImg = urlImg ? urlImg.trim() : '';
+  var icono = iconoEsUrl(urlImg) ? urlImg : document.getElementById('actIcono').value.trim();
   var color = document.getElementById('actColor').value;
   if(!nom) return alert('Ingresa el nombre de la actividad');
   mostrarLoader('Guardando...');
@@ -4131,6 +4164,7 @@ function guardarActividad() {
     DB.actividades.push({nombre:nom, icono:icono, color:color});
     document.getElementById('actNom').value = '';
     document.getElementById('actIcono').value = '';
+    var urlInput = document.getElementById('actIconoUrl'); if(urlInput) urlInput.value = '';
     var disp = document.getElementById('emoji-selected');
     if(disp) disp.textContent = '\u26BD';
     renderEmojiGrid(_emojiTodos);
@@ -4158,7 +4192,7 @@ function guardarActividadesJ() {
         var ao = (DB.actividades||[]).find(function(a){ return a.nombre === nombre; });
         var color = ao ? ao.color : '#555';
         var icono = ao ? ao.icono : '';
-        return '<span class="act-chip" style="background:' + color + ';">' + (icono||'') + ' ' + nombre + '</span>';
+        return '<span class="act-chip" style="background:' + color + ';">' + iconoHTML(icono, 14) + ' ' + esc(nombre) + '</span>';
       }).join('') + '</div>' : '<span style="color:var(--muted);font-size:12px;">Sin actividades asignadas</span>';
     }
     document.getElementById('m-actividades-checks').style.display = 'none';
@@ -4411,7 +4445,7 @@ function renderCatActsCheckboxes(seleccionadas) {
     var checked = sel.indexOf(a.nombre) >= 0 ? 'checked' : '';
     return '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--surface);border-radius:8px;padding:6px 10px;border:1px solid var(--border);">'
       + '<input type="checkbox" data-act="' + a.nombre + '" ' + checked + ' style="accent-color:var(--primary);">'
-      + '<span class="emoji" style="font-size:16px;">' + (a.icono||'') + '</span>'
+      + '<span class="emoji" style="font-size:16px;">' + iconoHTML(a.icono, 18) + '</span>'
       + '<span style="font-size:13px;">' + a.nombre + '</span>'
       + '</label>';
   }).join('');
@@ -4505,7 +4539,7 @@ function poblarSelectsPrecios() {
   var selCat = document.getElementById('precio-cat');
   if(!selAct || !selCat) return;
   selAct.innerHTML = (DB.actividades||[]).map(function(a){
-    return '<option value="' + a.nombre + '">' + (a.icono||'') + ' ' + a.nombre + '</option>';
+    return '<option value="' + a.nombre + '">' + (a.icono && !iconoEsUrl(a.icono) ? a.icono + ' ' : '') + a.nombre + '</option>';
   }).join('');
   selCat.innerHTML = (DB.categorias||[]).map(function(c){
     return '<option value="' + c[0] + '">' + c[0] + ' (' + c[4] + ')</option>';
@@ -4525,7 +4559,7 @@ function renderListPrecios() {
     var icono = actObj ? (actObj.icono||'') : '';
     return '<div class="item-row">'
       + '<span style="flex:1;">'
-      + '<span class="emoji" style="font-size:15px;">' + icono + '</span> '
+      + '<span class="emoji" style="font-size:15px;">' + iconoHTML(icono, 16) + '</span> '
       + '<strong>' + p.actividad + '</strong>'
       + ' <span style="color:var(--muted);font-size:12px;">/ ' + p.categoria + '</span>'
       + ' &nbsp;<span style="color:#6de097;font-weight:700;">$' + Number(p.monto).toLocaleString('es-AR') + '</span>'
@@ -4655,7 +4689,7 @@ function onMasivaCatChange() {
     var tieneConfig = montoPrecio !== null;
     return '<div style="display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:8px;padding:8px 10px;margin-bottom:6px;border:1px solid var(--border);">'
       + '<input type="checkbox" data-plan="' + nom + '" data-monto="' + monto + '" checked style="accent-color:var(--primary);">'
-      + '<span style="font-size:15px;">' + (actObj && actObj.icono ? actObj.icono : '') + '</span>'
+      + '<span style="font-size:15px;">' + iconoHTML(actObj ? actObj.icono : '', 16) + '</span>'
       + '<span style="flex:1;font-size:13px;font-weight:600;">' + nom
       + (tieneConfig ? ' <span style="font-size:10px;background:rgba(109,224,151,.15);color:#6de097;border-radius:4px;padding:1px 5px;">precio config</span>' : '') + '</span>'
       + '<input type="number" class="edit-input" data-monto-input="' + nom + '" value="' + monto + '" placeholder="Monto" style="width:110px;font-size:13px;padding:4px 8px;">'
@@ -4766,7 +4800,7 @@ function poblarSelects() {
 
 function poblarSelectActividad() {
   var hAct = document.getElementById('hActividad');
-  if(hAct){ hAct.innerHTML = '<option value="">Sin actividad</option>' + (DB.actividades||[]).map(function(a){ return '<option value="' + a.nombre + '">' + (a.icono||'') + ' ' + a.nombre + '</option>'; }).join(''); }
+  if(hAct){ hAct.innerHTML = '<option value="">Sin actividad</option>' + (DB.actividades||[]).map(function(a){ return '<option value="' + a.nombre + '">' + (a.icono && !iconoEsUrl(a.icono) ? a.icono + ' ' : '') + a.nombre + '</option>'; }).join(''); }
 }
 
 // -- INSTITUCION --------------------------------------------------
@@ -6135,7 +6169,7 @@ function citInicializar() {
   actSel.innerHTML = '<option value="">-- Actividad --</option>';
   (DB.actividades || []).forEach(function(a) {
     var o = document.createElement('option');
-    o.value = a.nombre; o.text = (a.icono ? a.icono + ' ' : '') + a.nombre;
+    o.value = a.nombre; o.text = (a.icono && !iconoEsUrl(a.icono) ? a.icono + ' ' : '') + a.nombre;
     actSel.appendChild(o);
   });
   // Si solo hay una actividad, la pre-selecciona
