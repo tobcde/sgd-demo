@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.0</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.3</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -6593,14 +6593,17 @@ function citInicializar() {
     o.value = a.nombre; o.text = (a.icono && !iconoEsUrl(a.icono) ? a.icono + ' ' : '') + a.nombre;
     actSel.appendChild(o);
   });
-  // Si solo hay una actividad, la pre-selecciona
+  // Reset del combo de categorías al placeholder ANTES de llamar a citOnActChange,
+  // sino cuando hay 1 sola actividad el auto-call lo popula pero acto seguido
+  // esta línea lo pisaría y quedaría vacío (bug histórico).
+  document.getElementById('cit-sel-cat').innerHTML = '<option value="">-- Categoria --</option>';
+  document.getElementById('cit-form-partido').style.display = 'none';
+  document.getElementById('cit-jugadores-wrap').style.display = 'none';
+  // Si solo hay una actividad, la pre-selecciona y dispara el populate de categorías
   if ((DB.actividades || []).length === 1) {
     actSel.value = DB.actividades[0].nombre;
     citOnActChange();
   }
-  document.getElementById('cit-sel-cat').innerHTML = '<option value="">-- Categoria --</option>';
-  document.getElementById('cit-form-partido').style.display = 'none';
-  document.getElementById('cit-jugadores-wrap').style.display = 'none';
   citCargarHistorial();
 }
 
@@ -6613,15 +6616,30 @@ function citOnActChange() {
     document.getElementById('cit-jugadores-wrap').style.display = 'none';
     return;
   }
-  // Filtrar categorias que tengan esta actividad en su col 5
+  // Normalizador para matching tolerante (sin tildes, lowercase, trim)
+  function _norm(s) {
+    return String(s||'').trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  var actNorm = _norm(CIT.act);
+  var matches = [];
   (DB.categorias || []).forEach(function(c) {
     var actsStr = getCatActs(c);
-    var incluye = !actsStr || actsStr.split(',').map(function(x){ return x.trim(); }).indexOf(CIT.act) !== -1;
-    if (incluye) {
-      var o = document.createElement('option');
-      o.value = c[0]; o.text = c[0];
-      catSel.appendChild(o);
-    }
+    if (!actsStr) { matches.push(c); return; } // sin restricción → siempre incluir
+    var tokens = actsStr.split(',').map(_norm);
+    if (tokens.indexOf(actNorm) !== -1) matches.push(c);
+  });
+  // Fallback UX: si el filtro dejó 0 resultados (probablemente data inconsistente
+  // — admin cambió nombres de actividades después de asignarlas), mostrar TODAS
+  // las categorías en vez de dejar el combo vacío.
+  if (!matches.length) {
+    matches = (DB.categorias || []).slice();
+    try { console.warn('[citaciones] actividad "' + CIT.act + '" no matchea con ninguna categoría; mostrando todas'); } catch(_){}
+  }
+  matches.forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c[0]; o.text = c[0];
+    catSel.appendChild(o);
   });
   document.getElementById('cit-form-partido').style.display = 'none';
   document.getElementById('cit-jugadores-wrap').style.display = 'none';
@@ -6868,15 +6886,24 @@ function citMostrarPrint(jugadores, info) {
   function cardHTML(j, isCT) {
     // Cards un poco mas chicas cuando hay muchos jugadores + CT, para que entre todo en A4 apaisado
     var altoFoto = isCT ? 110 : 130;
+    // Tanto jugadores como CT pueden subir fotos con aspect ratio y framing variable
+    // (DNI, selfies, full body). Tratamiento uniforme: avatar redondo con cover+center 35%
+    // (cara levemente arriba del centro, funciona para todos los formatos típicos).
+    // La diferenciación jugador/CT es solo por color de borde (gris vs dorado).
+    var avatarSize = altoFoto - 10;
+    var avatarBorder = isCT ? '#c9a227' : '#888';
+    var avatarBg = isCT ? '#fcf6e3' : '#f0f0f0';
+    var fotoStyle = 'width:' + avatarSize + 'px;height:' + avatarSize + 'px;border-radius:50%;object-fit:cover;object-position:50% 35%;border:2px solid ' + avatarBorder + ';background:#fff;';
     var fotoHtml = j.foto
-      ? '<img src="' + citEsc(j.foto) + '" style="width:100%;height:100%;object-fit:cover;object-position:center 30%;" onerror="this.style.display=\'none\'">'
-      : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>';
+      ? '<img src="' + citEsc(j.foto) + '" style="' + fotoStyle + '" onerror="this.style.display=\'none\'">'
+      : '<div style="width:' + avatarSize + 'px;height:' + avatarSize + 'px;border-radius:50%;background:#fff;border:2px solid ' + avatarBorder + ';display:flex;align-items:center;justify-content:center;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>';
     var borderColor = isCT ? '#c9a227' : '#ccc';
     var ribbon = isCT
-      ? '<div style="position:absolute;top:4px;right:4px;background:#c9a227;color:white;font-size:7px;font-weight:800;padding:1px 4px;border-radius:2px;letter-spacing:.05em;">CT</div>'
+      ? '<div style="position:absolute;top:4px;right:4px;background:#c9a227;color:white;font-size:7px;font-weight:800;padding:1px 4px;border-radius:2px;letter-spacing:.05em;z-index:2;">CT</div>'
       : '';
+    var fotoWrapStyle = 'width:100%;height:' + altoFoto + 'px;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;position:relative;';
     return '<div style="border:1px solid ' + borderColor + ';border-radius:6px;overflow:hidden;display:flex;flex-direction:column;position:relative;">'
-      + '<div style="width:100%;height:' + altoFoto + 'px;background:#f0f0f0;overflow:hidden;flex-shrink:0;position:relative;">' + fotoHtml + ribbon + '</div>'
+      + '<div style="' + fotoWrapStyle + '">' + fotoHtml + ribbon + '</div>'
       + '<div style="padding:5px 6px;background:' + (isCT ? '#fcf6e3' : '#f8f8f8') + ';flex:1;">'
       + '<div style="font-size:8.5px;font-weight:800;text-transform:uppercase;color:#111;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + citEsc(j.apellido || j.nombre) + '</div>'
       + (j.pnombre ? '<div style="font-size:7.5px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + citEsc(j.pnombre) + '</div>' : '')
