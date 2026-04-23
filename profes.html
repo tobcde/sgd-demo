@@ -403,7 +403,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 </div>
 
 <div id="toast"></div>
-<div id="vbadge">v1.2</div>
+<div id="vbadge">v1.3</div>
 
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -445,7 +445,8 @@ var INST = {};
 
 var DB = {
   horarios:  [],   // array de docs Firestore (con idx, dia, hora, grupo, extra, etc.)
-  jugadores: []    // array de docs Firestore /socios
+  jugadores: [],   // array de docs Firestore /socios
+  misGrupos: []    // categorías (h.grupo) que el profe enseña — usado por el filtro de jugadores
 };
 var asistencias  = [];  // registros últimos 2 meses [{fecha,turnoId,label,dni,nombre,presente}]
 var asistActual  = {};  // {dni: true/false}
@@ -657,7 +658,7 @@ function doLogout() {
   }
   window._logoutConfirmado = false;
   limpiarSesion();
-  DB = {horarios:[], jugadores:[]};
+  DB = {horarios:[], jugadores:[], misGrupos:[]};
   asistencias = [];
   document.getElementById('app').classList.remove('visible');
   document.getElementById('login-screen').classList.remove('hidden');
@@ -776,6 +777,7 @@ function cargarDatos() {
     DB.horarios.forEach(function(h){
       if (h.grupo && misGrupos.indexOf(h.grupo) < 0) misGrupos.push(h.grupo);
     });
+    DB.misGrupos = misGrupos.slice();
 
     // Asistencias
     asistencias = [];
@@ -881,6 +883,18 @@ function irTab(tab) {
 // ══════════════════════════════════════════════════════════════════
 // JUGADORES — grid + ficha reducida
 // ══════════════════════════════════════════════════════════════════
+// Convierte una URL cruda de Google Drive (drive.google.com/file/d/ID/view)
+// a una URL de thumbnail embeddable (drive.google.com/thumbnail?id=ID&sz=wXXX).
+// Si la URL no es de Drive, la devuelve tal cual (permite URLs de otros hosts).
+function getDriveThumb(url, sz) {
+  if (!url || typeof url !== 'string' || !url.trim()) return '';
+  sz = sz || 'w200';
+  var m = url.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
+  if (!m) m = url.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
+  if (!m) return url;
+  return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=' + sz;
+}
+
 function renderJugadoresGrid() {
   var grid = document.getElementById('jug-grid');
   var empty = document.getElementById('jug-empty');
@@ -897,35 +911,41 @@ function renderJugadoresGrid() {
     return an.localeCompare(bn);
   });
 
-  // Poblar dropdown de categorias a partir de los jugadores cargados
+  // Poblar dropdown de categorías — SOLO las categorías que el profe enseña
+  // (DB.misGrupos). No tiene sentido ofrecer una categoría para la que el
+  // profe no tiene horario asignado, aunque un jugador la tenga como cat secundaria.
   var sel = document.getElementById('jug-cat-filter');
   if (sel) {
     var prev = sel.value;
-    var cats = {};
-    ordenados.forEach(function(f){
-      var c = (f.categoriaApp||'').toString().trim();
-      if (c) cats[c] = true;
-    });
-    var sorted = Object.keys(cats).sort(function(a,b){ return a.localeCompare(b); });
+    var misGruposSet = {};
+    (DB.misGrupos||[]).forEach(function(g){ if (g) misGruposSet[g] = true; });
+    var sorted = Object.keys(misGruposSet).sort(function(a,b){ return a.localeCompare(b); });
     sel.innerHTML = '<option value="">Todas las categor\u00edas</option>' +
       sorted.map(function(c){ return '<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>'; }).join('');
-    if (prev && cats[prev]) sel.value = prev;
+    if (prev && misGruposSet[prev]) sel.value = prev;
   }
 
   grid.innerHTML = ordenados.map(function(f){
     var nombre = ((f.apellido||'') + ', ' + (f.nombre||'')).replace(/^,\s*/, '').replace(/,\s*$/,'') || '\u2014';
-    var cat = (f.categoriaApp||'').toString() || '\u2014';
+    var catP = (f.categoriaApp||'').toString().trim();
+    var catS = (f.catSecundaria||'').toString().trim();
+    // Mostrar ambas categorías si la persona pertenece a dos (ej: Profesores · Adultas).
+    var catDisplay = catP || '\u2014';
+    if (catS && catS !== catP) catDisplay = (catP ? catP + ' \u00b7 ' + catS : catS);
+    // data-cat: lista con | para que el filtro matchee contra cualquiera.
+    var dataCat = catP + (catS && catS !== catP ? '|' + catS : '');
     var fn  = (f.fechaNac||'').toString() || '\u2014';
     var activo = !!f.activo;
-    var foto = (f.foto||'').toString();
+    var fotoRaw = (f.foto||'').toString();
+    var fotoUrl = getDriveThumb(fotoRaw, 'w200');
     var dni = (f.dni||f.id||'').toString();
-    var fotoHtml = foto
-      ? '<img class="jug-foto" src="'+foto+'" alt="" onerror="this.outerHTML=\'<div class=&quot;jug-foto-ph&quot;>&#x1F464;</div>\'">'
+    var fotoHtml = fotoUrl
+      ? '<img class="jug-foto" src="'+fotoUrl+'" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=&quot;jug-foto-ph&quot;>&#x1F464;</div>\'">'
       : '<div class="jug-foto-ph">&#x1F464;</div>';
-    return '<div class="jug-card" data-cat="'+escapeHtml(cat)+'" onclick="abrirFichaJugador(\''+dni+'\')">'+
+    return '<div class="jug-card" data-cat="'+escapeHtml(dataCat)+'" onclick="abrirFichaJugador(\''+dni+'\')">'+
       fotoHtml +
       '<div class="jug-nombre">'+escapeHtml(nombre)+'</div>'+
-      '<div class="jug-meta">'+escapeHtml(cat)+'<br>Nac: '+escapeHtml(fn)+'</div>'+
+      '<div class="jug-meta">'+escapeHtml(catDisplay)+'<br>Nac: '+escapeHtml(fn)+'</div>'+
       '<span class="jug-estado '+(activo?'activo':'inactivo')+'">'+(activo?'Activo':'Inactivo')+'</span>'+
     '</div>';
   }).join('');
@@ -940,9 +960,10 @@ function aplicarFiltrosJugadores() {
   var cards = document.querySelectorAll('#jug-grid .jug-card');
   cards.forEach(function(c){
     var txt = c.innerText.toLowerCase();
-    var cCat = c.getAttribute('data-cat') || '';
+    // data-cat puede ser "Profesores|Adultas" si la persona tiene cat secundaria.
+    var cCatList = (c.getAttribute('data-cat') || '').split('|').filter(Boolean);
     var okTxt = (!qn || txt.indexOf(qn) !== -1);
-    var okCat = (!cat || cCat === cat);
+    var okCat = (!cat || cCatList.indexOf(cat) !== -1);
     c.style.display = (okTxt && okCat) ? '' : 'none';
   });
 }
@@ -959,12 +980,18 @@ function abrirFichaJugador(dni) {
   if (!f) return;
   var nombre = ((f.apellido||'') + ', ' + (f.nombre||'')).replace(/^,\s*/, '').replace(/,\s*$/,'') || '\u2014';
   document.getElementById('ficha-nombre').innerText = nombre;
-  document.getElementById('ficha-sub').innerText = (f.categoriaApp||'\u2014') + ' \u00b7 Nac: ' + (f.fechaNac||'\u2014') + ' \u00b7 ' + (f.activo?'Activo':'Inactivo');
+  // Subtítulo: incluye cat secundaria si la persona la tiene (ej: "Profesores · Adultas")
+  var catPf = (f.categoriaApp||'').toString().trim();
+  var catSf = (f.catSecundaria||'').toString().trim();
+  var catSub = catPf || '\u2014';
+  if (catSf && catSf !== catPf) catSub = (catPf ? catPf + ' \u00b7 ' + catSf : catSf);
+  document.getElementById('ficha-sub').innerText = catSub + ' \u00b7 Nac: ' + (f.fechaNac||'\u2014') + ' \u00b7 ' + (f.activo?'Activo':'Inactivo');
 
   var fotoImg = document.getElementById('ficha-foto');
   var fotoPh  = document.getElementById('ficha-foto-ph');
-  if (f.foto) {
-    fotoImg.src = f.foto;
+  var fichaFotoUrl = getDriveThumb(f.foto || '', 'w300');
+  if (fichaFotoUrl) {
+    fotoImg.src = fichaFotoUrl;
     fotoImg.style.display = 'block';
     fotoPh.style.display = 'none';
   } else {
