@@ -5242,22 +5242,22 @@ function renderReporte() {
 // ── Pills + charts ───────────────────────────────────────────────
 var R_CAT_MAP = {
   pagos:  [
-    {v:'pagos_mes',  l:'Pagos del periodo'},
-    {v:'deudores',   l:'Deben cuota'},
-    {v:'al_dia',     l:'Al d\u00EDa'},
-    {v:'tipo_pago',  l:'Por tipo de pago'},
-    {v:'caja_dia',   l:'Caja del d\u00EDa'},
-    {v:'auditoria',  l:'Auditor\u00EDa'}
+    {v:'pagos_mes',  i:'\uD83D\uDCB5', l:'Pagos del periodo'},
+    {v:'deudores',   i:'\u26A0\uFE0F',   l:'Deben cuota'},
+    {v:'al_dia',     i:'\u2705',       l:'Al d\u00EDa'},
+    {v:'tipo_pago',  i:'\uD83D\uDCB3', l:'Por tipo de pago'},
+    {v:'caja_dia',   i:'\uD83C\uDFE6', l:'Caja del d\u00EDa'},
+    {v:'auditoria',  i:'\uD83D\uDD0D', l:'Auditor\u00EDa'}
   ],
   asist:  [
-    {v:'asistencia',    l:'Asistencia'},
-    {v:'asist_matriz',  l:'Matriz'},
-    {v:'asist_por_dia', l:'Por d\u00EDa'},
-    {v:'ranking_asist', l:'Ranking'}
+    {v:'asistencia',    i:'\u2705',       l:'Asistencia'},
+    {v:'asist_matriz',  i:'\uD83D\uDD22', l:'Matriz'},
+    {v:'asist_por_dia', i:'\uD83D\uDCC5', l:'Por d\u00EDa'},
+    {v:'ranking_asist', i:'\uD83C\uDFC6', l:'Ranking'}
   ],
   socios: [
-    {v:'jugadores', l:'Listado completo'},
-    {v:'eliminados', l:'Eliminados'}
+    {v:'jugadores',  i:'\uD83D\uDCCB', l:'Listado completo'},
+    {v:'eliminados', i:'\uD83D\uDDD1\uFE0F', l:'Eliminados'}
   ]
 };
 function selectRptCat(cat){
@@ -5266,7 +5266,8 @@ function selectRptCat(cat){
   var subs = R_CAT_MAP[cat] || [];
   var wrap = document.getElementById('r-pills-sub');
   wrap.innerHTML = subs.map(function(s,i){
-    return '<button type="button" class="r-pill-sub'+(i===0?' active':'')+'" data-v="'+s.v+'" onclick="selectRptSub(\''+s.v+'\')">'+s.l+'</button>';
+    var ico = s.i ? '<span style="margin-right:6px;">'+s.i+'</span>' : '';
+    return '<button type="button" class="r-pill-sub'+(i===0?' active':'')+'" data-v="'+s.v+'" onclick="selectRptSub(\''+s.v+'\')">'+ico+s.l+'</button>';
   }).join('');
   if(subs.length){ document.getElementById('rTipo').value = subs[0].v; renderReporte(); }
 }
