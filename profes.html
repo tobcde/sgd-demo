@@ -838,14 +838,23 @@ function gasMatchCat(catJugador, catBase) {
 function matcheaTurno(catJugador, catBase, liga) {
   if (!catJugador || !catBase) return false;
   var cj = catJugador.toString().trim(), cb = catBase.toString().trim();
-  if (cj !== cb && cj.indexOf(cb) !== 0) return false;
   if (cj === cb) return true;
-  var sufijo = cj.substring(cb.length).trim();
   var lig = (liga||'').toString().trim().toUpperCase();
-  if (!lig || lig === 'AMBAS') return true;
-  if (lig === 'AFA')     return sufijo === 'A';
-  if (lig === 'FUTSALA') return sufijo === 'F';
-  return true;
+  if (cj.indexOf(cb + ' ') === 0) {
+    var rest = cj.substring(cb.length + 1).trim().toUpperCase();
+    if (!lig || lig === 'AMBAS') return true;
+    if (lig === 'AFA')     return rest === 'AFA';
+    if (lig === 'FUTSALA') return rest === 'FUTSALA';
+    return true;
+  }
+  if (cj.indexOf(cb) === 0) {
+    var sufijo = cj.substring(cb.length).trim();
+    if (!lig || lig === 'AMBAS') return true;
+    if (lig === 'AFA')     return sufijo === 'A';
+    if (lig === 'FUTSALA') return sufijo === 'F';
+    return true;
+  }
+  return false;
 }
 
 function matcheaLiga(playerActividades, turnoLiga) {
