@@ -4903,10 +4903,10 @@ function renderReporte() {
   hideRptChart();
   var _sd = function(id,v){ var e = document.getElementById(id); if(e) e.style.display = v; };
   _sd('r-filter-mes', tipo === 'tipo_pago' ? '' : 'none');
-  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
-  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
   _sd('r-filter-caja-fecha', tipo === 'caja_dia' ? '' : 'none');
-  _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia','auditoria'].includes(tipo) ? '' : 'none');
   _sd('r-filter-plan', ['pagos_mes','deudores','al_dia','tipo_pago','caja_dia','jugadores'].includes(tipo) ? '' : 'none');
   if(tipo === 'deudores') rptDeudores();
   else if(tipo === 'al_dia') rptAlDia();
@@ -5433,15 +5433,30 @@ function rptRankingAsist() {
 }
 
 function rptAuditoria() {
+  var rango = getRangoFechas();
+  var cat = document.getElementById('rCat').value;
+  var dniByCat = null;
+  if(cat){
+    dniByCat = {};
+    DB.jugadores.slice(1).forEach(function(f){
+      if(String(f[COL.CATEGORIA_APP]||'').trim() === String(cat).trim()){
+        dniByCat[(f[COL.DNI]||f[COL.TARJETA]||'').toString().trim()] = true;
+      }
+    });
+  }
   mostrarLoader('Cargando auditoría...');
-  db.collection('auditoria_pagos').orderBy('fecha','desc').limit(100).get()
+  db.collection('auditoria_pagos').orderBy('fecha','desc').limit(500).get()
     .then(function(snap) {
       _contarLecturas(snap.size);
       ocultarLoader();
       var rows = [];
+      var count = 0;
       snap.forEach(function(doc) {
         var d = doc.data();
         var orig = d.pagoOriginal || {};
+        var fechaDia = (d.fecha||'').substring(0,10);
+        if(!enRango(fechaDia, rango.desde, rango.hasta)) return;
+        if(dniByCat && !dniByCat[(orig.dni||'').toString().trim()]) return;
         var tipoColor = d.tipo === 'ELIMINAR' ? 'var(--red)' : 'var(--secondary)';
         var detalle = d.tipo === 'EDITAR' && d.pagoNuevo
           ? 'Monto: $' + Number(orig.monto).toLocaleString('es-AR') + ' → $' + Number(d.pagoNuevo.monto).toLocaleString('es-AR')
@@ -5454,8 +5469,9 @@ function rptAuditoria() {
           + td(detalle)
           + td(d.motivo||'-','muted')
           + '</tr>');
+        count++;
       });
-      setCards([{val:snap.size, lbl:'Registros de auditoría', color:'var(--secondary)'}]);
+      setCards([{val:count, lbl:'Registros de auditoría', color:'var(--secondary)'}]);
       setTablaHeaders(['Tipo','Fecha','Socio','Plan','Detalle','Motivo']);
       setTablaRows(rows);
       if(!rows.length) document.getElementById('r-empty').style.display='';
