@@ -5240,21 +5240,12 @@ function renderReporte() {
   var _re = document.getElementById('r-empty'); if(_re) _re.style.display = 'none';
   var _sd = function(id,v){ var e = document.getElementById(id); if(e) e.style.display = v; };
   _sd('r-filter-mes', tipo === 'tipo_pago' ? '' : 'none');
-  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria','eliminados'].includes(tipo) ? '' : 'none');
-  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria','eliminados'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
   _sd('r-filter-caja-fecha', tipo === 'caja_dia' ? '' : 'none');
   _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia','auditoria'].includes(tipo) ? '' : 'none');
   _sd('r-filter-plan', ['pagos_mes','deudores','al_dia','tipo_pago','caja_dia','jugadores'].includes(tipo) ? '' : 'none');
-  // Eliminados: ampliar rango automaticamente para incluir meses anteriores
-  if(tipo === 'eliminados'){
-    var _rDe = document.getElementById('rDesde');
-    if(_rDe && _rDe.value){
-      var _hoy = new Date();
-      var _amp = new Date(_hoy.getFullYear(), _hoy.getMonth()-6, 1);
-      var _cur = new Date(_rDe.value);
-      if(_cur > _amp) _rDe.value = _amp.toISOString().split('T')[0];
-    }
-  }
+  // Eliminados: mostramos los ultimos 500 eventos sin filtro de fecha — no toca rDesde/rHasta
   if(tipo === 'deudores') rptDeudores();
   else if(tipo === 'al_dia') rptAlDia();
   else if(tipo === 'jugadores') rptJugadores();
@@ -5829,19 +5820,19 @@ function rptAuditoria() {
 }
 
 function rptEliminados() {
-  var rango = getRangoFechas();
+  // No filtramos por rango de fechas — la query ya limita a los ultimos 500 eventos
+  // ordenados por fecha desc, que es lo que el usuario quiere ver.
   mostrarLoader('Cargando historico de eliminados...');
   db.collection('auditoria_socios').orderBy('fecha','desc').limit(500).get()
     .then(function(snap){
       _contarLecturas(snap.size);
       ocultarLoader();
+      try { console.log('[rptEliminados] docs recibidos:', snap.size); } catch(_){}
       var rows = [];
       var totalElim = 0, totalRest = 0;
       snap.forEach(function(doc){
         var d = doc.data();
         var fechaStr = d.fecha && d.fecha.toDate ? formatDate(d.fecha.toDate()) : (d.fecha||'-');
-        var fechaDia = d.fecha && d.fecha.toDate ? d.fecha.toDate().toISOString().substring(0,10) : '';
-        if(fechaDia && !enRango(fechaDia, rango.desde, rango.hasta)) return;
         var accion = d.accion || '-';
         var color = accion === 'eliminar' ? 'var(--red)' : '#6de097';
         var snap2 = d.snapshot || {};
@@ -5867,8 +5858,24 @@ function rptEliminados() {
       ]);
       setTablaHeaders(['Accion','Fecha','Socio','Categoria','Motivo','Usuario','']);
       setTablaRows(rows);
-      if(!rows.length) document.getElementById('r-empty').style.display='';
-    }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+      if(!rows.length){
+        var empty = document.getElementById('r-empty');
+        if(empty){
+          empty.style.display = '';
+          empty.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);">'
+            + '<div style="font-size:30px;margin-bottom:6px;">&#128196;</div>'
+            + '<div style="font-size:14px;font-weight:700;">Sin eliminaciones registradas</div>'
+            + '<div style="font-size:12px;margin-top:4px;">'
+            + 'La colecci&oacute;n <code>auditoria_socios</code> est&aacute; vac&iacute;a. '
+            + 'Se registran autom&aacute;ticamente al eliminar o restaurar socios desde la ficha.'
+            + '</div></div>';
+        }
+      }
+    }).catch(function(e){
+      ocultarLoader();
+      try { console.error('[rptEliminados] error:', e); } catch(_){}
+      toast('Error al cargar eliminados: ' + (e.message || e) + ' (code: ' + (e.code || 'n/a') + ')', 'err');
+    });
 }
 
 function restaurarSocioDesdeReporte(dni){
