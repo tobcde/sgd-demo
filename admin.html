@@ -5218,13 +5218,28 @@ function renderReporte() {
   }
   // Destruir chart previo y ocultar wrap — cada reporte que quiera chart lo re-crea
   hideRptChart();
+  // Limpiar headers/rows/cards del reporte anterior para evitar ver data vieja
+  var _th = document.getElementById('r-thead'); if(_th) _th.innerHTML = '';
+  var _tb = document.getElementById('r-tbody'); if(_tb) _tb.innerHTML = '';
+  var _rc = document.getElementById('r-cards'); if(_rc) _rc.innerHTML = '';
+  var _re = document.getElementById('r-empty'); if(_re) _re.style.display = 'none';
   var _sd = function(id,v){ var e = document.getElementById(id); if(e) e.style.display = v; };
   _sd('r-filter-mes', tipo === 'tipo_pago' ? '' : 'none');
-  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
-  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria','eliminados'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria','eliminados'].includes(tipo) ? '' : 'none');
   _sd('r-filter-caja-fecha', tipo === 'caja_dia' ? '' : 'none');
   _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia','auditoria'].includes(tipo) ? '' : 'none');
   _sd('r-filter-plan', ['pagos_mes','deudores','al_dia','tipo_pago','caja_dia','jugadores'].includes(tipo) ? '' : 'none');
+  // Eliminados: ampliar rango automaticamente para incluir meses anteriores
+  if(tipo === 'eliminados'){
+    var _rDe = document.getElementById('rDesde');
+    if(_rDe && _rDe.value){
+      var _hoy = new Date();
+      var _amp = new Date(_hoy.getFullYear(), _hoy.getMonth()-6, 1);
+      var _cur = new Date(_rDe.value);
+      if(_cur > _amp) _rDe.value = _amp.toISOString().split('T')[0];
+    }
+  }
   if(tipo === 'deudores') rptDeudores();
   else if(tipo === 'al_dia') rptAlDia();
   else if(tipo === 'jugadores') rptJugadores();
