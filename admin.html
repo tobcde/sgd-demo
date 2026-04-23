@@ -350,7 +350,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <input type="text" id="busq" class="filter-select" placeholder="Nombre o documento..." oninput="renderPlayers()"></div>
     <div class="filter-group"><label class="filter-label">Estado</label>
       <select id="fEstado" class="filter-select" onchange="renderPlayers()">
-        <option value="">Todos</option><option value="Activos" selected>Solo Activos</option><option value="Inactivos">Solo Inactivos</option></select></div>
+        <option value="">Todos</option><option value="Activos" selected>Solo Activos</option><option value="Inactivos">Solo Inactivos</option><option value="Eliminados">Eliminados</option></select></div>
     <div class="filter-group"><label class="filter-label">Genero</label>
       <select id="fGen" class="filter-select" onchange="renderPlayers()">
         <option value="">Todos</option><option>Masculino</option><option>Femenino</option></select></div>
@@ -933,6 +933,8 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn-editar" id="btn-convertir-profe" onclick="convertirSocioAProfe()" title="Crear profesor con el mismo DNI">&#x1F464; A Profesor</button>
         <button class="btn-editar" id="btn-editar-ficha" onclick="toggleEditarFicha()">&#x270F; Editar</button>
+        <button class="btn-editar" id="btn-eliminar-socio" onclick="eliminarSocio()" title="Eliminar socio (soft delete)" style="color:var(--red);border-color:var(--red);">&#x1F5D1; Eliminar</button>
+        <button class="btn-editar" id="btn-restaurar-socio" onclick="restaurarSocio()" title="Restaurar socio eliminado" style="display:none;color:#6de097;border-color:#6de097;">&#x267B; Restaurar</button>
         <button class="modal-close" onclick="cerrarModal()">&#x2715;</button>
       </div>
     </div>
@@ -1678,7 +1680,7 @@ function socioToRow(doc, docId) {
   // 18=Plan,19=Foto,20=DniFoto,21=Apto,22=Contacto1,23=Contacto2,24=DniDorso,
   // 25=Actividades,26=Saldo,27=CatSecundaria
   // Los últimos 2 elementos son hoja y fila (usados por itemSel)
-  return [
+  var row = [
     d.apellido||'', d.nombre||'', d.email||'',
     d.dni||id,      // tarjeta = DNI
     d.telefono||'', d.celular||'',
@@ -1692,6 +1694,11 @@ function socioToRow(doc, docId) {
     d.actividades||'', d.saldo||0, d.catSecundaria||'',
     'socios', id   // hoja, fila (usamos el docId como "fila")
   ];
+  row._eliminado = d.eliminado === true;
+  row._eliminadoEn = d.eliminadoEn || null;
+  row._eliminadoPor = d.eliminadoPor || '';
+  row._motivoEliminacion = d.motivoEliminacion || '';
+  return row;
 }
 
 function horarioToRow(doc) {
@@ -2720,7 +2727,7 @@ function estadoCuotaV2(f) { return calcularEstadoTiempoReal(f); }// -- RENDER SO
 function renderPlayers() {
   // Si el filtro es Inactivos y no están cargados, cargarlos primero
   var estFil = document.getElementById('fEstado');
-  if(estFil && estFil.value === 'Inactivos' && !_cargado.inactivos) {
+  if(estFil && (estFil.value === 'Inactivos' || estFil.value === 'Eliminados') && !_cargado.inactivos) {
     lazyCargarInactivos(function(){ renderPlayers(); });
     return;
   }
@@ -2744,6 +2751,8 @@ function renderPlayers() {
     var cv = estadoCuotaV2(f), est = cv.estado;
 
     if(!(nom.toLowerCase().includes(busq) || dni.includes(busq))) return;
+    if(f._eliminado && estF !== 'Eliminados') return;
+    if(!f._eliminado && estF === 'Eliminados') return;
     if(genF && gen !== genF) return;
     if(catF && cat !== catF) return;
     if(estF==='Activos' && !act) return;
@@ -2773,7 +2782,11 @@ function renderPlayers() {
     if(_rendered >= _PAG){ _skipped++; return; }
     _rendered++;
 
-    html += '<div class="card" onclick="abrirM(' + (i+1) + ')" style="border-left-color:' + bc + ';position:relative;">';
+    var eliminadoStyle = f._eliminado ? 'opacity:0.55;filter:grayscale(0.4);' : '';
+    html += '<div class="card" onclick="abrirM(' + (i+1) + ')" style="border-left-color:' + (f._eliminado ? 'var(--red)' : bc) + ';position:relative;' + eliminadoStyle + '">';
+    if(f._eliminado){
+      html += '<div style="position:absolute;top:0;left:0;right:0;background:var(--red);color:#fff;font-size:10px;font-weight:800;text-align:center;padding:2px 0;border-top-right-radius:10px;border-top-left-radius:10px;letter-spacing:1px;">ELIMINADO</div>';
+    }
     var fotoUrl = getDriveThumb(f[COL.FOTO], 'w200');
     var fotoHtml = fotoUrl ? '<img src="' + fotoUrl + '" loading="lazy" style="width:80px;height:90px;border-radius:8px;object-fit:cover;border:2px solid ' + bc + ';position:absolute;top:34px;right:8px;" onerror="this.parentNode.removeChild(this)">' : '';
     var prStyle = fotoUrl ? 'padding-right:96px;' : '';
@@ -3519,6 +3532,23 @@ function abrirM(ai) {
     }).join('') : '<span style="color:var(--muted);font-size:12px;">Sin actividades configuradas</span>';
     actChecksEl.style.display = 'none';
     document.getElementById('btn-guardar-actividades').style.display = 'none';
+  }
+  // Toggle botones eliminar/restaurar segun estado del socio
+  var esEliminado = !!f._eliminado;
+  var btnEliminar = document.getElementById('btn-eliminar-socio');
+  var btnRestaurar = document.getElementById('btn-restaurar-socio');
+  var btnEditar = document.getElementById('btn-editar-ficha');
+  var btnProfe = document.getElementById('btn-convertir-profe');
+  if(btnEliminar) btnEliminar.style.display = esEliminado ? 'none' : '';
+  if(btnRestaurar) btnRestaurar.style.display = esEliminado ? '' : 'none';
+  if(btnEditar) btnEditar.style.display = esEliminado ? 'none' : '';
+  if(btnProfe) btnProfe.style.display = esEliminado ? 'none' : '';
+  // Banner de eliminado en el header del modal
+  var subEl = document.getElementById('m-dni-sub');
+  if(subEl && esEliminado){
+    var fechaElim = f._eliminadoEn && f._eliminadoEn.toDate ? formatDate(f._eliminadoEn.toDate()) : (f._eliminadoEn || '');
+    var motivoEl = f._motivoEliminacion ? ' — ' + f._motivoEliminacion : '';
+    subEl.innerHTML = '<span style="background:var(--red);color:#fff;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800;margin-right:6px;">ELIMINADO' + (fechaElim ? ' ' + fechaElim : '') + '</span>Doc: ' + dni + motivoEl;
   }
   document.getElementById('modalEdicion').classList.add('open');
   // Datos médicos — reset + fetch async desde Firestore
@@ -4375,6 +4405,82 @@ function cancelarEditProfesor() {
   document.getElementById('btnCancelProfesor').style.display = 'none';
 }
 
+function eliminarSocio() {
+  if(!itemSel || !itemSel.dni) return alert('Abri primero la ficha de un socio');
+  var dni = itemSel.dni.toString();
+  var f = DB.jugadores[itemSel.arrIdx]; if(!f) return;
+  if(f._eliminado) return alert('Este socio ya esta eliminado');
+  var nombreCompleto = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
+  sgdConfirm('Eliminar a <b>' + nombreCompleto + '</b> (DNI ' + dni + ')?<br><br>El socio queda archivado y puede restaurarse. Se requiere un motivo.', function(){
+    var motivo = prompt('Motivo de la eliminacion (obligatorio):');
+    if(!motivo || !motivo.trim()) return alert('El motivo es obligatorio');
+    motivo = motivo.trim();
+    mostrarLoader('Eliminando socio...');
+    var snapshot = {};
+    for(var k in f){ if(Object.prototype.hasOwnProperty.call(f,k) && k.indexOf('_') !== 0) snapshot[k] = f[k]; }
+    var usuario = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+    var ts = firebase.firestore.FieldValue.serverTimestamp();
+    db.collection('socios').doc(dni).update({
+      eliminado: true,
+      eliminadoEn: ts,
+      eliminadoPor: usuario,
+      motivoEliminacion: motivo,
+      activo: false
+    }).then(function(){
+      return db.collection('auditoria_socios').add({
+        accion: 'eliminar', dni: dni, fecha: ts, usuario: usuario,
+        motivo: motivo, snapshot: snapshot
+      });
+    }).then(function(){
+      f._eliminado = true;
+      f._eliminadoEn = new Date();
+      f._eliminadoPor = usuario;
+      f._motivoEliminacion = motivo;
+      f[COL.ACTIVO] = 'No';
+      ocultarLoader();
+      cerrarModal();
+      renderPlayers();
+      toast('Socio eliminado', 'ok');
+    }).catch(function(e){ ocultarLoader(); alert('Error: ' + (e.message||e)); });
+  }, 'ELIMINAR');
+}
+
+function restaurarSocio() {
+  if(!itemSel || !itemSel.dni) return alert('Abri primero la ficha de un socio');
+  var dni = itemSel.dni.toString();
+  var f = DB.jugadores[itemSel.arrIdx]; if(!f) return;
+  if(!f._eliminado) return alert('Este socio no esta eliminado');
+  var nombreCompleto = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
+  sgdConfirm('Restaurar a <b>' + nombreCompleto + '</b> (DNI ' + dni + ')?', function(){
+    mostrarLoader('Restaurando...');
+    var usuario = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+    var ts = firebase.firestore.FieldValue.serverTimestamp();
+    var snapshot = {};
+    for(var k in f){ if(Object.prototype.hasOwnProperty.call(f,k) && k.indexOf('_') !== 0) snapshot[k] = f[k]; }
+    var del = firebase.firestore.FieldValue.delete();
+    db.collection('socios').doc(dni).update({
+      eliminado: del,
+      eliminadoEn: del,
+      eliminadoPor: del,
+      motivoEliminacion: del
+    }).then(function(){
+      return db.collection('auditoria_socios').add({
+        accion: 'restaurar', dni: dni, fecha: ts, usuario: usuario,
+        motivo: '', snapshot: snapshot
+      });
+    }).then(function(){
+      f._eliminado = false;
+      f._eliminadoEn = null;
+      f._eliminadoPor = '';
+      f._motivoEliminacion = '';
+      ocultarLoader();
+      cerrarModal();
+      renderPlayers();
+      toast('Socio restaurado', 'ok');
+    }).catch(function(e){ ocultarLoader(); alert('Error: ' + (e.message||e)); });
+  }, 'RESTAURAR');
+}
+
 function convertirSocioAProfe() {
   if (!itemSel || !itemSel.dni) return alert('Abr\u00ed primero la ficha de un jugador');
   var dni = itemSel.dni.toString();
@@ -5037,6 +5143,7 @@ function renderReporte() {
   else if(tipo === 'tipo_pago') rptTipoPago();
   else if(tipo === 'caja_dia') rptCajaDia();
   else if(tipo === 'auditoria') rptAuditoria();
+  else if(tipo === 'eliminados') rptEliminados();
 }
 
 // ── Pills + charts ───────────────────────────────────────────────
@@ -5056,7 +5163,8 @@ var R_CAT_MAP = {
     {v:'ranking_asist', l:'Ranking'}
   ],
   socios: [
-    {v:'jugadores', l:'Listado completo'}
+    {v:'jugadores', l:'Listado completo'},
+    {v:'eliminados', l:'Eliminados'}
   ]
 };
 function selectRptCat(cat){
@@ -5594,6 +5702,60 @@ function rptAuditoria() {
       setTablaRows(rows);
       if(!rows.length) document.getElementById('r-empty').style.display='';
     }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+}
+
+function rptEliminados() {
+  var rango = getRangoFechas();
+  mostrarLoader('Cargando historico de eliminados...');
+  db.collection('auditoria_socios').orderBy('fecha','desc').limit(500).get()
+    .then(function(snap){
+      _contarLecturas(snap.size);
+      ocultarLoader();
+      var rows = [];
+      var totalElim = 0, totalRest = 0;
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var fechaStr = d.fecha && d.fecha.toDate ? formatDate(d.fecha.toDate()) : (d.fecha||'-');
+        var fechaDia = d.fecha && d.fecha.toDate ? d.fecha.toDate().toISOString().substring(0,10) : '';
+        if(fechaDia && !enRango(fechaDia, rango.desde, rango.hasta)) return;
+        var accion = d.accion || '-';
+        var color = accion === 'eliminar' ? 'var(--red)' : '#6de097';
+        var snap2 = d.snapshot || {};
+        var nombre = (snap2.apellido||'') + ', ' + (snap2.nombre||'');
+        var cat = snap2.categoriaApp || '-';
+        var restaurarBtn = accion === 'eliminar'
+          ? '<button class="btn btn-secondary" style="padding:3px 8px;font-size:10px;" onclick="restaurarSocioDesdeReporte(\'' + (d.dni||'') + '\')">&#x267B; Restaurar</button>'
+          : '';
+        rows.push('<tr>'
+          + td('<span style="color:'+color+';font-weight:700;text-transform:uppercase;">'+accion+'</span>')
+          + td(fechaStr,'muted')
+          + td(nombre + '<br><small style="color:var(--muted)">' + (d.dni||'-') + '</small>')
+          + td(cat,'muted')
+          + td(d.motivo||'-','muted')
+          + td(d.usuario||'-','muted')
+          + td(restaurarBtn)
+          + '</tr>');
+        if(accion === 'eliminar') totalElim++; else if(accion === 'restaurar') totalRest++;
+      });
+      setCards([
+        {val:totalElim, lbl:'Eliminaciones', color:'var(--red)'},
+        {val:totalRest, lbl:'Restauraciones', color:'#6de097'}
+      ]);
+      setTablaHeaders(['Accion','Fecha','Socio','Categoria','Motivo','Usuario','']);
+      setTablaRows(rows);
+      if(!rows.length) document.getElementById('r-empty').style.display='';
+    }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+}
+
+function restaurarSocioDesdeReporte(dni){
+  if(!dni) return;
+  var idx = DB.jugadores.findIndex(function(f,i){ return i>0 && (f[COL.DNI]||f[COL.TARJETA]||'').toString() === dni; });
+  if(idx < 0){
+    // socio no cargado en memoria (inactivos no cargados) — forzar carga y reintentar
+    return lazyCargarInactivos(function(){ restaurarSocioDesdeReporte(dni); });
+  }
+  itemSel = {sheet:'socios', row:dni, dni:dni, arrIdx:idx};
+  restaurarSocio();
 }
 
 function rptCajaDia() {
