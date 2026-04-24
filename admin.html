@@ -1566,7 +1566,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.10</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.11</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3080,6 +3080,16 @@ function getActividadEmoji(a){
   if(a.icono && !iconoEsUrl(a.icono)) return a.icono;
   return emojiPorNombre(a.nombre);
 }
+// Decora un planNom "Futbol + Musculacion" con emojis por actividad.
+function decorarPlanNom(planNom){
+  if(!planNom) return '';
+  return planNom.toString().split(' + ').map(function(pn){
+    var _nm = (pn||'').trim(); if(!_nm) return pn;
+    var _act = (typeof DB !== 'undefined' && DB.actividades) ? DB.actividades.find(function(a){ return a.nombre === _nm; }) : null;
+    var _em = getActividadEmoji(_act || {nombre:_nm});
+    return (_em ? _em + ' ' : '') + _nm;
+  }).join(' + ');
+}
 
 // -- PERIODOS DE PAGO ---------------------------------------------
 function getFechaDesde(p){ return new Date(p.anioD, p.mes-1, parseInt(p.diaD)||1); }
@@ -3492,7 +3502,7 @@ function renderPlayers() {
     html += '</div>';
     var _pt=cv.deuda>0?'Debe $'+Number(cv.deuda).toLocaleString('es-AR'):cv.saldoAFavor>0?'A favor: $'+Number(cv.saldoAFavor).toLocaleString('es-AR'):'Al dia';
 html += '<div class="cuota-badge"><span class="cuota-pill ' + cl + '" title="'+_pt+'">' + lb + '</span>';
-    html += '<span style="font-size:11px;color:var(--muted);">' + (cv.planNom ? cv.planNom + ' ' + ms : '') + '</span></div>';
+    html += '<span style="font-size:11px;color:var(--muted);">' + (cv.planNom ? decorarPlanNom(cv.planNom) + ' ' + ms : '') + '</span></div>';
     if(st.total > 0){
       html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">';
       html += '<span style="font-size:10px;color:var(--muted);text-transform:uppercase;">Asistencia mes</span>';
@@ -4270,7 +4280,7 @@ function abrirM(ai) {
     } else {
       ecHtml += '<span style="color:var(--red);font-weight:700;">DEBE $' + Number(cv.deudaActividad).toLocaleString('es-AR') + '</span>';
     }
-    ecHtml += ' <small style="color:var(--muted);">(' + cv.planNom + ')</small></div>';
+    ecHtml += ' <small style="color:var(--muted);">(' + decorarPlanNom(cv.planNom) + ')</small></div>';
   } else { ecHtml = '<span style="color:var(--muted);">Sin plan asignado</span>'; }
   document.getElementById('m-estado-cuota').innerHTML = ecHtml;
   // Info del ajuste aplicado + historial
@@ -4891,7 +4901,7 @@ function guardarAjusteSaldo() {
         } else {
           ecHtml += '<span style="color:var(--red);font-weight:700;">DEBE $' + Number(cv.deudaActividad).toLocaleString('es-AR') + '</span>';
         }
-        ecHtml += ' <small style="color:var(--muted);">(' + cv.planNom + ')</small></div>';
+        ecHtml += ' <small style="color:var(--muted);">(' + decorarPlanNom(cv.planNom) + ')</small></div>';
       } else { ecHtml = '<span style="color:var(--muted);">Sin plan asignado</span>'; }
       var ec = document.getElementById('m-estado-cuota'); if(ec) ec.innerHTML = ecHtml;
       renderAjusteSaldoInfo(dni, cv);
