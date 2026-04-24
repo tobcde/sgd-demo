@@ -403,7 +403,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 </div>
 
 <div id="toast"></div>
-<div id="vbadge">v1.3</div>
+<div id="vbadge">v2.0</div>
 
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -759,16 +759,25 @@ function cargarDatos() {
     // Institución
     if (instDoc.exists) aplicarBranding(instDoc.data());
 
-    // Horarios — filtrar los del profe por nombre
+    // Horarios — filtrar los del profe
+    // FASE 1 dual-read: preferir profesoresIds (refs por DNI) si existe, fallback a match por nombre
     var nombrePers = (PROF.nombre || '').toLowerCase().trim();
+    var miDni = (PROF.dni || '').toString().trim();
     DB.horarios = [];
     horSnap.forEach(function(doc) {
       var h = doc.data();
-      var profsCelda = (h.profesores || '').toString().toLowerCase();
-      var profs = profsCelda.split(',').map(function(p){ return p.trim(); });
-      var esDelProfe = profs.some(function(p){
-        return p && (p === nombrePers || p.indexOf(nombrePers) >= 0 || nombrePers.indexOf(p) >= 0);
-      });
+      var esDelProfe = false;
+      if (Array.isArray(h.profesoresIds) && h.profesoresIds.length > 0) {
+        // Ref por ID (preferido)
+        esDelProfe = miDni && h.profesoresIds.indexOf(miDni) >= 0;
+      } else {
+        // Fallback: match por nombre (datos pre-migración)
+        var profsCelda = (h.profesores || '').toString().toLowerCase();
+        var profs = profsCelda.split(',').map(function(p){ return p.trim(); });
+        esDelProfe = profs.some(function(p){
+          return p && (p === nombrePers || p.indexOf(nombrePers) >= 0 || nombrePers.indexOf(p) >= 0);
+        });
+      }
       if (esDelProfe) DB.horarios.push(Object.assign({id: doc.id}, h));
     });
 
