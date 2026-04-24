@@ -535,7 +535,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v2.5</div>
+<div id="version-badge">v2.6</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
@@ -632,6 +632,25 @@ function toast(msg, tipo) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// DRIVE HELPERS (para que el logo de Drive cargue sin CORS)
+// ══════════════════════════════════════════════════════════════════
+function getDriveThumb(url, sz) {
+  if(!url || typeof url !== 'string' || !url.trim()) return '';
+  sz = sz || 'w200';
+  var m = url.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
+  if(!m) m = url.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
+  if(!m) return '';
+  return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=' + sz;
+}
+function getDriveDisplay(url) {
+  if(!url || typeof url !== 'string' || !url.trim()) return '';
+  var m = url.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
+  if(!m) m = url.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
+  if(!m) return url; // si no es Drive, usar directo
+  return 'https://lh3.googleusercontent.com/d/' + m[1];
+}
+
+// ══════════════════════════════════════════════════════════════════
 // BRANDING
 // ══════════════════════════════════════════════════════════════════
 function aplicarBranding(inst) {
@@ -648,7 +667,25 @@ function aplicarBranding(inst) {
     document.documentElement.style.setProperty('--secondary-dim',    hexAlpha(inst.colorSecundario, 0.12));
     document.documentElement.style.setProperty('--secondary-border', hexAlpha(inst.colorSecundario, 0.35));
   }
-  if (inst.logoUrl) document.getElementById('header-logo').src = inst.logoUrl;
+  var _logoEl = document.getElementById('header-logo');
+  if (_logoEl) {
+    if (inst.logoUrl) {
+      var _rawUrl = inst.logoUrl;
+      var _logoSrc = getDriveDisplay(_rawUrl);
+      _logoEl.onerror = function(){
+        if (this.dataset.tried !== '1') {
+          this.dataset.tried = '1';
+          this.src = getDriveThumb(_rawUrl, 'w100') || _rawUrl;
+        } else {
+          this.style.display = 'none';
+        }
+      };
+      _logoEl.src = _logoSrc;
+      _logoEl.style.display = '';
+    } else {
+      _logoEl.style.display = 'none';
+    }
+  }
   var nombre = inst.nombreCorto || inst.nombre || 'Registro';
   document.getElementById('header-titulo').innerHTML = nombre + ' &mdash; <span>Registro</span>';
   document.getElementById('page-title').innerText = nombre + ' - Registro';
