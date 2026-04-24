@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.1</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.2</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1763,6 +1763,31 @@ function _refreshResolvedRows() {
       }
     });
   }
+  // Inscripciones vigentes — refrescan nombre del plan
+  if (Array.isArray(DB.inscripciones)) {
+    DB.inscripciones.forEach(function(i){
+      if (!i) return;
+      var leg = i._legacy || {};
+      i.plan = _nomByActId(i.planId) || leg.plan || i.plan || '';
+    });
+  }
+  // Precios — actividad/categoria actuales
+  if (Array.isArray(DB.precios)) {
+    DB.precios.forEach(function(pr){
+      if (!pr) return;
+      var leg = pr._legacy || {};
+      pr.actividad = _nomByActId(pr.actividadId) || leg.actividad || pr.actividad || '';
+      pr.categoria = _nomByCatId(pr.categoriaId) || leg.categoria || pr.categoria || '';
+    });
+  }
+  // Categorias — CSV de actividades actual
+  if (Array.isArray(DB.categorias)) {
+    DB.categorias.forEach(function(c){
+      if (!c || !Array.isArray(c.actividadesIds) || !c.actividadesIds.length) return;
+      var _nm = c.actividadesIds.map(_nomByActId).filter(function(x){ return x; });
+      if (_nm.length) c[5] = _nm.join(',');
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -2010,13 +2035,16 @@ function cuotaToRow(d, fsId) {
 
 function inscToObj(doc) {
   var d = doc.data ? doc.data() : doc;
+  // FASE 2: resolver nombre actual del plan desde planId (sobrevive renames)
+  var planNom = _nomByActId(d.planId) || d.plan || '';
   return {
-    dni: d.dni||'', nombre: d.nombre||'', plan: d.plan||'',
+    dni: d.dni||'', nombre: d.nombre||'', plan: planNom,
     monto: Number(d.monto)||0, desde: d.desde||'', hasta: d.hasta||'',
     obs: d.obs||'', descuentoHno: Number(d.descuentoHno)||0,
     hnoDe: d.hnoDe||'', _row: doc.id,
     // FASE 2
-    planId: d.planId||''
+    planId: d.planId||'',
+    _legacy: { plan: d.plan||'' }
   };
 }
 
@@ -2156,12 +2184,24 @@ function inicializar(passReal) {
 
     // Categorías
     DB.categorias = [];
+    // Pre-indice actividades por id para resolver el CSV en vivo
+    var _actNomByIdTmp = {};
+    actSnap.forEach(function(ad){ var x=ad.data(); _actNomByIdTmp[ad.id] = x.nombre||ad.id; });
     catSnap.forEach(function(doc){
       var d = doc.data();
       // Soportar formato viejo (edadMin/edadMax) y nuevo (edadDesde/edadHasta)
       var desde = d.edadDesde || d.edadMin || '';
       var hasta  = d.edadHasta  || d.edadMax  || '';
-      DB.categorias.push([d.nombre||doc.id, d.color||'#1a7a3c', desde.toString(), hasta.toString(), d.genero||'Mixto', d.actividades||'', doc.id]);
+      // FASE 2: si hay actividadesIds, resolver a nombres actuales; fallback al CSV legacy
+      var actCsv = d.actividades || '';
+      if (Array.isArray(d.actividadesIds) && d.actividadesIds.length) {
+        var _nm = d.actividadesIds.map(function(id){ return _actNomByIdTmp[id] || ''; }).filter(function(x){ return x; });
+        if (_nm.length) actCsv = _nm.join(',');
+      }
+      var row = [d.nombre||doc.id, d.color||'#1a7a3c', desde.toString(), hasta.toString(), d.genero||'Mixto', actCsv, doc.id];
+      row.actividadesIds = Array.isArray(d.actividadesIds) ? d.actividadesIds.slice() : [];
+      row._legacy = { actividades: d.actividades||'' };
+      DB.categorias.push(row);
     });
 
     // Períodos de pago
@@ -2173,8 +2213,18 @@ function inicializar(passReal) {
     actSnap.forEach(function(doc){ var d=doc.data(); DB.actividades.push({nombre:d.nombre||doc.id,icono:d.icono||'',color:d.color||'#555',monto:d.monto||0,_row:doc.id}); });
 
     // Precios
+    // FASE 2: resolver nombres actuales de actividad/categoria desde sus *Id
     DB.precios = [];
-    precSnap.forEach(function(doc){ var d=doc.data(); DB.precios.push({actividad:d.actividad||'',categoria:d.categoria||'',monto:Number(d.monto)||0,_row:doc.id}); });
+    precSnap.forEach(function(doc){
+      var d=doc.data();
+      var actNom = _nomByActId(d.actividadId) || d.actividad || '';
+      var catNom = _nomByCatId(d.categoriaId) || d.categoria || '';
+      DB.precios.push({
+        actividad: actNom, categoria: catNom, monto:Number(d.monto)||0, _row:doc.id,
+        actividadId: d.actividadId||'', categoriaId: d.categoriaId||'',
+        _legacy: { actividad: d.actividad||'', categoria: d.categoria||'' }
+      });
+    });
 
     // Periodos (índice nombre→id para Fase 1 migración IDs)
     DB.periodosById = {}; DB.periodosByNorm = {};
@@ -5198,7 +5248,7 @@ function guardarCat() {
     limpiarFormCat();
     poblarSelectMasiva();
   };
-  var cb = function(){ reset(); renderListCat(); poblarSelects(); poblarSelectMasiva(); renderPlayers(); ocultarLoader(); toast(T('grupo') + ' guardada', 'ok'); };
+  var cb = function(){ reset(); renderListCat(); poblarSelects(); poblarSelectMasiva(); renderPlayers(); if(typeof renderListPrecios==='function') renderListPrecios(); if(typeof renderHorarios==='function') renderHorarios(); if(typeof renderCuotas==='function') renderCuotas(); if(typeof renderInscripciones==='function') renderInscripciones(); ocultarLoader(); toast(T('grupo') + ' guardada', 'ok'); };
   if(catEditIdx) callScript({action:'updateAdminItem', tabName:'Config_Categorias', rowIndex:catEditIdx, rowArray:d, pass:TOKEN, _noRetry:true}, function(){
     // FASE 2: actualizar DB.categorias local + refrescar indices y nombres resueltos en rows
     for (var _i=0; _i<DB.categorias.length; _i++) {
