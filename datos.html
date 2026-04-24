@@ -310,7 +310,46 @@ video{width:100%;display:block;}
 <div class="step activo" id="step1">
   <div class="card">
     <div class="card-title">&#x1F4F7; Documento — Frente</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Escaneá o fotografiá el frente del DNI. Asegurate que el número y nombre sean legibles.</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Escaneá o fotografiá el frente del DNI. Asegurate que el número y nombre sean legibles.</p>
+    <div class="alert alert-warn" style="font-size:12px;line-height:1.4;margin-bottom:12px;">
+      <div style="font-weight:700;margin-bottom:4px;">&#x26A0;&#xFE0F; Importante por tu seguridad</div>
+      Antes de sacar la foto, <b>tapá el N&deg; de trámite</b> con un papelito o editalo en la app de galería/fotos. Ese número se usa para verificaciones de identidad online y si se filtra podrían abrirte cuentas o pedir préstamos a tu nombre. El sistema <b>no lo necesita</b>.
+      <details style="margin-top:6px;">
+        <summary style="cursor:pointer;font-weight:600;font-size:11px;">Ver ejemplo &#x1F50D;</summary>
+        <div style="margin-top:8px;background:#fff;border-radius:8px;padding:8px;">
+          <svg viewBox="0 0 300 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:280px;height:auto;display:block;margin:0 auto;">
+            <rect x="2" y="2" width="296" height="186" rx="8" fill="#e6eef5" stroke="#456" stroke-width="1"/>
+            <rect x="2" y="2" width="296" height="20" rx="8" fill="#6ab0d8"/>
+            <rect x="2" y="14" width="296" height="8" fill="#6ab0d8"/>
+            <text x="10" y="16" font-family="sans-serif" font-size="9" fill="#fff" font-weight="700">REPUBLICA ARGENTINA</text>
+            <rect x="10" y="30" width="60" height="80" fill="#bbb" stroke="#777"/>
+            <circle cx="40" cy="58" r="14" fill="#999"/>
+            <path d="M22,108 Q40,86 58,108 Z" fill="#999"/>
+            <text x="78" y="40" font-family="sans-serif" font-size="7" fill="#456">APELLIDO</text>
+            <text x="78" y="50" font-family="sans-serif" font-size="10" fill="#111" font-weight="700">GOMEZ</text>
+            <text x="78" y="62" font-family="sans-serif" font-size="7" fill="#456">NOMBRE</text>
+            <text x="78" y="72" font-family="sans-serif" font-size="10" fill="#111" font-weight="700">JUAN CARLOS</text>
+            <text x="78" y="84" font-family="sans-serif" font-size="7" fill="#456">SEXO / NAC.</text>
+            <text x="78" y="94" font-family="sans-serif" font-size="9" fill="#111">M / ARG</text>
+            <text x="78" y="106" font-family="sans-serif" font-size="7" fill="#456">DOCUMENTO N&#xBA;</text>
+            <text x="78" y="118" font-family="sans-serif" font-size="13" fill="#111" font-weight="700">12.345.678</text>
+            <text x="10" y="128" font-family="sans-serif" font-size="6" fill="#456">EJEMPLAR</text>
+            <text x="10" y="138" font-family="sans-serif" font-size="8" fill="#111">A</text>
+            <text x="48" y="128" font-family="sans-serif" font-size="6" fill="#456">F. EMISION</text>
+            <text x="48" y="138" font-family="sans-serif" font-size="8" fill="#111">01/01/2020</text>
+            <text x="110" y="128" font-family="sans-serif" font-size="6" fill="#456">F. VTO.</text>
+            <text x="110" y="138" font-family="sans-serif" font-size="8" fill="#111">01/01/2035</text>
+            <text x="180" y="128" font-family="sans-serif" font-size="6" fill="#456">N&#xBA; TRAMITE</text>
+            <rect x="178" y="131" width="84" height="12" fill="#ffeb3b" stroke="#b88700" stroke-width="1.5"/>
+            <text x="220" y="140" font-family="sans-serif" font-size="8" fill="#b88700" text-anchor="middle" font-weight="700">TAPAR</text>
+            <path d="M220,170 L220,148" stroke="#d32f2f" stroke-width="2" fill="none"/>
+            <path d="M215,152 L220,146 L225,152" stroke="#d32f2f" stroke-width="2" fill="none"/>
+            <text x="150" y="182" font-family="sans-serif" font-size="8" fill="#d32f2f" text-anchor="middle" font-weight="700">Tapá este numero antes de enviar</text>
+          </svg>
+          <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;">Ejemplo: cubrí el recuadro del "N&deg; Trámite" (los demás datos pueden ir normales).</div>
+        </div>
+      </details>
+    </div>
     <button class="btn btn-cam" onclick="toggleCam(1)" id="btn-cam1">&#x1F3A5; Usar cámara</button>
     <div class="cam-wrap" id="cam1-wrap">
       <video id="cam1-video" autoplay playsinline></video>
@@ -473,7 +512,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v2.3</div>
+<div id="version-badge">v2.4</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
