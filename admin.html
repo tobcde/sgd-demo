@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.6</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.7</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3668,6 +3668,38 @@ function abrirM(ai) {
   document.getElementById('med-chev-adm').innerHTML = '&#x25BC;';
   db.collection('socios').doc(dni).get().then(function(d) {
     _medicoActual = (d.exists && d.data().medico) ? d.data().medico : {};
+    // 🔁 Auto-refresh de DB.jugadores[ai] con datos frescos (previene stale cache → pisar email/tel/etc)
+    if (d.exists && itemSel && itemSel.arrIdx === ai && itemSel.dni === dni) {
+      var oldRow = DB.jugadores[ai];
+      var fresh  = socioToRow(d, dni);
+      // Preservar metadata de sheet/row al final
+      if (oldRow) {
+        fresh[fresh.length-2] = oldRow[oldRow.length-2];
+        fresh[fresh.length-1] = oldRow[oldRow.length-1];
+      }
+      DB.jugadores[ai] = fresh;
+      // Re-pintar displays no editables si el modal sigue abierto
+      var modal = document.getElementById('modalEdicion');
+      if (modal && modal.classList.contains('open')) {
+        var emailEl = document.getElementById('m-email');
+        if (emailEl) emailEl.innerText = (fresh[COL.EMAIL]||'').toString().trim() || 'Sin registro';
+        var celEl = document.getElementById('m-celular');
+        if (celEl) celEl.innerHTML = btnContacto(fresh[COL.CELULAR]||fresh[COL.TEL]);
+        var domEl = document.getElementById('m-domicilio');
+        if (domEl) domEl.innerText = (fresh[COL.DOMICILIO]||'').toString().trim() || 'Sin registro';
+        var obsEl = document.getElementById('m-obs');
+        if (obsEl) obsEl.innerText = (fresh[COL.OBS]||'').toString().trim() || 'Ninguna';
+        // Inputs de edición: solo actualizar si el usuario NO los modificó (siguen con el valor viejo cacheado)
+        var _oE = oldRow ? (oldRow[COL.EMAIL]||'').toString()    : '';
+        var _oC = oldRow ? (oldRow[COL.CELULAR]||'').toString()  : '';
+        var _oD = oldRow ? (oldRow[COL.DOMICILIO]||'').toString(): '';
+        var _oO = oldRow ? (oldRow[COL.OBS]||'').toString()      : '';
+        var miE = document.getElementById('mi-email');    if (miE && miE.value === _oE) miE.value = (fresh[COL.EMAIL]||'').toString();
+        var miC = document.getElementById('mi-celular');  if (miC && miC.value === _oC) miC.value = (fresh[COL.CELULAR]||'').toString();
+        var miD = document.getElementById('mi-domicilio');if (miD && miD.value === _oD) miD.value = (fresh[COL.DOMICILIO]||'').toString();
+        var miO = document.getElementById('mi-obs');      if (miO && miO.value === _oO) miO.value = (fresh[COL.OBS]||'').toString();
+      }
+    }
   }).catch(function(){ _medicoActual = {}; });
 }
 
@@ -3801,35 +3833,44 @@ function guardarJ() {
   var getV = function(id){ var el=document.getElementById(id); return el ? el.value.trim() : ''; };
   var c1 = [getV('mi-c1nombre'), getV('mi-c1tel')].filter(Boolean).join('|');
   var c2 = [getV('mi-c2nombre'), getV('mi-c2tel')].filter(Boolean).join('|');
-  var dni = (DB.jugadores[itemSel.arrIdx][COL.DNI]||DB.jugadores[itemSel.arrIdx][COL.TARJETA]||'').toString();
+  var f = DB.jugadores[itemSel.arrIdx] || [];
+  var dni = (f[COL.DNI]||f[COL.TARJETA]||'').toString();
   // Leer actividades seleccionadas
   var actChecks = document.querySelectorAll('#m-actividades-checks input[name="act_check"]:checked');
   var actSeleccionadas = Array.from(actChecks).map(function(cb){ return cb.value; }).join(',');
+  // Campos "stale" — solo enviar si cambiaron vs cache (previene pisar datos escritos por datos.html)
+  var emailNew = getV('mi-email');     var emailOld = (f[COL.EMAIL]||'').toString();
+  var celNew   = getV('mi-celular');   var celOld   = (f[COL.CELULAR]||'').toString();
+  var domNew   = getV('mi-domicilio'); var domOld   = (f[COL.DOMICILIO]||'').toString();
+  var obsNew   = getV('mi-obs');       var obsOld   = (f[COL.OBS]||'').toString();
+  var c1Old    = (f[COL.CONTACTO1]||'').toString();
+  var c2Old    = (f[COL.CONTACTO2]||'').toString();
   var campos = {
     genero:        document.getElementById('m-genero').value,
     activo:        document.getElementById('m-estado').value === 'true',
     categoria:     document.getElementById('m-cat-m').value,
     catSecundaria: document.getElementById('m-cat-sec').value,
-    email:         getV('mi-email'),
-    celular:       getV('mi-celular'),
-    domicilio:     getV('mi-domicilio'),
-    obs:           getV('mi-obs'),
-    contacto1:     c1,
-    contacto2:     c2,
     actividades:   actSeleccionadas
   };
+  if (emailNew !== emailOld) campos.email     = emailNew;
+  if (celNew   !== celOld)   campos.celular   = celNew;
+  if (domNew   !== domOld)   campos.domicilio = domNew;
+  if (obsNew   !== obsOld)   campos.obs       = obsNew;
+  if (c1       !== c1Old)    campos.contacto1 = c1;
+  if (c2       !== c2Old)    campos.contacto2 = c2;
   mostrarLoader('Guardando ficha...');
   callScript({action:'updatePlayer', dni:dni, campos:campos, pass:TOKEN}, function(){
     var f = DB.jugadores[itemSel.arrIdx];
     f[COL.ACTIVO]       = campos.activo ? 'Si' : 'No';
     f[COL.CATEGORIA_APP]= campos.categoria;
     f[COL.SEXO]         = campos.genero;
-    f[COL.EMAIL]        = campos.email;
-    f[COL.CELULAR]      = campos.celular;
-    f[COL.DOMICILIO]    = campos.domicilio;
-    f[COL.OBS]          = campos.obs;
-    f[COL.CONTACTO1]    = campos.contacto1;
-    f[COL.CONTACTO2]    = campos.contacto2;
+    // Solo actualizar cache en los campos que realmente se enviaron (evitar pisar con undefined)
+    if (campos.email     !== undefined) f[COL.EMAIL]     = campos.email;
+    if (campos.celular   !== undefined) f[COL.CELULAR]   = campos.celular;
+    if (campos.domicilio !== undefined) f[COL.DOMICILIO] = campos.domicilio;
+    if (campos.obs       !== undefined) f[COL.OBS]       = campos.obs;
+    if (campos.contacto1 !== undefined) f[COL.CONTACTO1] = campos.contacto1;
+    if (campos.contacto2 !== undefined) f[COL.CONTACTO2] = campos.contacto2;
     f[COL.ACTIVIDADES]  = campos.actividades;
     f[COL.CAT_SECUNDARIA] = campos.catSecundaria;
     // Salir del modo edicion
