@@ -405,7 +405,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 </div>
 
 <div id="toast"></div>
-<div id="vbadge">v2.3</div>
+<div id="vbadge">v2.4</div>
 
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1054,7 +1054,22 @@ function abrirFichaJugador(dni) {
   }
 
   document.getElementById('ficha-apto').innerText    = f.apto || '\u2014';
-  document.getElementById('ficha-medico').innerText  = f.medico || '\u2014';
+  // Obs. medicas: f.medico puede ser string (legacy) u objeto {obsMedicas, alergias, medicacion, ...}
+  var _medTxt = '\u2014';
+  if (f.medico) {
+    if (typeof f.medico === 'string') {
+      _medTxt = f.medico;
+    } else if (typeof f.medico === 'object') {
+      var _m = f.medico;
+      var _parts = [];
+      if (_m.obsMedicas) _parts.push(_m.obsMedicas);
+      if (_m.alergias)   _parts.push('Alergias: ' + _m.alergias);
+      if (_m.medicacion) _parts.push('Medicacion: ' + _m.medicacion);
+      if (_m.cronicas)   _parts.push('Cronicas: ' + _m.cronicas);
+      _medTxt = _parts.length ? _parts.join(' \u00b7 ') : '\u2014';
+    }
+  }
+  document.getElementById('ficha-medico').innerText  = _medTxt;
   var ddjj = f.ddjjSalud;
   var ddjjTxt = '\u2014';
   if (ddjj && ddjj.firmado) {
