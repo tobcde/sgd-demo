@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.3</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.4</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1788,6 +1788,31 @@ function _refreshResolvedRows() {
       if (_nm.length) c[5] = _nm.join(',');
     });
   }
+}
+
+// QA-015: helper para renombrar options cacheadas en TODOS los <select>
+// del documento cuando se hace rename de un catalogo. Evita que un modal
+// abierto conserve el nombre viejo hasta re-abrirse.
+function _renombrarOptionsEnSelects(nombreViejo, nombreNuevo) {
+  if (!nombreViejo || !nombreNuevo || nombreViejo === nombreNuevo) return;
+  var selects = document.querySelectorAll('select');
+  Array.prototype.forEach.call(selects, function(sel){
+    Array.prototype.forEach.call(sel.options || [], function(opt){
+      // Evitar pisar options vacias / "Sin asignar" / etc.
+      if (opt.text === nombreViejo)   opt.text   = nombreNuevo;
+      if (opt.value === nombreViejo)  opt.value  = nombreNuevo;
+      // Si hay prefijo icono ("⚽ Sub-12"), solo actualizar si el sufijo matchea
+      var sufijo = opt.text.replace(/^\S+\s+/, '');
+      if (sufijo === nombreViejo) opt.text = opt.text.replace(nombreViejo, nombreNuevo);
+    });
+  });
+  // Tambien refrescar checkboxes con data-act / data-cat (categoria en cards)
+  var cbs = document.querySelectorAll('[data-act],[data-cat]');
+  Array.prototype.forEach.call(cbs, function(el){
+    if (el.getAttribute('data-act')  === nombreViejo) el.setAttribute('data-act',  nombreNuevo);
+    if (el.getAttribute('data-cat')  === nombreViejo) el.setAttribute('data-cat',  nombreNuevo);
+    if (el.getAttribute('data-plan') === nombreViejo) el.setAttribute('data-plan', nombreNuevo);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -2212,12 +2237,26 @@ function inicializar(passReal) {
     perSnap.forEach(function(doc){ var d=doc.data(); DB.configPagos.push([d.mes||1,d.anioD||2025,d.diaD||1,d.anioH||d.anioD||2025,d.diaH||0,d.gracia||5,d.desc||'']); });
 
     // Periodos (índice nombre→id para Fase 1 migración IDs)
+    // QA-002: construir nombre display "Mes YYYY" para que resolvePeriodoId matchee
+    // el label que arma la UI (periodoLabel()). Antes solo usaba d.nombre||doc.id
+    // y como los docs no tienen `nombre`, caía en doc.id ("abril2026") que no
+    // coincide con el label "Abril 2026".
     DB.periodosById = {}; DB.periodosByNorm = {};
+    var _MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     perSnap.forEach(function(doc){
       var d = doc.data();
-      var nm = d.nombre||doc.id;
+      var nm = d.nombre || '';
+      if (!nm && d.mes && (d.anioD || d.anioH)) {
+        nm = _MESES[(Number(d.mes)||1)-1] + ' ' + (d.anioD || d.anioH);
+      }
+      if (!nm) nm = doc.id;
       DB.periodosById[doc.id] = {id:doc.id, nombre:nm, fechaInicio:d.fechaInicio||'', fechaFin:d.fechaFin||''};
       if (nm) DB.periodosByNorm[_norm(nm)] = doc.id;
+      // Alias adicional: la UI puede formatear "Abril 2026" o "abril-2026" segun locale.
+      // Guardamos tambien el docId crudo y cualquier campo 'label' que venga del catalogo.
+      if (d.label) DB.periodosByNorm[_norm(d.label)] = doc.id;
+      DB.periodosByNorm[_norm(doc.id)] = doc.id;
     });
 
     // ═ MIGRACIÓN IDS — construir índices por-id / por-nombre (ANTES de horarios/precios/socios) ═
@@ -2988,8 +3027,8 @@ function renderInscripcionesModal(dni) {
       + '<div class="insc-fechas">Desde ' + i.desde + ' &middot; ' + hastaStr + (i.obs ? ' &middot; ' + i.obs : '') + '</div>'
       + '</div>'
       + '<div style="text-align:right;"><div class="insc-monto">$' + montoEfectivo.toLocaleString('es-AR') + '</div>' + badgeDesc + '</div>'
-      + (!baja ? '<button class="insc-btn" onclick="darDeBajaInscripcion(' + i._row + ',\'' + dniStr + '\')">BAJA</button>' : '<button class="insc-btn" style="background:rgba(109,224,151,.15);color:#6de097;border-color:#6de097;" onclick="reactivarInscripcion(' + i._row + ',\'' + dniStr + '\')">REACTIVAR</button>')
-      + '<button class="insc-btn" style="background:rgba(228,67,71,.15);color:var(--red);border-color:var(--red);margin-left:4px;" onclick="eliminarInscripcion(' + i._row + ',\'' + dniStr + '\')" title="Eliminar inscripcion (creada por error)">&#x2715;</button>'
+      + (!baja ? '<button class="insc-btn" onclick="darDeBajaInscripcion(\'' + i._row + '\',\'' + dniStr + '\')">BAJA</button>' : '<button class="insc-btn" style="background:rgba(109,224,151,.15);color:#6de097;border-color:#6de097;" onclick="reactivarInscripcion(\'' + i._row + '\',\'' + dniStr + '\')">REACTIVAR</button>')
+      + '<button class="insc-btn" style="background:rgba(228,67,71,.15);color:var(--red);border-color:var(--red);margin-left:4px;" onclick="eliminarInscripcion(\'' + i._row + '\',\'' + dniStr + '\')" title="Eliminar inscripcion (creada por error)">&#x2715;</button>'
       + '</div>';
   }).join('');
 }
@@ -3058,11 +3097,14 @@ function confirmarInscripcion() {
 }
 
 function darDeBajaInscripcion(rowIndex, dni) {
+  // QA-011: rowIndex llega siempre como string desde onclick (wrappeado en quotes).
+  // Normalizar: si es numerico -> Number, si es docId -> string.
+  var _ri = (typeof rowIndex === 'string' && /^\d+$/.test(rowIndex)) ? Number(rowIndex) : rowIndex;
   sgdConfirm('Dar de baja esta inscripcion desde hoy?', function() {
   var hoy = new Date().toISOString().split('T')[0];
   mostrarLoader('Actualizando...');
-  callScript({action:'updateInscripcion', rowIndex:rowIndex, hasta:hoy, pass:TOKEN, _noRetry:true}, function(){
-    var insc = DB.inscripciones.find(function(i){ return i._row === rowIndex; });
+  callScript({action:'updateInscripcion', rowIndex:_ri, hasta:hoy, pass:TOKEN, _noRetry:true}, function(){
+    var insc = DB.inscripciones.find(function(i){ return String(i._row) === String(_ri); });
     if(insc) insc.hasta = hoy;
     renderInscripcionesModal(dni);
     ocultarLoader();
@@ -3073,10 +3115,12 @@ function darDeBajaInscripcion(rowIndex, dni) {
 }
 
 function reactivarInscripcion(rowIndex, dni) {
+  // QA-011: rowIndex llega como string desde onclick — normalizar.
+  var _ri = (typeof rowIndex === 'string' && /^\d+$/.test(rowIndex)) ? Number(rowIndex) : rowIndex;
   sgdConfirm('Reactivar esta inscripcion?<br><br>Se quita la fecha de baja y vuelve a considerarse vigente.', function() {
     mostrarLoader('Reactivando...');
-    callScript({action:'updateInscripcion', rowIndex:rowIndex, hasta:'', pass:TOKEN, _noRetry:true}, function(){
-      var insc = DB.inscripciones.find(function(i){ return i._row === rowIndex; });
+    callScript({action:'updateInscripcion', rowIndex:_ri, hasta:'', pass:TOKEN, _noRetry:true}, function(){
+      var insc = DB.inscripciones.find(function(i){ return String(i._row) === String(_ri); });
       if(insc) insc.hasta = '';
       renderInscripcionesModal(dni);
       ocultarLoader();
@@ -3087,10 +3131,12 @@ function reactivarInscripcion(rowIndex, dni) {
 }
 
 function eliminarInscripcion(rowIndex, dni) {
+  // QA-011: rowIndex llega como string desde onclick — normalizar.
+  var _ri = (typeof rowIndex === 'string' && /^\d+$/.test(rowIndex)) ? Number(rowIndex) : rowIndex;
   sgdConfirm('<b>Eliminar</b> esta inscripcion?<br><br>Se borra permanentemente del sistema. Usalo solo si fue creada por error — los calculos de deuda historica de esta inscripcion desapareceran.', function() {
     mostrarLoader('Eliminando inscripcion...');
-    callScript({action:'deleteInscripcion', rowIndex:rowIndex, pass:TOKEN, _noRetry:true}, function(){
-      var idx = DB.inscripciones.findIndex(function(i){ return i._row === rowIndex; });
+    callScript({action:'deleteInscripcion', rowIndex:_ri, pass:TOKEN, _noRetry:true}, function(){
+      var idx = DB.inscripciones.findIndex(function(i){ return String(i._row) === String(_ri); });
       if(idx >= 0) DB.inscripciones.splice(idx, 1);
       renderInscripcionesModal(dni);
       ocultarLoader();
@@ -3615,6 +3661,21 @@ function confirmarPago() {
       var extraDesc = document.getElementById('mp-extra-desc').value.trim() || 'Cobro extraordinario';
       var extraMonto = Number(document.getElementById('mp-extra-monto').value)||0;
       if(extraMonto > 0) pagos.push({plan: extraDesc, monto: extraMonto});
+    }
+    // QA-014: si el usuario edito #mp-monto a un total distinto del sugerido
+    // por la suma de los data-monto, respetar ese override.
+    //   - 1 solo pago: el monto manual se aplica directo a ese pago.
+    //   - multiples pagos: se escala proporcionalmente cada monto para que
+    //     la suma sea igual al total editado.
+    var _montoManual = Number((document.getElementById('mp-monto')||{}).value) || 0;
+    var _montoSug    = pagos.reduce(function(s,p){ return s + p.monto; }, 0);
+    if (_montoManual > 0 && pagos.length > 0 && Math.abs(_montoManual - _montoSug) > 0.5) {
+      if (pagos.length === 1) {
+        pagos[0].monto = _montoManual;
+      } else if (_montoSug > 0) {
+        var _factor = _montoManual / _montoSug;
+        pagos.forEach(function(p){ p.monto = Math.round(p.monto * _factor); });
+      }
     }
   }
 
@@ -4741,8 +4802,9 @@ function editarActividad(row){
   _actEditandoRow = a._row;
   var nomEl = document.getElementById('actNom');
   nomEl.value = a.nombre || '';
-  nomEl.readOnly = true;
-  nomEl.style.opacity = '0.7';
+  // QA-019: permitir rename de actividad desde edicion.
+  nomEl.readOnly = false;
+  nomEl.style.opacity = '1';
   var iconoVal = a.icono || '';
   var urlInput = document.getElementById('actIconoUrl');
   var disp = document.getElementById('emoji-selected');
@@ -4780,19 +4842,45 @@ function cancelarEdicionActividad(){
 function guardarEdicionActividad(){
   var row = _actEditandoRow;
   if(!row) return;
+  // QA-019: permitir renombrar la actividad, no solo icono/color.
+  var nom = (document.getElementById('actNom')||{}).value;
+  nom = nom ? nom.trim() : '';
   var urlImg = (document.getElementById('actIconoUrl')||{}).value;
   urlImg = urlImg ? urlImg.trim() : '';
   var icono = iconoEsUrl(urlImg) ? urlImg : document.getElementById('actIcono').value.trim();
   var color = document.getElementById('actColor').value;
   mostrarLoader('Actualizando...');
-  db.collection('config_actividades').doc(row).update({icono:icono, color:color})
+  // QA-015: capturar nombre viejo para refrescar selects cacheados.
+  var _a = (DB.actividades||[]).find(function(x){ return String(x._row) === String(row); });
+  var _nombreViejoAct = (_a && _a.nombre) ? _a.nombre : '';
+  var upd = {icono:icono, color:color};
+  if (nom && nom !== _nombreViejoAct) upd.nombre = nom;
+  db.collection('config_actividades').doc(row).update(upd)
     .then(function(){
       var a = (DB.actividades||[]).find(function(x){ return String(x._row) === String(row); });
-      if(a){ a.icono = icono; a.color = color; }
+      if(a){
+        a.icono = icono;
+        a.color = color;
+        if (nom) a.nombre = nom;
+      }
+      // QA-019 + QA-015: si hubo rename, refrescar indices y rows resueltos
+      // ademas de repoblar selects y actualizar options cacheadas.
+      if (nom && nom !== _nombreViejoAct) {
+        if (typeof buildIdIndexes === 'function') buildIdIndexes();
+        if (typeof _refreshResolvedRows === 'function') _refreshResolvedRows();
+        _renombrarOptionsEnSelects(_nombreViejoAct, nom);
+      }
       cancelarEdicionActividad();
       renderListActividades();
       poblarSelects(); poblarSelectActividad(); poblarSelectsPrecios();
       poblarSelectMasiva(); renderCatActsCheckboxes('');
+      if (nom && nom !== _nombreViejoAct) {
+        if (typeof renderPlayers === 'function') renderPlayers();
+        if (typeof renderHorarios === 'function') renderHorarios();
+        if (typeof renderListPrecios === 'function') renderListPrecios();
+        if (typeof renderCuotas === 'function') renderCuotas();
+        if (typeof renderInscripciones === 'function') renderInscripciones();
+      }
       ocultarLoader();
       toast('Actividad actualizada', 'ok');
     })
@@ -5004,11 +5092,14 @@ function restaurarSocio() {
     var snapshot = {};
     for(var k in f){ if(Object.prototype.hasOwnProperty.call(f,k) && k.indexOf('_') !== 0) snapshot[k] = f[k]; }
     var del = firebase.firestore.FieldValue.delete();
+    // QA-020: al restaurar, devolver activo:true para que el socio vuelva
+    // al flujo normal sin requerir un paso manual extra en la ficha.
     db.collection('socios').doc(dni).update({
       eliminado: del,
       eliminadoEn: del,
       eliminadoPor: del,
-      motivoEliminacion: del
+      motivoEliminacion: del,
+      activo: true
     }).then(function(){
       return db.collection('auditoria_socios').add({
         accion: 'restaurar', dni: dni, fecha: ts, usuario: usuario,
@@ -5019,6 +5110,10 @@ function restaurarSocio() {
       f._eliminadoEn = null;
       f._eliminadoPor = '';
       f._motivoEliminacion = '';
+      // QA-020: reflejar activo:true en memoria.
+      if (typeof COL !== 'undefined' && COL && typeof COL.ACTIVO === 'number') {
+        f[COL.ACTIVO] = true;
+      }
       ocultarLoader();
       cerrarModal();
       renderPlayers();
@@ -5116,6 +5211,14 @@ function guardarProfesor() {
     buildIdIndexes();
     _refreshResolvedRows();
     cancelarEditProfesor(); renderListProfesores(); poblarSelects(); poblarTurnosAsist();
+    // QA-018: rename de profe debe propagar a la UI de horarios, cuotas,
+    // inscripciones y jugadores que ya esten renderizados en pantalla.
+    if (typeof renderHorarios === 'function') renderHorarios();
+    if (typeof renderListHorarios === 'function') renderListHorarios();
+    if (typeof renderPlayers === 'function') renderPlayers();
+    if (typeof renderListPrecios === 'function') renderListPrecios();
+    if (typeof renderCuotas === 'function') renderCuotas();
+    if (typeof renderInscripciones === 'function') renderInscripciones();
     ocultarLoader(); toast('Instructor guardado', 'ok');
   };
   var err = function(e) { ocultarLoader(); alert('Error: ' + e); };
@@ -5252,18 +5355,31 @@ function guardarCat() {
     poblarSelectMasiva();
   };
   var cb = function(){ reset(); renderListCat(); poblarSelects(); poblarSelectMasiva(); renderPlayers(); if(typeof renderListPrecios==='function') renderListPrecios(); if(typeof renderHorarios==='function') renderHorarios(); if(typeof renderCuotas==='function') renderCuotas(); if(typeof renderInscripciones==='function') renderInscripciones(); ocultarLoader(); toast(T('grupo') + ' guardada', 'ok'); };
-  if(catEditIdx) callScript({action:'updateAdminItem', tabName:'Config_Categorias', rowIndex:catEditIdx, rowArray:d, pass:TOKEN, _noRetry:true}, function(){
-    // FASE 2: actualizar DB.categorias local + refrescar indices y nombres resueltos en rows
-    for (var _i=0; _i<DB.categorias.length; _i++) {
-      if (DB.categorias[_i][DB.categorias[_i].length-1] === catEditIdx) {
-        DB.categorias[_i] = d.concat([catEditIdx]);
+  if(catEditIdx) {
+    // QA-015: capturar nombre viejo ANTES del reemplazo para actualizar
+    // options cacheadas en selects abiertos (modales pre-renderizados).
+    var _nombreViejoCat = '';
+    for (var _j=0; _j<DB.categorias.length; _j++) {
+      if (DB.categorias[_j][DB.categorias[_j].length-1] === catEditIdx) {
+        _nombreViejoCat = DB.categorias[_j][0] || '';
         break;
       }
     }
-    buildIdIndexes();
-    _refreshResolvedRows();
-    cb();
-  }, function(e){ reset(); ocultarLoader(); alert('Error: '+e); });
+    callScript({action:'updateAdminItem', tabName:'Config_Categorias', rowIndex:catEditIdx, rowArray:d, pass:TOKEN, _noRetry:true}, function(){
+      // FASE 2: actualizar DB.categorias local + refrescar indices y nombres resueltos en rows
+      for (var _i=0; _i<DB.categorias.length; _i++) {
+        if (DB.categorias[_i][DB.categorias[_i].length-1] === catEditIdx) {
+          DB.categorias[_i] = d.concat([catEditIdx]);
+          break;
+        }
+      }
+      buildIdIndexes();
+      _refreshResolvedRows();
+      // QA-015: renombrar options cacheadas en cualquier <select> del documento.
+      _renombrarOptionsEnSelects(_nombreViejoCat, d[0]);
+      cb();
+    }, function(e){ reset(); ocultarLoader(); alert('Error: '+e); });
+  }
   else callScript({action:'addComplexItem', tabName:'Config_Categorias', rowArray:d, pass:TOKEN, _noRetry:true}, function(r){
     var _newId = r && r.fila ? r.fila.toString() : ('cat_' + Date.now());
     DB.categorias.push(d.concat([_newId]));
