@@ -460,7 +460,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v2.1</div>
+<div id="version-badge">v2.2</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
@@ -723,7 +723,18 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
     }
     if (campos.medico)     upd.medico    = campos.medico;
     if (campos.ddjjSalud)  upd.ddjjSalud = campos.ddjjSalud;
-    return ref.update(upd).then(function(){ return {ok: true}; });
+    // QA-001: Garantizar presencia de ID keys aunque el socio preexista.
+    // Si el socio fue creado antes de FASE 1, puede faltar planId/actividadesIds/sedeId.
+    // Leemos el doc actual y solo seteamos las keys que falten (no pisamos valores).
+    return ref.get().then(function(snap){
+      var cur = snap.exists ? (snap.data() || {}) : {};
+      if (!('planId'          in cur)) upd.planId          = '';
+      if (!('actividadesIds'  in cur)) upd.actividadesIds  = [];
+      if (!('sedeId'          in cur)) upd.sedeId          = '';
+      if (!('catSecundariaId' in cur)) upd.catSecundariaId = '';
+      if (!('categoriaAppId'  in cur) && !upd.categoriaAppId) upd.categoriaAppId = '';
+      return ref.update(upd);
+    }).then(function(){ return {ok: true}; });
   }
 }
 
