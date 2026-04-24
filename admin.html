@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.2</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.3</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2169,10 +2169,9 @@ function inicializar(passReal) {
     INST = instDoc.exists ? instDoc.data() : {};
     DB.institucion = INST;
 
-    // Horarios
-    DB.horarios = [];
-    horSnap.forEach(function(doc) { DB.horarios.push(horarioToRow(doc)); });
-    DB.horarios.sort(function(a,b){ var dias=['Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo']; return dias.indexOf(a[0])-dias.indexOf(b[0]); });
+    // ── FASE 2: primero cargamos TODOS los catalogos, despues buildIdIndexes(),
+    // y recien despues las entidades que dependen de esos indices (horarios,
+    // socios, precios, inscripciones, cuotas).
 
     // Profesores
     DB.profesores = [];
@@ -2181,6 +2180,10 @@ function inicializar(passReal) {
     // Sedes
     DB.sedes = [];
     sedesSnap.forEach(function(doc){ var d=doc.data(); DB.sedes.push([d.nombre||doc.id, doc.id]); });
+
+    // Actividades (se necesita ANTES de categorias para resolver el CSV)
+    DB.actividades = [];
+    actSnap.forEach(function(doc){ var d=doc.data(); DB.actividades.push({nombre:d.nombre||doc.id,icono:d.icono||'',color:d.color||'#555',monto:d.monto||0,_row:doc.id}); });
 
     // Categorías
     DB.categorias = [];
@@ -2208,12 +2211,24 @@ function inicializar(passReal) {
     DB.configPagos = [];
     perSnap.forEach(function(doc){ var d=doc.data(); DB.configPagos.push([d.mes||1,d.anioD||2025,d.diaD||1,d.anioH||d.anioD||2025,d.diaH||0,d.gracia||5,d.desc||'']); });
 
-    // Actividades
-    DB.actividades = [];
-    actSnap.forEach(function(doc){ var d=doc.data(); DB.actividades.push({nombre:d.nombre||doc.id,icono:d.icono||'',color:d.color||'#555',monto:d.monto||0,_row:doc.id}); });
+    // Periodos (índice nombre→id para Fase 1 migración IDs)
+    DB.periodosById = {}; DB.periodosByNorm = {};
+    perSnap.forEach(function(doc){
+      var d = doc.data();
+      var nm = d.nombre||doc.id;
+      DB.periodosById[doc.id] = {id:doc.id, nombre:nm, fechaInicio:d.fechaInicio||'', fechaFin:d.fechaFin||''};
+      if (nm) DB.periodosByNorm[_norm(nm)] = doc.id;
+    });
 
-    // Precios
-    // FASE 2: resolver nombres actuales de actividad/categoria desde sus *Id
+    // ═ MIGRACIÓN IDS — construir índices por-id / por-nombre (ANTES de horarios/precios/socios) ═
+    buildIdIndexes();
+
+    // Horarios (depende de *ById para resolver nombres actuales)
+    DB.horarios = [];
+    horSnap.forEach(function(doc) { DB.horarios.push(horarioToRow(doc)); });
+    DB.horarios.sort(function(a,b){ var dias=['Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo']; return dias.indexOf(a[0])-dias.indexOf(b[0]); });
+
+    // Precios (depende de actsById/catsById)
     DB.precios = [];
     precSnap.forEach(function(doc){
       var d=doc.data();
@@ -2226,19 +2241,7 @@ function inicializar(passReal) {
       });
     });
 
-    // Periodos (índice nombre→id para Fase 1 migración IDs)
-    DB.periodosById = {}; DB.periodosByNorm = {};
-    perSnap.forEach(function(doc){
-      var d = doc.data();
-      var nm = d.nombre||doc.id;
-      DB.periodosById[doc.id] = {id:doc.id, nombre:nm, fechaInicio:d.fechaInicio||'', fechaFin:d.fechaFin||''};
-      if (nm) DB.periodosByNorm[_norm(nm)] = doc.id;
-    });
-
-    // ═ MIGRACIÓN IDS — construir índices por-id / por-nombre ═
-    buildIdIndexes();
-
-    // Socios
+    // Socios (depende de *ById)
     DB.jugadores = [[]];
     sociosSnap.forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
     CARGA_COMPLETA = true;
