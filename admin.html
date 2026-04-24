@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v1.7</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.0</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1548,6 +1548,112 @@ document.body.style.visibility='visible';
 // ---------------------------------------------------------------
 var DB = {jugadores:[], profesores:[], sedes:[], categorias:[], horarios:[], configPagos:[], institucion:{}, actividades:[], inscripciones:[], precios:[]};
 var CUOTAS_DB = {planes:[], cuotas:[]};
+
+// ═══════════════════════════════════════════════════════════════════════
+// MIGRACIÓN A IDs ESTABLES — helpers + índices nombre→id (Fase 1, v2.0)
+// Fase 1: escritura dual (nombre + *Id). Lectura sigue por nombre.
+// Design doc: memory/migracion_a_ids_estables.md
+// ═══════════════════════════════════════════════════════════════════════
+// Normalización consistente con Python 02_dryrun.py y backfill
+function _norm(s){
+  if (s===null||s===undefined) return '';
+  s = String(s).trim().toLowerCase();
+  // strip accents (NFD + quitar marks)
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); } catch(e){}
+  return s.replace(/\s+/g,' ');
+}
+function _csvSplit(s){
+  if (!s) return [];
+  return String(s).split(',').map(function(x){return x.trim();}).filter(Boolean);
+}
+// Índices por docId y por nombre normalizado. Rebuildeables.
+DB.catsById = {};    DB.catsByNorm = {};
+DB.actsById = {};    DB.actsByNorm = {};
+DB.sedesById = {};   DB.sedesByNorm = {};
+DB.periodosById = {}; DB.periodosByNorm = {};
+DB.profesoresByDni = {}; DB.profesByNombreNorm = {};
+function buildIdIndexes() {
+  // Categorías: DB.categorias = [[nombre,color,desde,hasta,genero,actCsv,docId], ...]
+  DB.catsById = {}; DB.catsByNorm = {};
+  (DB.categorias||[]).forEach(function(c){
+    var nm = c[0]||''; var id = c[6]||'';
+    if (id) DB.catsById[id] = {id:id, nombre:nm, color:c[1], desde:c[2], hasta:c[3], genero:c[4], actividades:c[5]};
+    if (nm) DB.catsByNorm[_norm(nm)] = id;
+  });
+  // Actividades: DB.actividades = [{nombre,icono,color,monto,_row}, ...]
+  DB.actsById = {}; DB.actsByNorm = {};
+  (DB.actividades||[]).forEach(function(a){
+    var id = a._row||'';
+    if (id) DB.actsById[id] = a;
+    if (a.nombre) DB.actsByNorm[_norm(a.nombre)] = id;
+  });
+  // Sedes: DB.sedes = [[nombre, docId], ...]
+  DB.sedesById = {}; DB.sedesByNorm = {};
+  (DB.sedes||[]).forEach(function(s){
+    var nm = s[0]||''; var id = s[1]||'';
+    if (id) DB.sedesById[id] = {id:id, nombre:nm};
+    if (nm) DB.sedesByNorm[_norm(nm)] = id;
+  });
+  // Profesores: DB.profesores = [[nombre,dni,fechaNac,email,pwd,docId(=dni),...], ...]
+  DB.profesoresByDni = {}; DB.profesByNombreNorm = {};
+  (DB.profesores||[]).forEach(function(p){
+    var dni = p[1]||p[5]||'';
+    if (dni) DB.profesoresByDni[dni] = {dni:dni, nombre:p[0]};
+    if (p[0]) DB.profesByNombreNorm[_norm(p[0])] = dni;
+  });
+  // Periodos: DB.periodos (nueva — se pobla al loader). Si no hay, queda vacío.
+  DB.periodosById = DB.periodosById||{};
+  DB.periodosByNorm = DB.periodosByNorm||{};
+}
+// Resolvers nombre→id con fallback. Devuelve '__UNRESOLVED__' si el nombre no existe
+// en el catálogo (el backfill lo marca igual y el admin resuelve después).
+function resolveCatId(nombre){
+  if (!nombre) return '';
+  return DB.catsByNorm[_norm(nombre)] || '__UNRESOLVED__';
+}
+function resolveActId(nombre){
+  if (!nombre) return '';
+  return DB.actsByNorm[_norm(nombre)] || '__UNRESOLVED__';
+}
+function resolveSedeId(nombre){
+  if (!nombre) return '';
+  return DB.sedesByNorm[_norm(nombre)] || '__UNRESOLVED__';
+}
+function resolvePeriodoId(nombre){
+  if (!nombre) return '';
+  return DB.periodosByNorm[_norm(nombre)] || '__UNRESOLVED__';
+}
+function resolveProfeIdByNombre(nombre){
+  if (!nombre) return '';
+  return DB.profesByNombreNorm[_norm(nombre)] || '__UNRESOLVED__';
+}
+// Resolver CSV de actividades → array de ids
+function resolveActIdsCsv(csv){
+  return _csvSplit(csv).map(resolveActId).filter(function(x){ return x; });
+}
+// Resolver CSV de profesores (nombres compuestos con comas) → array de dnis.
+// Usa longest-match sobre el CSV crudo para evitar romper "Apellido, Nombre".
+function resolveProfesIdsCsv(csv){
+  if (!csv) return [];
+  var remaining = String(csv);
+  var names = Object.keys(DB.profesByNombreNorm).slice().sort(function(a,b){ return b.length - a.length; });
+  var out = [];
+  // Necesitamos matchear nombres RAW (case-insensitive) en el remaining.
+  // Construir lista de (nombreRaw, dni) para hacer el substring match:
+  var rawPairs = (DB.profesores||[]).map(function(p){ return {nombre:p[0]||'', dni:p[1]||p[5]||''}; })
+    .filter(function(x){ return x.nombre && x.dni; })
+    .sort(function(a,b){ return b.nombre.length - a.nombre.length; });
+  rawPairs.forEach(function(pr){
+    if (!pr.nombre) return;
+    var re = new RegExp(pr.nombre.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i');
+    if (re.test(remaining) && out.indexOf(pr.dni) < 0){
+      out.push(pr.dni);
+      remaining = remaining.replace(re, '');
+    }
+  });
+  return out;
+}
+// ═══════════════════════════════════════════════════════════════════════
 // Flags de carga lazy — evitan recargar datos que ya están en memoria
 var _cargado = {cuotas: false, asistencias: false, inscripciones: false, citaciones: false, inactivos: true};
 
@@ -1908,6 +2014,18 @@ function inicializar(passReal) {
     DB.precios = [];
     precSnap.forEach(function(doc){ var d=doc.data(); DB.precios.push({actividad:d.actividad||'',categoria:d.categoria||'',monto:Number(d.monto)||0,_row:doc.id}); });
 
+    // Periodos (índice nombre→id para Fase 1 migración IDs)
+    DB.periodosById = {}; DB.periodosByNorm = {};
+    perSnap.forEach(function(doc){
+      var d = doc.data();
+      var nm = d.nombre||doc.id;
+      DB.periodosById[doc.id] = {id:doc.id, nombre:nm, fechaInicio:d.fechaInicio||'', fechaFin:d.fechaFin||''};
+      if (nm) DB.periodosByNorm[_norm(nm)] = doc.id;
+    });
+
+    // ═ MIGRACIÓN IDS — construir índices por-id / por-nombre ═
+    buildIdIndexes();
+
     // Socios
     DB.jugadores = [[]];
     sociosSnap.forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
@@ -2028,6 +2146,11 @@ function _fsDispatch(action, p, ok, err) {
       var dup = DB.jugadores.slice(1).find(function(f){ return (f[COL.DNI]||'').toString() === dniNorm; });
       if (dup){ cbErr('Ya existe un jugador con DNI ' + dniNorm + ' (' + (dup[COL.APELLIDO]||'') + ', ' + (dup[COL.NOMBRE]||'') + ')'); return; }
       var hoy = new Date().toLocaleDateString('sv');
+      var _catNom    = c.categoriaApp||c.categoria||'';
+      var _catSecNom = c.catSecundaria||'';
+      var _planNom   = c.plan||'';
+      var _actsNom   = c.actividades||'';
+      var _sedeNom   = c.sede||'';
       var doc = {
         apellido:c.apellido||'', nombre:c.nombre||'', email:c.email||'',
         celular:c.celular||c.telefono||'', telefono:c.telefono||'',
@@ -2035,10 +2158,16 @@ function _fsDispatch(action, p, ok, err) {
         fechaNac:c.fechaNac||'', sexo:c.sexo||'', domicilio:c.domicilio||'',
         obs:c.obs||'', membresia:'', vencimiento:'',
         fechaIngreso:c.fechaIngreso||hoy, creador:c.creador||'Admin',
-        categoriaApp:c.categoriaApp||c.categoria||'', plan:c.plan||'',
+        categoriaApp:_catNom, plan:_planNom,
         foto:c.foto||'', dniFoto:c.dniFoto||'', apto:c.apto||'',
         contacto1:c.contacto1||'', contacto2:c.contacto2||'', dniDorso:c.dniDorso||'',
-        actividades:c.actividades||'', saldo:0, catSecundaria:c.catSecundaria||''
+        actividades:_actsNom, saldo:0, catSecundaria:_catSecNom,
+        // ── IDs estables (migración Fase 1) ──
+        categoriaAppId:    _catNom    ? resolveCatId(_catNom)    : '',
+        catSecundariaId:   _catSecNom ? resolveCatId(_catSecNom) : '',
+        planId:            _planNom   ? resolveActId(_planNom)   : '',
+        actividadesIds:    _actsNom   ? resolveActIdsCsv(_actsNom) : [],
+        sedeId:            _sedeNom   ? resolveSedeId(_sedeNom)  : ''
       };
       db.collection('socios').doc(dniNorm).set(doc)
         .then(function(){ _contarEscrituras(1); DB.jugadores.push(socioToRow({data:function(){return doc;},id:dniNorm}, dniNorm)); renderPlayers(); cb({ok:true}); })
@@ -2056,13 +2185,19 @@ function _fsDispatch(action, p, ok, err) {
         obs:'obs', categoriaApp:'categoriaApp', categoria:'categoriaApp', catSecundaria:'catSecundaria',
         plan:'plan', membresia:'membresia', vencimiento:'vencimiento',
         foto:'foto', dniFoto:'dniFoto', apto:'apto', dniDorso:'dniDorso',
-        actividades:'actividades', activo:'activo',
+        actividades:'actividades', activo:'activo', sede:'sede',
         contacto1:'contacto1', contacto2:'contacto2'
       };
       Object.keys(campos).forEach(function(k){
         if(fieldMap[k] && campos[k] !== undefined) upd[fieldMap[k]] = campos[k];
       });
       if (campos.activo !== undefined) upd.activo = campos.activo === 'true' || campos.activo === true;
+      // ── Migración Fase 1: escribir *Id junto a los nombres ──
+      if (upd.categoriaApp    !== undefined) upd.categoriaAppId    = upd.categoriaApp    ? resolveCatId(upd.categoriaApp)    : '';
+      if (upd.catSecundaria   !== undefined) upd.catSecundariaId   = upd.catSecundaria   ? resolveCatId(upd.catSecundaria)   : '';
+      if (upd.plan            !== undefined) upd.planId            = upd.plan            ? resolveActId(upd.plan)            : '';
+      if (upd.actividades     !== undefined) upd.actividadesIds    = upd.actividades     ? resolveActIdsCsv(upd.actividades) : [];
+      if (upd.sede            !== undefined) upd.sedeId            = upd.sede            ? resolveSedeId(upd.sede)           : '';
       db.collection('socios').doc(dniNorm).update(upd)
         .then(function(){ _contarEscrituras(1);
           // Actualizar en cache local
@@ -2113,13 +2248,20 @@ function _fsDispatch(action, p, ok, err) {
     // ── CUOTAS / PAGOS ────────────────────────────────────────────
     case 'registrarPago': {
       var pg = p.pago || p;
+      var _planNomC = pg.plan||pg.concepto||'';
+      var _perNomC  = pg.periodo||'';
       var docData = {
         dni: normDoc(pg.doc||pg.dni||''), nombre:pg.nombre||'',
-        plan:pg.plan||pg.concepto||'', concepto:pg.concepto||pg.plan||'',
+        plan:_planNomC, concepto:pg.concepto||pg.plan||'',
         periodoDesde:pg.periodoDesde||'', periodoHasta:pg.periodoHasta||'',
         fechaPago:pg.fechaPago||'', monto:Number(pg.monto)||0,
         metodo:pg.metodo||'', cobrador:pg.cobrador||'', obs:pg.obs||'',
-        periodo:pg.periodo||'', ts:Date.now()
+        periodo:_perNomC, ts:Date.now(),
+        // ── Migración Fase 1: ids + snapshot de nombre para histórico ──
+        planId:      _planNomC ? resolveActId(_planNomC)     : '',
+        planNombre:  _planNomC,  // snapshot histórico (nunca se actualiza en rename)
+        periodoId:   _perNomC  ? resolvePeriodoId(_perNomC)  : '',
+        periodoNombre:_perNomC
       };
       db.collection('cuotas').add(docData)
         .then(function(ref){ _contarEscrituras(1); cb({ok:true, id:ref.id}); })
@@ -2130,10 +2272,13 @@ function _fsDispatch(action, p, ok, err) {
     // ── INSCRIPCIONES ─────────────────────────────────────────────
     case 'addInscripcion': {
       var row = p.rowArray || [];
+      var _planNomI = row[2]||'';
       var docInsc = {
-        dni:normDoc(row[0]||''), nombre:row[1]||'', plan:row[2]||'',
+        dni:normDoc(row[0]||''), nombre:row[1]||'', plan:_planNomI,
         monto:Number(row[3])||0, desde:row[4]||'', hasta:row[5]||'',
-        obs:row[6]||'', descuentoHno:Number(row[7])||0, hnoDe:row[8]||''
+        obs:row[6]||'', descuentoHno:Number(row[7])||0, hnoDe:row[8]||'',
+        // ── Migración Fase 1 ──
+        planId: _planNomI ? resolveActId(_planNomI) : ''
       };
       db.collection('inscripciones').add(docInsc)
         .then(function(ref){ cb({ok:true, fila:ref.id}); })
@@ -2165,14 +2310,17 @@ function _fsDispatch(action, p, ok, err) {
         return true;
       });
       var batch = db.batch();
+      var _planNomM = p.actividades||'';
+      var _planIdM  = _planNomM ? resolveActId(_planNomM) : '';
       sociosMasiva.forEach(function(f){
         var dniM = normDoc(f[COL.DNI]||'');
         var ref = db.collection('inscripciones').doc();
         batch.set(ref, {
           dni:dniM, nombre:(f[COL.APELLIDO]||'')+' '+(f[COL.NOMBRE]||''),
-          plan:p.actividades||'', monto:0,
+          plan:_planNomM, monto:0,
           desde:p.desde||'', hasta:p.hasta||'', obs:p.obs||'',
-          descuentoHno:0, hnoDe:''
+          descuentoHno:0, hnoDe:'',
+          planId:_planIdM
         });
       });
       batch.commit()
@@ -2183,7 +2331,13 @@ function _fsDispatch(action, p, ok, err) {
 
     // ── PRECIOS ───────────────────────────────────────────────────
     case 'savePrecio': {
-      var precData = {actividad:p.actividad||'', categoria:p.categoria||'', monto:Number(p.monto)||0};
+      var _actP = p.actividad||''; var _catP = p.categoria||'';
+      var precData = {
+        actividad:_actP, categoria:_catP, monto:Number(p.monto)||0,
+        // ── Migración Fase 1 ──
+        actividadId: _actP ? resolveActId(_actP) : '',
+        categoriaId: _catP ? resolveCatId(_catP) : ''
+      };
       var ref = p.rowIndex
         ? db.collection('config_precios').doc(p.rowIndex.toString())
         : db.collection('config_precios').doc();
@@ -2335,6 +2489,15 @@ function _fsDispatch(action, p, ok, err) {
       var citData = Object.assign({}, p);
       delete citData.action; delete citData.pass; delete citData.token;
       citData.fechaCreacion = citData.fechaCreacion || new Date().toLocaleDateString('sv');
+      // ── Migración Fase 1: resolver ids + snapshot de nombres para histórico ──
+      if (citData.actividad && citData.actividadId === undefined) {
+        citData.actividadId = resolveActId(citData.actividad);
+        citData.actividadNombre = citData.actividad;  // snapshot (no se toca en rename)
+      }
+      if (citData.categoria && citData.categoriaId === undefined) {
+        citData.categoriaId = resolveCatId(citData.categoria);
+        citData.categoriaNombre = citData.categoria;
+      }
       if (citData.id) {
         var citId = citData.id; delete citData.id;
         db.collection('citaciones').doc(citId).set(citData)
@@ -2417,7 +2580,17 @@ function _fsDispatch(action, p, ok, err) {
 // ── Convertir rowArray → doc según tabName ────────────────────────
 function _rowToDoc(tabName, row) {
   switch(tabName) {
-    case 'Horarios': return {dia:row[0]||'',hora:row[1]||'',sede:row[2]||'',profesores:row[3]||'',grupo:row[4]||'',liga:row[5]||'',modalidad:row[6]||'Mixto', idx: Date.now()};
+    case 'Horarios': {
+      var _sedeH = row[2]||''; var _profH = row[3]||''; var _grpH = row[4]||'';
+      return {
+        dia:row[0]||'', hora:row[1]||'', sede:_sedeH, profesores:_profH,
+        grupo:_grpH, liga:row[5]||'', modalidad:row[6]||'Mixto', idx: Date.now(),
+        // ── Migración Fase 1 ──
+        sedeId:         _sedeH ? resolveSedeId(_sedeH) : '',
+        categoriaId:    _grpH  ? resolveCatId(_grpH)   : '',
+        profesoresIds:  _profH ? resolveProfesIdsCsv(_profH) : []
+      };
+    }
     case 'Profesores': {
       var dniP = normDoc(row[1]||'');
       // También crear usuario en Firebase Auth para el profe
@@ -2432,7 +2605,15 @@ function _rowToDoc(tabName, row) {
         telegramChatId:   row[6]||''
       };
     }
-    case 'Config_Categorias': return {nombre:row[0]||'',color:row[1]||'',edadDesde:String(row[2]||''),edadHasta:String(row[3]||''),genero:row[4]||'Mixto',actividades:row[5]||''};
+    case 'Config_Categorias': {
+      var _actCsvC = row[5]||'';
+      return {
+        nombre:row[0]||'', color:row[1]||'', edadDesde:String(row[2]||''),
+        edadHasta:String(row[3]||''), genero:row[4]||'Mixto', actividades:_actCsvC,
+        // ── Migración Fase 1 ──
+        actividadesIds: _actCsvC ? resolveActIdsCsv(_actCsvC) : []
+      };
+    }
     case 'Sedes': return {nombre:row[0]||''};
     case 'Config_Periodos': return {mes:row[0]||1,anioD:row[1]||2025,diaD:row[2]||1,anioH:row[3]||row[1]||2025,diaH:row[4]||0,gracia:row[5]||5,desc:row[6]||''};
     case 'Actividades': return {nombre:row[0]||'',icono:row[1]||'',color:row[2]||'#555',monto:Number(row[3])||0};
@@ -7399,7 +7580,8 @@ function ejecutarRecategorizacion() {
   // 2. Actualizar categoría de cada alumno en Firestore
   _recatPreview.cambios.forEach(function(cambio) {
     db.collection('socios').doc(cambio.dni).update({
-      categoriaApp: cambio.catNueva
+      categoriaApp:   cambio.catNueva,
+      categoriaAppId: cambio.catNueva ? resolveCatId(cambio.catNueva) : ''
     }).then(checkDone).catch(function(e){ errores++; checkDone(); });
   });
 
