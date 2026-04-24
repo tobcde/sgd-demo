@@ -1566,7 +1566,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.9</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.10</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3058,6 +3058,28 @@ function iconoHTML(icono, size){
   }
   return icono;
 }
+// Busca un emoji por nombre de actividad (ej. "Futbol" -> pelota). Usa EMOJIS_DEPORTES si esta cargado.
+function emojiPorNombre(nombre){
+  try {
+    var nom = (nombre||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(!nom || typeof EMOJIS_DEPORTES === 'undefined') return '';
+    for(var i=0; i<EMOJIS_DEPORTES.length; i++){
+      var em = EMOJIS_DEPORTES[i];
+      var palabras = (em.n||'').toLowerCase().split(/\s+/);
+      for(var j=0; j<palabras.length; j++){
+        var p = palabras[j];
+        if(p && nom.indexOf(p) !== -1) return em.e;
+      }
+    }
+  } catch(_e){}
+  return '';
+}
+// Devuelve el emoji visible para una actividad en contextos que no aceptan HTML (ej. <option>)
+function getActividadEmoji(a){
+  if(!a) return '';
+  if(a.icono && !iconoEsUrl(a.icono)) return a.icono;
+  return emojiPorNombre(a.nombre);
+}
 
 // -- PERIODOS DE PAGO ---------------------------------------------
 function getFechaDesde(p){ return new Date(p.anioD, p.mes-1, parseInt(p.diaD)||1); }
@@ -3109,7 +3131,7 @@ function renderInscripcionesModal(dni) {
     var badgeHno = i.hnoDe ? ' <span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;">HNO DE ' + i.hnoDe + '</span>' : '';
     var badgeDesc = descHno > 0 ? '<div style="font-size:10px;color:var(--muted);">Base $' + montoBase.toLocaleString('es-AR') + ' - $' + descHno.toLocaleString('es-AR') + '</div>' : '';
     return '<div class="insc-row' + (baja ? ' insc-baja' : '') + '">'
-      + '<span style="font-size:18px;">' + (icono ? iconoHTML(icono, 22) : '&#x1F4CB;') + '</span>'
+      + '<span style="font-size:18px;">' + (icono ? iconoHTML(icono, 22) : (emojiPorNombre(i.plan) || '&#x1F4CB;')) + '</span>'
       + '<div style="flex:1;">'
       + '<div class="insc-plan">' + i.plan + (baja ? ' <span style="color:var(--red);font-size:10px;">[BAJA]</span>' : '') + badgeHno + '</div>'
       + '<div class="insc-fechas">Desde ' + i.desde + ' &middot; ' + hastaStr + (i.obs ? ' &middot; ' + i.obs : '') + '</div>'
@@ -3130,7 +3152,8 @@ function abrirModalInscripcion() {
   sel.innerHTML = '<option value="">-- Seleccionar --</option>'
     + (DB.actividades||[]).map(function(a){
         var monto = a.monto || 0;
-        return '<option value="' + a.nombre + '" data-monto="' + monto + '">' + (a.icono && !iconoEsUrl(a.icono) ? a.icono + ' ' : '') + a.nombre + (monto ? ' ($' + Number(monto).toLocaleString('es-AR') + ')' : '') + '</option>';
+        var _emA = getActividadEmoji(a);
+        return '<option value="' + a.nombre + '" data-monto="' + monto + '">' + (_emA ? _emA + ' ' : '') + a.nombre + (monto ? ' ($' + Number(monto).toLocaleString('es-AR') + ')' : '') + '</option>';
       }).join('');
   document.getElementById('mi-monto').value = '';
   document.getElementById('mi-desde').value = new Date().toISOString().split('T')[0];
@@ -3685,7 +3708,7 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
     listaEl.innerHTML = inscVig.map(function(i, idx){
       var actObj = (DB.actividades||[]).find(function(a){ return a.nombre === i.plan; });
       var iconoRaw = actObj ? actObj.icono : '';
-      var icono = iconoRaw ? iconoHTML(iconoRaw, 18) : '&#x1F4CB;';
+      var icono = iconoRaw ? iconoHTML(iconoRaw, 18) : (emojiPorNombre(i.plan) || '&#x1F4CB;');
       var _sc = calcularSaldoPorInscripcion(i);
       var _badge = '';
       var _montoSugerido = Number(i.monto);
@@ -5718,7 +5741,8 @@ function poblarSelectsPrecios() {
   var selCat = document.getElementById('precio-cat');
   if(!selAct || !selCat) return;
   selAct.innerHTML = (DB.actividades||[]).map(function(a){
-    return '<option value="' + a.nombre + '">' + (a.icono && !iconoEsUrl(a.icono) ? a.icono + ' ' : '') + a.nombre + '</option>';
+    var _em = getActividadEmoji(a);
+    return '<option value="' + a.nombre + '">' + (_em ? _em + ' ' : '') + a.nombre + '</option>';
   }).join('');
   selCat.innerHTML = (DB.categorias||[]).map(function(c){
     return '<option value="' + c[0] + '">' + c[0] + ' (' + c[4] + ')</option>';
@@ -6069,7 +6093,7 @@ function poblarSelects() {
 
 function poblarSelectActividad() {
   var hAct = document.getElementById('hActividad');
-  if(hAct){ hAct.innerHTML = '<option value="">Sin actividad</option>' + (DB.actividades||[]).map(function(a){ return '<option value="' + a.nombre + '">' + (a.icono && !iconoEsUrl(a.icono) ? a.icono + ' ' : '') + a.nombre + '</option>'; }).join(''); }
+  if(hAct){ hAct.innerHTML = '<option value="">Sin actividad</option>' + (DB.actividades||[]).map(function(a){ var _em = getActividadEmoji(a); return '<option value="' + a.nombre + '">' + (_em ? _em + ' ' : '') + a.nombre + '</option>'; }).join(''); }
 }
 
 // -- INSTITUCION --------------------------------------------------
@@ -7561,7 +7585,7 @@ function citInicializar() {
   actSel.innerHTML = '<option value="">-- Actividad --</option>';
   (DB.actividades || []).forEach(function(a) {
     var o = document.createElement('option');
-    o.value = a.nombre; o.text = (a.icono && !iconoEsUrl(a.icono) ? a.icono + ' ' : '') + a.nombre;
+    var _em = getActividadEmoji(a); o.value = a.nombre; o.text = (_em ? _em + ' ' : '') + a.nombre;
     actSel.appendChild(o);
   });
   // Reset del combo de categorías al placeholder ANTES de llamar a citOnActChange,
