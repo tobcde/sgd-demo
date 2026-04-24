@@ -1621,7 +1621,34 @@ function resolveSedeId(nombre){
 }
 function resolvePeriodoId(nombre){
   if (!nombre) return '';
-  return DB.periodosByNorm[_norm(nombre)] || '__UNRESOLVED__';
+  var direct = DB.periodosByNorm[_norm(nombre)];
+  if (direct) return direct;
+  // QA-002 (v2.4): fallback por año. Las cuotas guardan "Abril 2026" pero el
+  // catálogo tipicamente solo tiene periodos anuales ("Anual 2026") o un
+  // subset mensual. Si matcheamos el año en el nombre y hay exactamente un
+  // periodo cuyo doc.data contiene ese año, usamos ese docId.
+  var m = String(nombre).match(/(\d{4})/);
+  if (m) {
+    var anio = m[1];
+    var candidatos = [];
+    for (var k in DB.periodosById) {
+      if (!Object.prototype.hasOwnProperty.call(DB.periodosById, k)) continue;
+      var p = DB.periodosById[k];
+      var haystack = [p.id||'', p.nombre||'', p.fechaInicio||'', p.fechaFin||''].join(' ');
+      if (haystack.indexOf(anio) >= 0) candidatos.push(p.id);
+    }
+    if (candidatos.length === 1) return candidatos[0];
+    // Si hay múltiples, preferir el que matchea fechaInicio/Fin del año
+    if (candidatos.length > 1) {
+      for (var i=0; i<candidatos.length; i++) {
+        var q = DB.periodosById[candidatos[i]];
+        if ((q.fechaInicio||'').indexOf(anio+'-') === 0 ||
+            (q.fechaFin||'').indexOf(anio+'-12') === 0) return q.id;
+      }
+      return candidatos[0];
+    }
+  }
+  return '__UNRESOLVED__';
 }
 function resolveProfeIdByNombre(nombre){
   if (!nombre) return '';
