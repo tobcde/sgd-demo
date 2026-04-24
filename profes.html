@@ -403,7 +403,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 </div>
 
 <div id="toast"></div>
-<div id="vbadge">v2.0</div>
+<div id="vbadge">v2.1</div>
 
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -739,6 +739,8 @@ function cargarDatos() {
   var corteStr = corte.toLocaleDateString('sv'); // yyyy-mm-dd
 
   // 3 queries en paralelo — Promise.all, no secuencial
+  // FASE 2: agregamos config_categorias, config_actividades y config_sedes para
+  // resolver nombres actuales por ID (sobrevive renames).
   Promise.all([
     // 1. Institución
     db.collection('config').doc('institucion').get(),
@@ -749,15 +751,34 @@ function cargarDatos() {
     // 3. Asistencias últimos 2 meses
     db.collection('asistencias')
       .where('fecha', '>=', corteStr)
-      .get()
+      .get(),
+
+    // 4-6. Catalogos para resolver *Id -> nombre actual (FASE 2)
+    db.collection('config_categorias').get(),
+    db.collection('config_actividades').get(),
+    db.collection('config_sedes').get()
   ])
   .then(function(results) {
     var instDoc   = results[0];
     var horSnap   = results[1];
     var asistSnap = results[2];
+    var catSnap   = results[3];
+    var actSnap   = results[4];
+    var sedeSnap  = results[5];
 
     // Institución
     if (instDoc.exists) aplicarBranding(instDoc.data());
+
+    // FASE 2: indices *ById para resolver nombres actuales
+    var catsById = {}, actsById = {}, sedesById = {};
+    catSnap.forEach(function(d){ var x = d.data(); catsById[d.id] = { id:d.id, nombre: x.nombre || d.id }; });
+    actSnap.forEach(function(d){ var x = d.data(); actsById[d.id] = { id:d.id, nombre: x.nombre || d.id }; });
+    sedeSnap.forEach(function(d){ var x = d.data(); sedesById[d.id] = { id:d.id, nombre: x.nombre || d.id }; });
+    function _catNom(id, fallback){ return (id && id !== '__UNRESOLVED__' && catsById[id]) ? catsById[id].nombre : (fallback || ''); }
+    function _actNom(id, fallback){ return (id && id !== '__UNRESOLVED__' && actsById[id]) ? actsById[id].nombre : (fallback || ''); }
+    function _sedeNom(id, fallback){ return (id && id !== '__UNRESOLVED__' && sedesById[id]) ? sedesById[id].nombre : (fallback || ''); }
+    // exponer para helpers downstream (gasMatchCat, renders)
+    DB.catsById = catsById; DB.actsById = actsById; DB.sedesById = sedesById;
 
     // Horarios — filtrar los del profe
     // FASE 1 dual-read: preferir profesoresIds (refs por DNI) si existe, fallback a match por nombre
@@ -778,15 +799,24 @@ function cargarDatos() {
           return p && (p === nombrePers || p.indexOf(nombrePers) >= 0 || nombrePers.indexOf(p) >= 0);
         });
       }
-      if (esDelProfe) DB.horarios.push(Object.assign({id: doc.id}, h));
+      if (esDelProfe) {
+        // FASE 2: resolver nombres desde *Id (sobrevive renames)
+        h.grupo = _catNom(h.categoriaId, h.grupo);
+        h.sede  = _sedeNom(h.sedeId,     h.sede);
+        h.liga  = _actNom(h.actividadId,  h.liga || h.extra || '');
+        DB.horarios.push(Object.assign({id: doc.id}, h));
+      }
     });
 
-    // Mis grupos
+    // Mis grupos — set de IDs (para match robusto a renames) + set de nombres (fallback)
     var misGrupos = [];
+    var misGruposIds = [];
     DB.horarios.forEach(function(h){
+      if (h.categoriaId && misGruposIds.indexOf(h.categoriaId) < 0) misGruposIds.push(h.categoriaId);
       if (h.grupo && misGrupos.indexOf(h.grupo) < 0) misGrupos.push(h.grupo);
     });
     DB.misGrupos = misGrupos.slice();
+    DB.misGruposIds = misGruposIds.slice();
 
     // Asistencias
     asistencias = [];
@@ -814,12 +844,25 @@ function cargarDatos() {
         DB.jugadores = [];
         sociosSnap.forEach(function(doc) {
           var f = doc.data();
+          // FASE 2: resolver nombres actuales desde *Id (sobrevive renames)
+          f.categoriaApp  = _catNom(f.categoriaAppId,  f.categoriaApp);
+          f.catSecundaria = _catNom(f.catSecundariaId, f.catSecundaria);
+          f.plan          = _actNom(f.planId,          f.plan);
+          f.sede          = _sedeNom(f.sedeId,         f.sede);
+          // Actividades CSV: si hay array de IDs, resolver a nombres actuales
+          if (Array.isArray(f.actividadesIds) && f.actividadesIds.length) {
+            var _nm = f.actividadesIds.map(function(id){ return _actNom(id, ''); }).filter(function(x){ return x; });
+            if (_nm.length) f.actividades = _nm.join(', ');
+          }
           var catP = (f.categoriaApp   || '').toString().trim();
           var catS = (f.catSecundaria  || '').toString().trim();
-          var enGrupo = misGrupos.some(function(g){
+          // Preferir match por ID (robusto a renames); fallback a match por nombre
+          var enGrupoId = (f.categoriaAppId && misGruposIds.indexOf(f.categoriaAppId) >= 0)
+                       || (f.catSecundariaId && misGruposIds.indexOf(f.catSecundariaId) >= 0);
+          var enGrupoNom = misGrupos.some(function(g){
             return gasMatchCat(catP, g) || (catS && gasMatchCat(catS, g));
           });
-          if (enGrupo) DB.jugadores.push(Object.assign({id: doc.id}, f));
+          if (enGrupoId || enGrupoNom) DB.jugadores.push(Object.assign({id: doc.id}, f));
         });
 
         ocultarLoader();
