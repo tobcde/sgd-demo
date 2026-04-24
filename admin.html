@@ -1164,13 +1164,20 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           <span id="mp-total-calc" style="font-size:18px;font-weight:800;color:var(--secondary);">$0</span>
         </div>
       </div>
+      <div id="mp-favor-wrap" style="display:none;margin-bottom:12px;padding:10px 12px;background:var(--green-dim,#e8f7ee);border:1px solid var(--green-border,#9cd5ac);border-radius:8px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--green,#2a7a3f);font-weight:600;">
+          <input type="checkbox" id="mp-favor-check" onchange="toggleUsarFavor()" style="accent-color:var(--green,#2a7a3f);">
+          <span>Pagar con saldo a favor (disponible: <span id="mp-favor-disp">$0</span>)</span>
+        </label>
+        <div id="mp-favor-hint" style="display:none;margin-top:6px;font-size:11px;color:var(--muted);padding-left:22px;">Se descontara del saldo a favor del socio y se registrara en la auditoria.</div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
         <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Monto total ($)</label><input id="mp-monto" type="number" class="edit-input" style="width:100%;font-size:16px;padding:12px;" oninput="sincronizarMontoManual()"></div>
         <div class="filter-group"><label class="filter-label">Desde</label><input id="mp-desde" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label">Hasta</label><input id="mp-hasta" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group"><label class="filter-label">Metodo de pago</label>
           <select id="mp-metodo" class="edit-input" style="width:100%;">
-            <option>Efectivo</option><option>Transferencia</option><option>Tarjeta debito</option><option>Tarjeta credito</option><option>Mercado Pago</option></select></div>
+            <option>Efectivo</option><option>Transferencia</option><option>Tarjeta debito</option><option>Tarjeta credito</option><option>Mercado Pago</option><option>Saldo a favor</option></select></div>
         <div class="filter-group"><label class="filter-label">Fecha de pago</label><input id="mp-fecha" type="date" class="edit-input" style="width:100%;"></div>
         <div class="filter-group full" style="grid-column:1/-1;"><label class="filter-label">Cobrador</label>
           <select id="mp-cobrador" class="edit-input" style="width:100%;"></select></div>
@@ -1559,7 +1566,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.8</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.9</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3642,6 +3649,17 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   pagoCtx = {dni:dni, nombre:nom, planNom:pl, hoja:hoja, f:_fJug};
   // Mostrar saldo previo del socio
   var _cv = _fJug ? estadoCuotaV2(_fJug) : null;
+  // Saldo a favor disponible (incluye ajusteSaldo positivo)
+  var _favor = (_cv && _cv.saldoAFavor) ? Number(_cv.saldoAFavor) : 0;
+  pagoCtx.saldoAFavor = _favor;
+  var _favWrap = document.getElementById('mp-favor-wrap');
+  var _favChk  = document.getElementById('mp-favor-check');
+  var _favDisp = document.getElementById('mp-favor-disp');
+  var _favHint = document.getElementById('mp-favor-hint');
+  if(_favChk) _favChk.checked = false;
+  if(_favHint) _favHint.style.display = 'none';
+  if(_favWrap) _favWrap.style.display = (_favor > 0) ? 'block' : 'none';
+  if(_favDisp) _favDisp.innerText = '$' + _favor.toLocaleString('es-AR');
   var _saldoInfo = '';
   if(_cv && _cv.saldoAFavor > 0) {
     _saldoInfo = ' &mdash; <span style="color:#6de097;font-size:11px;">+$' + Number(_cv.saldoAFavor).toLocaleString('es-AR') + ' a favor</span>';
@@ -3736,6 +3754,31 @@ function sincronizarMontoManual() {
   if(calcEl) calcEl.innerText = '$' + (Number(document.getElementById('mp-monto').value)||0).toLocaleString('es-AR');
 }
 
+function toggleUsarFavor() {
+  var chk = document.getElementById('mp-favor-check');
+  var hint = document.getElementById('mp-favor-hint');
+  var metSel = document.getElementById('mp-metodo');
+  var montoEl = document.getElementById('mp-monto');
+  if(!chk) return;
+  var disp = (pagoCtx && Number(pagoCtx.saldoAFavor)) || 0;
+  if(chk.checked) {
+    if(hint) hint.style.display = 'block';
+    if(metSel) {
+      for(var i=0;i<metSel.options.length;i++){
+        if(metSel.options[i].value === 'Saldo a favor' || metSel.options[i].text === 'Saldo a favor'){ metSel.selectedIndex = i; break; }
+      }
+    }
+    var actual = Number(montoEl.value)||0;
+    if(actual <= 0 || actual > disp) {
+      montoEl.value = disp;
+      sincronizarMontoManual();
+    }
+  } else {
+    if(hint) hint.style.display = 'none';
+    if(metSel) metSel.selectedIndex = 0;
+  }
+}
+
 function confirmarPago() {
   if(!pagoCtx) return;
   if(pagoCtx._enviando) return; // guard doble submit
@@ -3797,6 +3840,18 @@ function confirmarPago() {
   var moTotal = pagos.reduce(function(s, p){ return s + p.monto; }, 0);
   if(!moTotal) { pagoCtx._enviando = false; return alert('El monto total no puede ser cero'); }
 
+  // QA-Saldo: si se paga con saldo a favor, validar que el monto no exceda el disponible
+  var _usarFavor = (function(){
+    var c = document.getElementById('mp-favor-check');
+    return !!(c && c.checked) || (_metodo === 'Saldo a favor');
+  })();
+  var _favorDisp = (pagoCtx && Number(pagoCtx.saldoAFavor)) || 0;
+  if(_usarFavor) {
+    if(_favorDisp <= 0) { pagoCtx._enviando = false; return alert('El socio no tiene saldo a favor disponible'); }
+    if(moTotal > _favorDisp) { pagoCtx._enviando = false; return alert('El monto ($' + moTotal.toLocaleString('es-AR') + ') excede el saldo a favor disponible ($' + _favorDisp.toLocaleString('es-AR') + ')'); }
+    _metodo = 'Saldo a favor';
+  }
+
   mostrarLoader('Registrando pago...');
   var done = 0;
   pagos.forEach(function(item) {
@@ -3813,16 +3868,52 @@ function confirmarPago() {
       newRow._fsId = (res && res.id) || '';
       CUOTAS_DB.cuotas.push(newRow);
       if(++done === pagos.length) {
-        window._ultimoPago = {
-          nombre: pagoCtx.nombre, dni: pagoCtx.dni,
-          email: pagoCtx.f ? (pagoCtx.f[COL.EMAIL]||'') : '',
-          categoria: pagoCtx.f ? (pagoCtx.f[COL.CATEGORIA_APP]||'') : '',
-          planAct: pagos.map(function(p){ return p.plan; }).join(' + '), moTotal: moTotal,
-          periodo: periodo, vigente: hasta, fechaPago: _fecha,
-          cobrador: _cobrador, metodo: _metodo
+        var _finalizarPago = function(){
+          window._ultimoPago = {
+            nombre: pagoCtx.nombre, dni: pagoCtx.dni,
+            email: pagoCtx.f ? (pagoCtx.f[COL.EMAIL]||'') : '',
+            categoria: pagoCtx.f ? (pagoCtx.f[COL.CATEGORIA_APP]||'') : '',
+            planAct: pagos.map(function(p){ return p.plan; }).join(' + '), moTotal: moTotal,
+            periodo: periodo, vigente: hasta, fechaPago: _fecha,
+            cobrador: _cobrador, metodo: _metodo
+          };
+          cerrarModalPago(); ocultarLoader(); renderCuotas(); renderPlayers();
+          ofrecerEnvioComprobante(window._ultimoPago);
         };
-        cerrarModalPago(); ocultarLoader(); renderCuotas(); renderPlayers();
-        ofrecerEnvioComprobante(window._ultimoPago);
+        if(_usarFavor) {
+          try {
+            var _dniStr = String(pagoCtx.dni);
+            var _f = pagoCtx.f;
+            var _anterior = (_f && typeof _f.ajusteSaldo === 'number') ? _f.ajusteSaldo : 0;
+            var _nuevo = Math.round((_anterior - moTotal) * 100) / 100;
+            var _delta = _nuevo - _anterior;
+            var _usuario = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+            var _nombreSocio = _f ? ((_f[COL.APELLIDO]||'') + ', ' + (_f[COL.NOMBRE]||'')) : pagoCtx.nombre;
+            var _motivoAudit = 'Usado para pago: ' + pagos.map(function(pp){ return pp.plan; }).join(' + ') + (periodo ? ' (' + periodo + ')' : '');
+            var _ts = firebase.firestore.FieldValue.serverTimestamp();
+            var _batch = db.batch();
+            _batch.update(db.collection('socios').doc(_dniStr), { ajusteSaldo: _nuevo });
+            _batch.set(db.collection('auditoria_saldos').doc(), {
+              dni: _dniStr, nombreSocio: _nombreSocio,
+              montoAnterior: _anterior, montoNuevo: _nuevo, delta: _delta,
+              motivo: _motivoAudit, modificadoPor: _usuario, fecha: _ts
+            });
+            _batch.commit().then(function(){
+              if(_f) _f.ajusteSaldo = _nuevo;
+              _finalizarPago();
+            }).catch(function(err){
+              ocultarLoader();
+              alert('Pago registrado, pero fallo el descuento del saldo a favor:\n' + (err && err.message ? err.message : err) + '\nAjustá manualmente desde "Editar saldo".');
+              _finalizarPago();
+            });
+          } catch(e) {
+            ocultarLoader();
+            alert('Pago registrado, pero fallo el descuento del saldo a favor: ' + e.message + '\nAjustá manualmente desde "Editar saldo".');
+            _finalizarPago();
+          }
+        } else {
+          _finalizarPago();
+        }
       }
     }, function(e){ pagoCtx._enviando = false; alert('Error: ' + e); ocultarLoader(); });
   });
