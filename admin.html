@@ -1507,7 +1507,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.0</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.1</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -1653,6 +1653,118 @@ function resolveProfesIdsCsv(csv){
   });
   return out;
 }
+// ═══════════════════════════════════════════════════════════════════════
+// FASE 2: helpers de lectura por ID con fallback al nombre legacy.
+// Se usan SIEMPRE en reads/displays para sobrevivir a renames de catalogo.
+// Los writes (FASE 1) siguen escribiendo ambos: nombre legacy + *Id.
+// ═══════════════════════════════════════════════════════════════════════
+function _nomByCatId(id) {
+  if (id && id !== '__UNRESOLVED__' && DB.catsById && DB.catsById[id]) return DB.catsById[id].nombre || '';
+  return '';
+}
+function _nomByActId(id) {
+  if (id && id !== '__UNRESOLVED__' && DB.actsById && DB.actsById[id]) return DB.actsById[id].nombre || '';
+  return '';
+}
+function _nomBySedeId(id) {
+  if (id && id !== '__UNRESOLVED__' && DB.sedesById && DB.sedesById[id]) return DB.sedesById[id].nombre || '';
+  return '';
+}
+function _nomByPeriodoId(id) {
+  if (id && id !== '__UNRESOLVED__' && DB.periodosById && DB.periodosById[id]) return DB.periodosById[id].nombre || '';
+  return '';
+}
+function _nomByProfeDni(dni) {
+  if (dni && DB.profesoresByDni && DB.profesoresByDni[dni]) return DB.profesoresByDni[dni].nombre || '';
+  return '';
+}
+
+// Socios (f = row array con props *Id)
+function socioCatNombre(f)   { return _nomByCatId(f && f.categoriaAppId)  || (f && f[COL.CATEGORIA_APP]) || ''; }
+function socioCatSecNombre(f){ return _nomByCatId(f && f.catSecundariaId) || (f && f[COL.CAT_SECUNDARIA]) || ''; }
+function socioPlanNombre(f)  { return _nomByActId(f && f.planId)          || (f && f[COL.PLAN]) || ''; }
+function socioSedeNombre(f)  { return _nomBySedeId(f && f.sedeId)         || (f && f.sede) || ''; }
+function socioActsCsv(f) {
+  // prefiere actividadesIds[] con nombres actuales; fallback al CSV legacy
+  if (f && Array.isArray(f.actividadesIds) && f.actividadesIds.length) {
+    var nombres = f.actividadesIds.map(_nomByActId).filter(function(x){ return x; });
+    if (nombres.length) return nombres.join(', ');
+  }
+  return (f && f[COL.ACTIVIDADES]) || '';
+}
+
+// Horarios (h = row array con props *Id)
+function horarioCatNombre(h)  { return _nomByCatId(h && h.categoriaId)  || (h && h[4]) || ''; }
+function horarioActNombre(h)  { return _nomByActId(h && h.actividadId)  || (h && h[5]) || ''; }
+function horarioSedeNombre(h) { return _nomBySedeId(h && h.sedeId)      || (h && h[2]) || ''; }
+function horarioProfesCsv(h) {
+  if (h && Array.isArray(h.profesoresIds) && h.profesoresIds.length) {
+    var nombres = h.profesoresIds.map(_nomByProfeDni).filter(function(x){ return x; });
+    if (nombres.length) return nombres.join(', ');
+  }
+  return (h && h[3]) || '';
+}
+
+// Cuotas — prefiere snapshot historico planNombre/periodoNombre (immutable cuando se pago)
+// Si no hay snapshot (cuotas pre-FASE1), cae al ID→nombre actual; si tampoco, al legacy.
+function cuotaPlanNombre(c) {
+  if (c && c.planNombre) return c.planNombre;
+  return _nomByActId(c && c.planId) || (c && c[2]) || '';
+}
+function cuotaPeriodoNombre(c) {
+  if (c && c.periodoNombre) return c.periodoNombre;
+  return _nomByPeriodoId(c && c.periodoId) || (c && c.periodo) || '';
+}
+
+// Inscripciones
+function inscPlanNombre(i) {
+  return _nomByActId(i && i.planId) || (i && i.plan) || '';
+}
+
+// FASE 2: tras un rename de catalogo (categoria/actividad/sede/profe), los rows
+// en DB.jugadores/DB.horarios/CUOTAS_DB.cuotas tienen el nombre viejo cacheado
+// en el slot posicional. Este helper recomputa esos slots usando *Id -> catalogo
+// actual, manteniendo fallback al nombre legacy si no hay ID.
+// Llamar SIEMPRE despues de buildIdIndexes() cuando cambia un catalogo.
+function _refreshResolvedRows() {
+  if (Array.isArray(DB.jugadores)) {
+    DB.jugadores.forEach(function(row){
+      if (!row || !row.length) return;
+      var leg = row._legacy || {};
+      row[COL.CATEGORIA_APP]   = _nomByCatId(row.categoriaAppId)  || leg.categoriaApp || row[COL.CATEGORIA_APP] || '';
+      row[COL.CAT_SECUNDARIA]  = _nomByCatId(row.catSecundariaId) || leg.catSecundaria || row[COL.CAT_SECUNDARIA] || '';
+      row[COL.PLAN]            = _nomByActId(row.planId)          || leg.plan || row[COL.PLAN] || '';
+      if (Array.isArray(row.actividadesIds) && row.actividadesIds.length) {
+        var _nm = row.actividadesIds.map(_nomByActId).filter(function(x){ return x; });
+        row[COL.ACTIVIDADES] = _nm.length ? _nm.join(', ') : (leg.actividades || row[COL.ACTIVIDADES] || '');
+      }
+    });
+  }
+  if (Array.isArray(DB.horarios)) {
+    DB.horarios.forEach(function(h){
+      if (!h || !h.length) return;
+      var leg = h._legacy || {};
+      h[2] = _nomBySedeId(h.sedeId)     || leg.sede  || h[2] || '';
+      h[4] = _nomByCatId(h.categoriaId) || leg.grupo || h[4] || '';
+      h[5] = _nomByActId(h.actividadId) || leg.liga  || h[5] || '';
+      if (Array.isArray(h.profesoresIds) && h.profesoresIds.length) {
+        var _pn = h.profesoresIds.map(_nomByProfeDni).filter(function(x){ return x; });
+        h[3] = _pn.length ? _pn.join(', ') : (leg.profesores || h[3] || '');
+      }
+    });
+  }
+  if (window.CUOTAS_DB && Array.isArray(CUOTAS_DB.cuotas)) {
+    CUOTAS_DB.cuotas.forEach(function(c){
+      if (!c || !c.length) return;
+      // planNombre snapshot es historico: NO se refresca
+      if (!c.planNombre) {
+        var leg = c._legacy || {};
+        c[2] = _nomByActId(c.planId) || leg.plan || c[2] || '';
+      }
+    });
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // Flags de carga lazy — evitan recargar datos que ya están en memoria
 var _cargado = {cuotas: false, asistencias: false, inscripciones: false, citaciones: false, inactivos: true};
@@ -1809,6 +1921,18 @@ function socioToRow(doc, docId) {
   // 18=Plan,19=Foto,20=DniFoto,21=Apto,22=Contacto1,23=Contacto2,24=DniDorso,
   // 25=Actividades,26=Saldo,27=CatSecundaria
   // Los últimos 2 elementos son hoja y fila (usados por itemSel)
+  // FASE 2: resolvemos nombres desde *Id (catalogo actual) con fallback al legacy.
+  // Asi row[COL.CATEGORIA_APP], row[COL.PLAN], etc. siempre traen el nombre actualizado.
+  var catNom = _nomByCatId(d.categoriaAppId) || d.categoriaApp || '';
+  var catSecNom = _nomByCatId(d.catSecundariaId) || d.catSecundaria || '';
+  var planNom = _nomByActId(d.planId) || d.plan || '';
+  var actsCsv;
+  if (Array.isArray(d.actividadesIds) && d.actividadesIds.length) {
+    var _nm = d.actividadesIds.map(_nomByActId).filter(function(x){ return x; });
+    actsCsv = _nm.length ? _nm.join(', ') : (d.actividades || '');
+  } else {
+    actsCsv = d.actividades || '';
+  }
   var row = [
     d.apellido||'', d.nombre||'', d.email||'',
     d.dni||id,      // tarjeta = DNI
@@ -1817,34 +1941,70 @@ function socioToRow(doc, docId) {
     d.tipoDoc||'DNI', d.dni||id, d.fechaNac||'',
     d.sexo||'', d.domicilio||'', d.obs||'',
     d.membresia||'', d.vencimiento||'', d.fechaIngreso||'',
-    d.creador||'', d.categoriaApp||'', d.plan||'',
+    d.creador||'', catNom, planNom,
     d.foto||'', d.dniFoto||'', d.apto||'',
     d.contacto1||'', d.contacto2||'', d.dniDorso||'',
-    d.actividades||'', d.saldo||0, d.catSecundaria||'',
+    actsCsv, d.saldo||0, catSecNom,
     'socios', id   // hoja, fila (usamos el docId como "fila")
   ];
   row._eliminado = d.eliminado === true;
   row._eliminadoEn = d.eliminadoEn || null;
   row._eliminadoPor = d.eliminadoPor || '';
   row._motivoEliminacion = d.motivoEliminacion || '';
+  // FASE 2: guardar refs-por-ID como propiedades del row (para lookups post-rename)
+  row.categoriaAppId   = d.categoriaAppId   || '';
+  row.catSecundariaId  = d.catSecundariaId  || '';
+  row.planId           = d.planId           || '';
+  row.sedeId           = d.sedeId           || '';
+  row.actividadesIds   = Array.isArray(d.actividadesIds) ? d.actividadesIds.slice() : [];
+  // Guardamos tambien los nombres legacy crudos por si algun code path los necesita
+  row._legacy = { categoriaApp: d.categoriaApp||'', plan: d.plan||'', actividades: d.actividades||'', catSecundaria: d.catSecundaria||'' };
   return row;
 }
 
 function horarioToRow(doc) {
   var d = doc.data ? doc.data() : doc;
-  return [d.dia||'', d.hora||'', d.sede||'', d.profesores||'', d.grupo||'', d.liga||d.extra||'', d.modalidad||'Mixto', doc.id];
+  // FASE 2: resolvemos nombres desde *Id con fallback al legacy.
+  // row[2]=sede, row[3]=profesores CSV, row[4]=grupo(categoria), row[5]=actividad
+  var sedeNom = _nomBySedeId(d.sedeId) || d.sede || '';
+  var catNom  = _nomByCatId(d.categoriaId) || d.grupo || '';
+  var actNom  = _nomByActId(d.actividadId) || d.liga || d.extra || '';
+  var profCsv;
+  if (Array.isArray(d.profesoresIds) && d.profesoresIds.length) {
+    var _pn = d.profesoresIds.map(_nomByProfeDni).filter(function(x){ return x; });
+    profCsv = _pn.length ? _pn.join(', ') : (d.profesores || '');
+  } else {
+    profCsv = d.profesores || '';
+  }
+  var row = [d.dia||'', d.hora||'', sedeNom, profCsv, catNom, actNom, d.modalidad||'Mixto', doc.id];
+  // FASE 2: refs-por-ID (para escrituras y lookups post-rename)
+  row.categoriaId   = d.categoriaId   || '';
+  row.actividadId   = d.actividadId   || '';
+  row.sedeId        = d.sedeId        || '';
+  row.profesoresIds = Array.isArray(d.profesoresIds) ? d.profesoresIds.slice() : [];
+  row._legacy = { sede: d.sede||'', profesores: d.profesores||'', grupo: d.grupo||'', liga: d.liga||d.extra||'' };
+  return row;
 }
 
 function cuotaToRow(d, fsId) {
   // formato: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs, _fsId]
+  // FASE 2: para cuotas preferimos el snapshot historico planNombre (immutable).
+  // Si no hay snapshot (cuotas pre-FASE1), resolvemos el ID al nombre actual; fallback legacy.
+  var planNom = d.planNombre || _nomByActId(d.planId) || d.plan || d.concepto || '';
   var row = [
     d.dni||d.doc||'', d.nombre||'',
-    d.plan||d.concepto||'',
+    planNom,
     d.periodoDesde||'', d.periodoHasta||'',
     d.fechaPago||'', d.monto||0,
     d.metodo||'', d.cobrador||'', d.obs||''
   ];
   row._fsId = fsId || d._fsId || '';
+  // FASE 2: refs-por-ID + snapshots historicos
+  row.planId       = d.planId       || '';
+  row.planNombre   = d.planNombre   || '';
+  row.periodoId    = d.periodoId    || '';
+  row.periodoNombre= d.periodoNombre|| '';
+  row._legacy = { plan: d.plan||d.concepto||'' };
   return row;
 }
 
@@ -1854,7 +2014,9 @@ function inscToObj(doc) {
     dni: d.dni||'', nombre: d.nombre||'', plan: d.plan||'',
     monto: Number(d.monto)||0, desde: d.desde||'', hasta: d.hasta||'',
     obs: d.obs||'', descuentoHno: Number(d.descuentoHno)||0,
-    hnoDe: d.hnoDe||'', _row: doc.id
+    hnoDe: d.hnoDe||'', _row: doc.id,
+    // FASE 2
+    planId: d.planId||''
   };
 }
 
@@ -2581,13 +2743,14 @@ function _fsDispatch(action, p, ok, err) {
 function _rowToDoc(tabName, row) {
   switch(tabName) {
     case 'Horarios': {
-      var _sedeH = row[2]||''; var _profH = row[3]||''; var _grpH = row[4]||'';
+      var _sedeH = row[2]||''; var _profH = row[3]||''; var _grpH = row[4]||''; var _actH = row[5]||'';
       return {
         dia:row[0]||'', hora:row[1]||'', sede:_sedeH, profesores:_profH,
-        grupo:_grpH, liga:row[5]||'', modalidad:row[6]||'Mixto', idx: Date.now(),
+        grupo:_grpH, liga:_actH, modalidad:row[6]||'Mixto', idx: Date.now(),
         // ── Migración Fase 1 ──
         sedeId:         _sedeH ? resolveSedeId(_sedeH) : '',
         categoriaId:    _grpH  ? resolveCatId(_grpH)   : '',
+        actividadId:    _actH  ? resolveActId(_actH)   : '',
         profesoresIds:  _profH ? resolveProfesIdsCsv(_profH) : []
       };
     }
@@ -4896,6 +5059,9 @@ function guardarProfesor() {
     } else {
       DB.profesores.push(nuevo);
     }
+    // FASE 2: refrescar indices por DNI y nombres de horarios cacheados
+    buildIdIndexes();
+    _refreshResolvedRows();
     cancelarEditProfesor(); renderListProfesores(); poblarSelects(); poblarTurnosAsist();
     ocultarLoader(); toast('Instructor guardado', 'ok');
   };
@@ -5033,7 +5199,18 @@ function guardarCat() {
     poblarSelectMasiva();
   };
   var cb = function(){ reset(); renderListCat(); poblarSelects(); poblarSelectMasiva(); renderPlayers(); ocultarLoader(); toast(T('grupo') + ' guardada', 'ok'); };
-  if(catEditIdx) callScript({action:'updateAdminItem', tabName:'Config_Categorias', rowIndex:catEditIdx, rowArray:d, pass:TOKEN, _noRetry:true}, cb, function(e){ reset(); ocultarLoader(); alert('Error: '+e); });
+  if(catEditIdx) callScript({action:'updateAdminItem', tabName:'Config_Categorias', rowIndex:catEditIdx, rowArray:d, pass:TOKEN, _noRetry:true}, function(){
+    // FASE 2: actualizar DB.categorias local + refrescar indices y nombres resueltos en rows
+    for (var _i=0; _i<DB.categorias.length; _i++) {
+      if (DB.categorias[_i][DB.categorias[_i].length-1] === catEditIdx) {
+        DB.categorias[_i] = d.concat([catEditIdx]);
+        break;
+      }
+    }
+    buildIdIndexes();
+    _refreshResolvedRows();
+    cb();
+  }, function(e){ reset(); ocultarLoader(); alert('Error: '+e); });
   else callScript({action:'addComplexItem', tabName:'Config_Categorias', rowArray:d, pass:TOKEN, _noRetry:true}, function(r){
     var _newId = r && r.fila ? r.fila.toString() : ('cat_' + Date.now());
     DB.categorias.push(d.concat([_newId]));
@@ -5338,6 +5515,9 @@ function _updateProfesHorario(rowId, newProfesList) {
   mostrarLoader('Actualizando instructores...');
   callScript({action:'updateAdminItem', tabName:'Horarios', rowIndex: rowId, rowArray: row, pass:TOKEN, _noRetry:true}, function(r){
     DB.horarios[idx][3] = newCsv;
+    // FASE 2: mantener profesoresIds sincronizado con el CSV recien guardado
+    DB.horarios[idx].profesoresIds = newCsv ? resolveProfesIdsCsv(newCsv).filter(function(x){ return x && x !== '__UNRESOLVED__'; }) : [];
+    if (DB.horarios[idx]._legacy) DB.horarios[idx]._legacy.profesores = newCsv;
     renderHorarios();
     if (typeof poblarTurnosAsist === 'function') poblarTurnosAsist();
     ocultarLoader();
