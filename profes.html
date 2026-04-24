@@ -99,6 +99,8 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 .alumno-row:last-child{border-bottom:none;}
 .alumno-nombre{font-size:14px;font-weight:500;}
 .alumno-info{font-size:11px;color:var(--muted);margin-top:2px;}
+.alumno-foto{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0;background:var(--surface);}
+.alumno-foto-ph{width:42px;height:42px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted);flex-shrink:0;border:2px solid var(--border);}
 .toggle-btn{width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
 .toggle-btn.presente{background:var(--primary);}
 .toggle-btn.presente::after{content:'✓';color:#fff;font-size:18px;}
@@ -403,7 +405,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 </div>
 
 <div id="toast"></div>
-<div id="vbadge">v2.2</div>
+<div id="vbadge">v2.3</div>
 
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1219,9 +1221,13 @@ function renderLista(jug, turnoId) {
     var dni    = (f.dni || '').toString();
     var nombre = (f.apellido||'') + ', ' + (f.nombre||'');
     var pres   = asistActual[dni] !== false;
+    var _fotoUrl = getDriveThumb(f.foto||'', 'w100');
+    var _fotoHtml = _fotoUrl
+      ? '<img src="'+_fotoUrl+'" loading="lazy" class="alumno-foto" onerror="this.style.display=\'none\';var ph=this.nextElementSibling;if(ph)ph.style.display=\'flex\';"><div class="alumno-foto-ph" style="display:none;">&#128100;</div>'
+      : '<div class="alumno-foto-ph">&#128100;</div>';
     html += '<div class="alumno-row" id="row-'+dni+'">'
-      + '<div><div class="alumno-nombre">'+nombre+'</div>'
-      + '<div class="alumno-info">DNI: '+dni+(f.categoriaApp?' &bull; '+f.categoriaApp:'')+'</div></div>'
+      + '<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">'+_fotoHtml+'<div style="min-width:0;flex:1;"><div class="alumno-nombre">'+nombre+'</div>'
+      + '<div class="alumno-info">DNI: '+dni+(f.categoriaApp?' &bull; '+f.categoriaApp:'')+'</div></div></div>'
       + '<button class="toggle-btn '+(pres?'presente':'ausente')+'" onclick="toggleAlumno(\''+dni+'\')"></button>'
       + '</div>';
   });
