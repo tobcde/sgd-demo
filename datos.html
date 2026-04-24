@@ -460,7 +460,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v1.2</div>
+<div id="version-badge">v2.0</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
@@ -621,6 +621,19 @@ function cargarCategorias() {
     .catch(function(e) { console.warn('Sin categorias:', e); });
 }
 
+// FASE 1 migración a IDs: resolver categoriaAppId por nombre (escritura dual).
+// Devuelve '__UNRESOLVED__' si no se puede mapear (el admin lo arreglará luego).
+function _normCat(s){
+  return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+}
+function resolveCatIdByNombre(nombre) {
+  if (!nombre) return '';
+  var key = _normCat(nombre);
+  if (!key) return '';
+  var match = CATEGORIAS.find(function(c){ return _normCat(c.nombre) === key; });
+  return match ? match.id : '__UNRESOLVED__';
+}
+
 // Sugiere categoría en base al año de nacimiento y sexo del OCR.
 // edadDesde/edadHasta en config_categorias son AÑOS de nacimiento.
 function sugerirCategoriaPorEdad(fechaNac, sexo) {
@@ -674,6 +687,11 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
       fechaIngreso:hoy,
       creador:     'App',
       categoriaApp:campos.categoriaApp || '',
+      categoriaAppId: resolveCatIdByNombre(campos.categoriaApp || ''),
+      catSecundariaId: '',
+      planId:      '',
+      actividadesIds: [],
+      sedeId:      '',
       plan:        '',
       foto:        campos.fotoUrl     || '',
       dniFoto:     campos.dniFotoUrl  || '',
@@ -699,7 +717,10 @@ function guardarSocioFirestore(dni, campos, esNuevo) {
     if (campos.aptoUrl)    upd.apto      = campos.aptoUrl;
     if (campos.contacto1)  upd.contacto1 = campos.contacto1;
     if (campos.contacto2)  upd.contacto2 = campos.contacto2;
-    if (campos.categoriaApp) upd.categoriaApp = campos.categoriaApp;
+    if (campos.categoriaApp) {
+      upd.categoriaApp   = campos.categoriaApp;
+      upd.categoriaAppId = resolveCatIdByNombre(campos.categoriaApp);
+    }
     if (campos.medico)     upd.medico    = campos.medico;
     if (campos.ddjjSalud)  upd.ddjjSalud = campos.ddjjSalud;
     return ref.update(upd).then(function(){ return {ok: true}; });
