@@ -475,7 +475,7 @@ video{width:100%;display:block;}
 
   <!-- APTO MEDICO -->
   <div class="card">
-    <div class="card-title">&#x1FA7A; Certificado médico</div>
+    <div class="card-title">&#x1FA7A; Certificado médico <span style="color:var(--muted);font-size:11px;font-weight:normal;">(opcional)</span></div>
     <div id="prev-apto-wrap" style="display:none;position:relative;"></div>
     <div class="upload-zone" id="zona-apto">
       <div class="upload-zone-icon">&#x1F4CB;</div>
@@ -535,7 +535,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v2.6</div>
+<div id="version-badge">v2.7</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
@@ -912,8 +912,17 @@ function callUploadDrive(dniNorm, cb, cbErr) {
     var d; try{ d=JSON.parse(t); } catch(e){ d={error:'Respuesta inválida del servidor'}; }
     if(d && d.error){
       try { console.error('[callUploadDrive] error GAS:', d.error, '| dni=', dniNorm, '| folderID=', INST.driveFolder, '| raw=', t); } catch(_){}
-      var msg = 'Error al subir fotos: ' + d.error + ' (DNI ' + dniNorm + ')';
-      if (cbErr) cbErr(msg); else toast(msg, 'err');
+      // GAS puede devolver error PARCIAL con urls vacías o algunas urls OK.
+      // Si al menos una imagen subió, continuamos (no bloqueamos el guardado por subidas fallidas).
+      var partialUrls = (d && d.urls) ? d.urls : {};
+      var algoSubido = partialUrls.dniFrenteUrl || partialUrls.dniDorsoUrl || partialUrls.fotoUrl || partialUrls.aptoUrl;
+      if (algoSubido) {
+        toast('Algunas imágenes no se subieron, pero seguimos con las demás', 'warn');
+        if (cb) cb(partialUrls);
+      } else {
+        var msg = 'Error al subir fotos: ' + d.error + ' (DNI ' + dniNorm + ')';
+        if (cbErr) cbErr(msg); else toast(msg, 'err');
+      }
     }
     else { if(cb) cb(d.urls || {}); }
   })
@@ -1303,10 +1312,29 @@ function confirmarGuardar() {
       });
 
   }, function(errDrive) {
-    // Drive falló pero igual intentamos guardar sin URLs
-    ocultarLoader();
-    toast('Imágenes no subidas: ' + errDrive, 'err');
-    btn.disabled = false;
+    // Drive falló:
+    //  - si es socio existente, guardamos igualmente lo demás (email, contactos, médico, etc).
+    //  - si es nuevo, no podemos seguir sin DNI subido a Drive.
+    if (!S.esNuevo) {
+      toast('Imágenes no subidas: ' + errDrive, 'err');
+      campos.dni = dni;
+      mostrarLoader('Actualizando datos...');
+      guardarSocioFirestore(dni, campos, false)
+        .then(function() {
+          ocultarLoader();
+          btn.disabled = false;
+          mostrarExito(false);
+        })
+        .catch(function(e) {
+          ocultarLoader();
+          btn.disabled = false;
+          toast('Error al guardar: ' + (e.message || e), 'err');
+        });
+    } else {
+      ocultarLoader();
+      toast('No se pudieron subir las imágenes: ' + errDrive, 'err');
+      btn.disabled = false;
+    }
   });
 }
 
