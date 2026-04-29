@@ -475,7 +475,10 @@ video{width:100%;display:block;}
 
   <!-- APTO MEDICO -->
   <div class="card">
-    <div class="card-title">&#x1FA7A; Certificado médico <span style="color:var(--muted);font-size:11px;font-weight:normal;">(opcional)</span></div>
+    <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">&#x1FA7A; Certificado médico <span style="background:rgba(109,224,151,.18);color:#6de097;font-size:10px;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:10px;text-transform:uppercase;border:1px solid rgba(109,224,151,.4);">OPCIONAL</span></div>
+    <div style="font-size:12px;color:var(--muted);margin:-4px 0 10px;line-height:1.4;">
+      Si no tenés el apto a mano, <b>saltá este paso</b> tocando "Continuar &#x2192;" abajo. Lo podés subir después escaneando tu DNI de nuevo.
+    </div>
     <div id="prev-apto-wrap" style="display:none;position:relative;"></div>
     <div class="upload-zone" id="zona-apto">
       <div class="upload-zone-icon">&#x1F4CB;</div>
@@ -535,7 +538,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v2.7</div>
+<div id="version-badge">v2.8</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
