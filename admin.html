@@ -1566,7 +1566,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.12</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.13</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3445,8 +3445,12 @@ function renderPlayers() {
     if(!f._eliminado && estF === 'Eliminados') return;
     if(genF && gen !== genF) return;
     if(catF) {
-      var _catSec = String(f[COL.CAT_SECUNDARIA]||'').trim();
-      if(cat !== catF && _catSec !== catF) return;
+      // Normalizamos a lowercase + trim para evitar mismatches por mayusculas/espacios.
+      // Usamos socioCatSecNombre() que resuelve por catSecundariaId si el campo crudo esta vacio.
+      var _catFnorm = catF.toLowerCase().trim();
+      var _catP     = (cat||'').toLowerCase().trim();
+      var _catSecN  = (typeof socioCatSecNombre === 'function' ? socioCatSecNombre(f) : String(f[COL.CAT_SECUNDARIA]||'')).toLowerCase().trim();
+      if(_catP !== _catFnorm && _catSecN !== _catFnorm) return;
     }
     if(estF==='Activos' && !act) return;
     if(estF==='Inactivos' && act) return;
