@@ -1641,7 +1641,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.39</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.40</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3639,6 +3639,31 @@ function calcularEstadoTiempoReal(f) {
     deudaTotal -= compensacion;
     favorTotal -= compensacion;
     if (deudaTotal === 0 && estadoPeor !== 'none') estadoPeor = 'ok';
+
+    // Repartir la compensacion sobre mesesAdeudados en orden cronologico (FIFO)
+    // para que el desglose visual coincida con la deuda total neta. Sin esto,
+    // el detalle mes-a-mes muestra meses brutos pero el header dice menos.
+    var _restCmp = compensacion;
+    var _flatMeses = [];
+    detalle.forEach(function(_d, _di){
+      (_d.mesesAdeudados || []).forEach(function(_m, _mi){
+        _flatMeses.push({ mes: _m.mes, di: _di, mi: _mi });
+      });
+    });
+    _flatMeses.sort(function(a, b){ return a.mes.localeCompare(b.mes); });
+    for (var _ki = 0; _ki < _flatMeses.length && _restCmp > 0.5; _ki++) {
+      var _ref = _flatMeses[_ki];
+      var _mObj = detalle[_ref.di].mesesAdeudados[_ref.mi];
+      if (!_mObj) continue;
+      var _take = Math.min(_mObj.falta, _restCmp);
+      _mObj.falta -= _take;
+      _restCmp  -= _take;
+      if (_mObj.falta <= 0.5) _mObj.falta = 0;
+    }
+    detalle.forEach(function(_d){
+      _d.mesesAdeudados = (_d.mesesAdeudados || []).filter(function(_m){ return _m.falta > 0.5; });
+      _d.deudaPorMes = (_d.mesesAdeudados || []).reduce(function(s, _m){ return s + _m.falta; }, 0);
+    });
   }
 
   // Capturar estado natural (sin ajuste manual) para que el modal Edit Saldo
@@ -4528,6 +4553,64 @@ function confirmarPago() {
     if(_favorDisp <= 0) { pagoCtx._enviando = false; return alert('El socio no tiene saldo a favor disponible'); }
     if(moTotal > _favorDisp) { pagoCtx._enviando = false; return alert('El monto ($' + moTotal.toLocaleString('es-AR') + ') excede el saldo a favor disponible ($' + _favorDisp.toLocaleString('es-AR') + ')'); }
     _metodo = 'Saldo a favor';
+  }
+
+  // QA-Insc: si el periodo del pago es anterior al "desde" de alguna inscripcion
+  // del mismo plan, ofrecer ajustar la fecha de la inscripcion ANTES de enviar
+  // el pago. Sin esto, el pago queda como "fuera de rango" y se trata como
+  // saldo a favor en vez de aplicarse al mes correcto.
+  if (!pagoCtx._inscOk) {
+    var _inscsAll = (DB.inscripciones||[]).filter(function(i){
+      return (i.dni||'').toString().trim() === (pagoCtx.dni||'').toString().trim();
+    });
+    var _desf = [];
+    pagos.forEach(function(pp){
+      _inscsAll.forEach(function(_i){
+        if ((_i.plan||'') !== pp.plan) return;
+        var _idIso = (_i.desde||'').toString().trim() ? normFecha(_i.desde).substring(0,10) : '';
+        if (_idIso && _idIso > desde) {
+          var _k = pp.plan + '|' + _i._row;
+          if (!_desf.some(function(d){ return d._key === _k; })) {
+            _desf.push({ _key:_k, plan: pp.plan, inscDesde: _idIso, inscRowId: _i._row, inscObj: _i });
+          }
+        }
+      });
+    });
+    if (_desf.length > 0) {
+      var _msg = 'El periodo del pago empieza el ' + desde + ', pero ';
+      if (_desf.length === 1) {
+        _msg += 'la inscripción "' + _desf[0].plan + '" arranca el ' + _desf[0].inscDesde + '.\n\n';
+      } else {
+        _msg += 'estas inscripciones arrancan después:\n';
+        _desf.forEach(function(d){ _msg += '  • ' + d.plan + ' desde ' + d.inscDesde + '\n'; });
+        _msg += '\n';
+      }
+      _msg += '¿Ajustar la fecha "desde" a ' + desde + ' para que el pago quede correctamente asignado?';
+      if (confirm(_msg)) {
+        mostrarLoader('Ajustando inscripción...');
+        var _batchInsc = db.batch();
+        _desf.forEach(function(d){
+          _batchInsc.update(db.collection('inscripciones').doc(d.inscRowId.toString()), { desde: desde });
+        });
+        _batchInsc.commit().then(function(){
+          _desf.forEach(function(d){ if (d.inscObj) d.inscObj.desde = desde; });
+          ocultarLoader();
+          pagoCtx._inscOk = true;
+          pagoCtx._enviando = false;
+          confirmarPago();
+        }).catch(function(err){
+          ocultarLoader();
+          alert('No se pudo ajustar la inscripción: ' + (err && err.message ? err.message : err) + '\nEl pago se registra igual.');
+          pagoCtx._inscOk = true;
+          pagoCtx._enviando = false;
+          confirmarPago();
+        });
+        return;
+      }
+      pagoCtx._inscOk = true;
+    } else {
+      pagoCtx._inscOk = true;
+    }
   }
 
   mostrarLoader('Registrando pago...');
