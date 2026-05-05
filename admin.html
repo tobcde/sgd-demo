@@ -89,6 +89,17 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 .toggle-asist::after{content:'';position:absolute;width:22px;height:22px;border-radius:50%;background:white;top:3px;transition:left .2s;}
 .toggle-asist.presente::after{left:27px;}
 .toggle-asist.ausente::after{left:3px;}
+/* Semaforo de emociones (admin) */
+.sem-group-admin{display:flex;gap:4px;margin-right:10px;flex-shrink:0;transition:opacity .15s;}
+.sem-group-admin.disabled{opacity:.25;pointer-events:none;}
+.sem-btn-admin{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;display:inline-block;padding:0;transition:transform .1s,border-color .1s;}
+.sem-btn-admin:hover{transform:scale(1.18);}
+.sem-btn-admin.verde{background:#22c55e;}
+.sem-btn-admin.amarillo{background:#eab308;}
+.sem-btn-admin.rojo{background:#ef4444;}
+.sem-btn-admin.activo{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.3);}
+.sem-btn-admin:not(.activo){opacity:.45;}
+.sem-btn-admin:not(.activo):hover{opacity:.85;}
 
 /* CUOTAS */
 .cuotas-container{padding:20px;max-width:1200px;margin:0 auto;}
@@ -628,6 +639,24 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <button id="btn-precio" class="btn btn-save" style="flex:1;" onclick="guardarPrecio()">AGREGAR PRECIO</button>
         <button id="btn-cancel-precio" class="btn" style="display:none;background:var(--muted);color:#fff;" onclick="cancelarEditPrecio()">CANCELAR</button>
       </div>
+
+      <!-- Carga masiva CSV de precios -->
+      <div style="margin-top:14px;padding:12px;background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:8px;">
+        <div style="font-size:13px;font-weight:700;color:var(--secondary);margin-bottom:6px;">&#x1F4C4; Carga masiva por CSV</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+          Bajá el CSV con los precios actuales, editalo en Excel/Sheets, y subilo de vuelta para aplicar los cambios en lote.
+          Formato: <code>actividad,categoria,monto</code>. Filas existentes se actualizan; filas nuevas se crean.
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" style="flex:1;min-width:140px;background:var(--primary-dim);color:#6de097;border:1px solid var(--primary-border);font-family:'Barlow Condensed',sans-serif;font-weight:700;padding:8px;" onclick="exportarPreciosCSV()">&#x2B07;&#xFE0F; Bajar CSV</button>
+          <label class="btn" style="flex:1;min-width:140px;background:rgba(201,162,39,.15);color:var(--secondary);border:1px solid rgba(201,162,39,.4);font-family:'Barlow Condensed',sans-serif;font-weight:700;padding:8px;cursor:pointer;text-align:center;">
+            &#x2B06;&#xFE0F; Subir CSV
+            <input type="file" accept=".csv,text/csv" style="display:none;" onchange="importarPreciosCSV(event)">
+          </label>
+        </div>
+        <div id="csv-precios-preview" style="margin-top:10px;display:none;font-size:11px;"></div>
+      </div>
+
       <div class="item-list" id="listPrecios" style="margin-top:10px;"></div>
     </div>
 
@@ -817,6 +846,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <button type="button" class="r-pill-cat active" data-cat="pagos" onclick="selectRptCat('pagos')">&#x1F4B0; Pagos &amp; cuotas</button>
       <button type="button" class="r-pill-cat" data-cat="asist" onclick="selectRptCat('asist')">&#x1F4CB; Asistencias</button>
       <button type="button" class="r-pill-cat" data-cat="socios" onclick="selectRptCat('socios')">&#x1F465; Socios</button>
+      <button type="button" class="r-pill-cat" data-cat="citaciones" onclick="selectRptCat('citaciones')">&#x1F4DD; Citaciones</button>
     </div>
     <!-- Pills de sub-reportes -->
     <div id="r-pills-sub" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;"></div>
@@ -835,6 +865,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <option value="asist_por_dia">Asistencia por dia</option>
         <option value="ranking_asist">Ranking asistencia</option>
         <option value="jugadores">Listado completo</option>
+        <option value="eliminados">Eliminados</option>
+        <option value="cit_matriz">Matriz de citaciones</option>
+        <option value="ajustes_saldo">Ajustes de saldo</option>
+        <option value="semaforo_matriz">Matriz de semáforo</option>
       </select>
       <div class="filter-group" id="r-filter-mes">
         <label class="filter-label">Mes</label><select id="rMes" class="filter-select" onchange="renderReporte()"></select></div>
@@ -850,6 +884,9 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div class="filter-group" id="r-filter-plan">
         <label class="filter-label">Plan / Inscripci&oacute;n</label>
         <select id="rPlan" class="filter-select" onchange="renderReporte()"><option value="">Todos</option></select></div>
+      <div class="filter-group" id="r-filter-socio" style="display:none;">
+        <label class="filter-label">Socio (nombre o DNI)</label>
+        <input type="text" id="rSocio" class="edit-input" style="height:36px;padding:0 10px;min-width:200px;" placeholder="ej: Cantero o 56279581" oninput="_debouncedRenderReporte()"></div>
       <button class="btn btn-secondary" onclick="exportarReporteCSV()" style="height:36px;">&#x2193; CSV</button>
     </div>
     <div id="r-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;"></div>
@@ -962,6 +999,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <div class="modal-subtitle" id="m-dni-sub"></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-editar" id="btn-editar-id" onclick="abrirModalEditId()" title="Editar nombre / apellido / DNI">&#x1F4DD; Identidad</button>
         <button class="btn-editar" id="btn-convertir-profe" onclick="convertirSocioAProfe()" title="Crear profesor con el mismo DNI">&#x1F464; A Profesor</button>
         <button class="btn-editar" id="btn-editar-ficha" onclick="toggleEditarFicha()">&#x270F; Editar</button>
         <button class="btn-editar" id="btn-eliminar-socio" onclick="eliminarSocio()" title="Eliminar socio (soft delete)" style="color:var(--red);border-color:var(--red);">&#x1F5D1; Eliminar</button>
@@ -1263,21 +1301,26 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:14px;border:1px solid var(--border);">
         <div style="font-size:13px;font-weight:700;" id="es-nombre"></div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="es-dni-lbl"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;">
           <div>
-            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Saldo neto actual</div>
-            <div style="font-size:18px;font-weight:800;" id="es-saldo-actual">-</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Sin ajuste</div>
+            <div style="font-size:14px;font-weight:800;" id="es-saldo-natural">-</div>
           </div>
           <div>
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Ajuste vigente</div>
-            <div style="font-size:18px;font-weight:800;" id="es-ajuste-actual">-</div>
+            <div style="font-size:14px;font-weight:800;" id="es-ajuste-actual">-</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;">Saldo efectivo</div>
+            <div style="font-size:14px;font-weight:800;" id="es-saldo-actual">-</div>
           </div>
         </div>
       </div>
       <div class="filter-group" style="margin-bottom:10px;">
-        <label class="filter-label">Nuevo ajuste (+ suma saldo a favor / &minus; genera deuda)</label>
-        <input id="es-nuevo-ajuste" type="number" step="0.01" class="edit-input" style="width:100%;" placeholder="0.00">
-        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Reemplaza el ajuste anterior. Ej: 5000 = beca de $5000 a favor. -2000 = cargo de $2000.</div>
+        <label class="filter-label">&#x1F4B0; Saldo final deseado (+ a favor / &minus; debe / 0 al d&iacute;a)</label>
+        <input id="es-saldo-final" type="number" step="0.01" class="edit-input" style="width:100%;" placeholder="0.00" oninput="previsualizarAjusteSaldo()">
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">Pon&eacute; el saldo neto que quer&eacute;s que tenga el socio. Ej: <b>0</b> = al d&iacute;a, <b>+10000</b> = $10k a favor, <b>-5000</b> = $5k de deuda.</div>
+        <div id="es-preview-ajuste" style="font-size:11px;margin-top:6px;color:var(--muted);"></div>
       </div>
       <div class="filter-group" style="margin-bottom:14px;">
         <label class="filter-label">Motivo (obligatorio)</label>
@@ -1286,6 +1329,38 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
       <div style="display:flex;gap:8px;">
         <button class="btn btn-save" onclick="guardarAjusteSaldo()" style="flex:1;">GUARDAR AJUSTE</button>
         <button class="btn btn-secondary" onclick="cerrarModalEditSaldo()">CANCELAR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR IDENTIDAD (apellido / nombre / DNI) -->
+<div class="modal-overlay" id="modalEditId">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div><div class="modal-title">&#x1F4DD; Editar identidad</div></div>
+      <button class="modal-close" onclick="cerrarModalEditId()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(255,193,7,.1);border:1px solid rgba(255,193,7,.4);color:#ffc107;padding:8px 12px;border-radius:6px;margin-bottom:14px;font-size:11px;">
+        Si cambi&aacute;s el <b>DNI</b>, se reasignan autom&aacute;ticamente todas las cuotas, inscripciones, asistencias y auditor&iacute;as del socio. Puede tardar unos segundos.
+      </div>
+      <div class="filter-group" style="margin-bottom:10px;">
+        <label class="filter-label">Apellido</label>
+        <input id="mei-apellido" type="text" class="edit-input" style="width:100%;text-transform:uppercase;">
+      </div>
+      <div class="filter-group" style="margin-bottom:10px;">
+        <label class="filter-label">Nombre</label>
+        <input id="mei-nombre" type="text" class="edit-input" style="width:100%;text-transform:uppercase;">
+      </div>
+      <div class="filter-group" style="margin-bottom:14px;">
+        <label class="filter-label">DNI / Documento</label>
+        <input id="mei-dni" type="text" class="edit-input" style="width:100%;" inputmode="numeric">
+        <div id="mei-dni-info" style="font-size:10px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-save" onclick="guardarEditId()" style="flex:1;">GUARDAR</button>
+        <button class="btn btn-secondary" onclick="cerrarModalEditId()">CANCELAR</button>
       </div>
     </div>
   </div>
@@ -1566,7 +1641,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.13</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.39</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2124,6 +2199,37 @@ function horarioToRow(doc) {
   return row;
 }
 
+// ── Helpers para mantener CUOTAS_DB sin duplicados por _fsId ─────
+function _pushCuotaUnique(row) {
+  var fsId = row && row._fsId;
+  if (fsId) {
+    for (var i = 0; i < CUOTAS_DB.cuotas.length; i++) {
+      if (CUOTAS_DB.cuotas[i] && CUOTAS_DB.cuotas[i]._fsId === fsId) {
+        CUOTAS_DB.cuotas[i] = row;
+        return false;
+      }
+    }
+  }
+  CUOTAS_DB.cuotas.push(row);
+  return true;
+}
+
+function _dedupCuotas() {
+  var seen = {};
+  var dups = 0;
+  CUOTAS_DB.cuotas = CUOTAS_DB.cuotas.filter(function(c){
+    var id = c && c._fsId;
+    if (!id) return true;
+    if (seen[id]) { dups++; return false; }
+    seen[id] = true;
+    return true;
+  });
+  if (dups > 0) {
+    try { console.warn('[_dedupCuotas] removidos ' + dups + ' duplicados de CUOTAS_DB.cuotas'); } catch(_){}
+  }
+  return dups;
+}
+
 function cuotaToRow(d, fsId) {
   // formato: [dni, nombre, plan, periodoDesde, periodoHasta, fechaPago, monto, metodo, cobrador, obs, _fsId]
   // FASE 2: para cuotas preferimos el snapshot historico planNombre (immutable).
@@ -2143,6 +2249,8 @@ function cuotaToRow(d, fsId) {
   row.periodoId    = d.periodoId    || '';
   row.periodoNombre= d.periodoNombre|| '';
   row._legacy = { plan: d.plan||d.concepto||'' };
+  // Timestamp del cobro para reportes con fecha+hora
+  row._ts = d.ts || null;
   return row;
 }
 
@@ -2218,7 +2326,8 @@ function refrescarDatos() {
     results[0].forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
     // Cuotas
     CUOTAS_DB.cuotas = [];
-    results[1].forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data(), doc.id)); });
+    results[1].forEach(function(doc){ _pushCuotaUnique(cuotaToRow(doc.data(), doc.id)); });
+    _dedupCuotas();
     _contarLecturas(results[0].size + results[1].size);
     ocultarLoader();
     renderPlayers();
@@ -2380,7 +2489,8 @@ function inicializar(passReal) {
     // Procesar cuotas del mes actual
     CUOTAS_DB.cuotas = [];
     var mesActual = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0');
-    cuotasMesSnap.forEach(function(doc){ CUOTAS_DB.cuotas.push(cuotaToRow(doc.data(), doc.id)); });
+    cuotasMesSnap.forEach(function(doc){ _pushCuotaUnique(cuotaToRow(doc.data(), doc.id)); });
+    _dedupCuotas();
     _cargado['cuotas_' + mesActual] = true;
     _cargado.cuotas = true;
 
@@ -2517,6 +2627,69 @@ function _fsDispatch(action, p, ok, err) {
       break;
     }
 
+    case 'cambiarIdentidadSocio': {
+      var oldDni = String(p.oldDni||'').replace(/\./g,'').replace(/\s/g,'').trim();
+      var newDni = String(p.newDni||'').replace(/\./g,'').replace(/\s/g,'').trim();
+      var apellidoNuevo = (p.apellido||'').toString().trim();
+      var nombreNuevo = (p.nombre||'').toString().trim();
+      if (!oldDni || !newDni || !apellidoNuevo || !nombreNuevo) { cbErr('Faltan datos'); break; }
+      var cambioDni = oldDni !== newDni;
+      var nombreCompleto = apellidoNuevo + ' ' + nombreNuevo;
+      var workflow = Promise.resolve();
+      if (cambioDni) {
+        workflow = workflow.then(function(){
+          return db.collection('socios').doc(newDni).get().then(function(checkDoc){
+            if (checkDoc.exists) throw new Error('Ya existe un socio con DNI ' + newDni);
+          });
+        });
+        workflow = workflow.then(function(){
+          return db.collection('socios').doc(oldDni).get().then(function(oldDoc){
+            if (!oldDoc.exists) throw new Error('Socio ' + oldDni + ' no existe');
+            var data = oldDoc.data() || {};
+            data.dni = newDni; data.apellido = apellidoNuevo; data.nombre = nombreNuevo;
+            var batch = db.batch();
+            batch.set(db.collection('socios').doc(newDni), data);
+            batch.delete(db.collection('socios').doc(oldDni));
+            return batch.commit();
+          });
+        });
+      } else {
+        workflow = workflow.then(function(){
+          return db.collection('socios').doc(oldDni).update({ apellido: apellidoNuevo, nombre: nombreNuevo });
+        });
+      }
+      var counters = { cuotasActualizadas: 0, inscripcionesActualizadas: 0, asistenciasActualizadas: 0, auditoriasActualizadas: 0 };
+      workflow = workflow.then(function(){
+        if (!cambioDni) return;
+        return Promise.all([
+          db.collection('cuotas').where('dni','==',oldDni).get(),
+          db.collection('inscripciones').where('dni','==',oldDni).get(),
+          db.collection('asistencias').where('dni','==',oldDni).get(),
+          db.collection('auditoria_saldos').where('dni','==',oldDni).get()
+        ]).then(function(snaps){
+          var allOps = [];
+          snaps[0].forEach(function(d){ allOps.push({ref:d.ref, data:{dni:newDni, nombre:nombreCompleto}}); });
+          snaps[1].forEach(function(d){ allOps.push({ref:d.ref, data:{dni:newDni, nombre:nombreCompleto}}); });
+          snaps[2].forEach(function(d){ allOps.push({ref:d.ref, data:{dni:newDni, nombre:nombreCompleto}}); });
+          snaps[3].forEach(function(d){ allOps.push({ref:d.ref, data:{dni:newDni, nombreSocio:apellidoNuevo+', '+nombreNuevo}}); });
+          counters.cuotasActualizadas = snaps[0].size;
+          counters.inscripcionesActualizadas = snaps[1].size;
+          counters.asistenciasActualizadas = snaps[2].size;
+          counters.auditoriasActualizadas = snaps[3].size;
+          var promesas = [];
+          for (var i = 0; i < allOps.length; i += 400) {
+            var b = db.batch();
+            allOps.slice(i, i+400).forEach(function(op){ b.update(op.ref, op.data); });
+            promesas.push(b.commit());
+          }
+          return Promise.all(promesas);
+        });
+      });
+      workflow.then(function(){ _contarEscrituras(1 + counters.cuotasActualizadas + counters.inscripcionesActualizadas + counters.asistenciasActualizadas + counters.auditoriasActualizadas); cb(Object.assign({ok:true}, counters)); })
+              .catch(function(e){ cbErr(e.message || String(e)); });
+      break;
+    }
+
     case 'updatePlayer': {
       var dniNorm = normDoc(p.dni || '');
       var campos = p.campos || {};
@@ -2573,9 +2746,11 @@ function _fsDispatch(action, p, ok, err) {
           snap.forEach(function(doc){ batch.delete(doc.ref); });
           registros.forEach(function(r){
             var docId = (r[0]+'_'+r[1]+'_'+r[3]).replace(/[^a-zA-Z0-9_-]/g,'_');
-            batch.set(db.collection('asistencias').doc(docId), {
+            var doc = {
               fecha:r[0], turnoId:r[1], label:r[2], dni:r[3].toString(), nombre:r[4], presente:r[5]===true||r[5]==='true'
-            });
+            };
+            if (doc.presente && r[6]) doc.semaforo = r[6];
+            batch.set(db.collection('asistencias').doc(docId), doc);
           });
           return batch.commit().then(function(){
             // Contar escrituras del batch: deletes + sets
@@ -2684,7 +2859,7 @@ function _fsDispatch(action, p, ok, err) {
         ? db.collection('config_precios').doc(p.rowIndex.toString())
         : db.collection('config_precios').doc();
       ref.set(precData)
-        .then(function(){ cb({ok:true}); })
+        .then(function(){ cb({ok:true, fila: ref.id}); })
         .catch(function(e){ cbErr(e.message); });
       break;
     }
@@ -3023,7 +3198,39 @@ function ocultarBannerPendientes(){
 
 // -- HELPERS FECHA ------------------------------------------------
 function parseDate(s){ if(!s) return null; var str = s.toString().trim(); if(str.includes('/')){ var p = str.split('/'); return new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0])); } if(/^\d{4}-\d{2}-\d{2}/.test(str)){ var p = str.substring(0,10).split('-'); return new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2])); } var d = new Date(str); return isNaN(d) ? null : d; }
-function formatDate(d){ if(!d) return ''; return d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear(); }
+function formatDate(d){ if(!d) return ''; return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); }
+function formatDateTime(d){
+  if(!d) return '';
+  var dt;
+  if (d && d.toDate) dt = d.toDate();
+  else if (d && d.getTime) dt = d;
+  else if (typeof d === 'number') dt = new Date(d);
+  else if (typeof d === 'string') {
+    var s = d.trim();
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) {
+      dt = new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]),
+                    parseInt(m[4]||'0'), parseInt(m[5]||'0'), parseInt(m[6]||'0'));
+    } else {
+      dt = new Date(s);
+    }
+    if (isNaN(dt.getTime())) return s;
+  } else return '';
+  return formatDate(dt) + ' ' + String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
+}
+
+function _fechaAuditISO(f) {
+  if (!f) return '';
+  if (f.toDate) {
+    var dt = f.toDate();
+    return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  }
+  var s = String(f).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+  return '';
+}
 function ultimoDiaMes(a,m){ return new Date(a,m,0).getDate(); }
 function nombreMes(n){ return ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][n]; }
 function extraerAnioNac(fStr){ if(!fStr) return null; var s = fStr.toString(); if(s.includes('/')){ var p = s.split('/'); if(p.length===3) return parseInt(p[2]); } var m = s.match(/(\d{4})/); return m ? parseInt(m[1]) : null; }
@@ -3298,7 +3505,8 @@ function calcularEstadoTiempoReal(f) {
   var planMonto = inscVigentes.reduce(function(s,i){
     var m = Number(i.monto) || 0;
     var d = Number(i.descuentoHno) || 0;
-    return s + (d > 0 && d < m ? m - d : m);
+    var esCS = /cuota\s*social/i.test(i.plan || '');
+    return s + (!esCS && d > 0 && d < m ? m - d : m);
   }, 0);
   var planNom = inscVigentes.map(function(i){ return i.plan; }).join(' + ');
 
@@ -3310,45 +3518,95 @@ function calcularEstadoTiempoReal(f) {
   inscTodas.forEach(function(insc) {
     var pm = Number(insc.monto) || 0;
     var descHno = Number(insc.descuentoHno) || 0;
-    if(descHno > 0 && descHno < pm) pm = pm - descHno;
+    // Cuota Social NUNCA recibe descuento de hermanos: queda fija en su monto base.
+    var esCuotaSocial = /cuota\s*social/i.test(insc.plan || '');
+    if (!esCuotaSocial && descHno > 0 && descHno < pm) pm = pm - descHno;
     if (!pm) return;
 
     var mD = insc.desde ? normFecha(insc.desde).substring(0,7) : '';
     if (!mD || mD > mesHoy) return;
 
-    var mH = insc.hasta ? normFecha(insc.hasta).substring(0,7) : mesHoy;
+    var mHRaw = insc.hasta ? normFecha(insc.hasta).substring(0,7) : '';
+    var mH = mHRaw && mHRaw < mesHoy ? mHRaw : mesHoy;
 
-    var d1 = mD.split('-'), d2 = mH.split('-');
-    var mesesT = (parseInt(d2[0]) - parseInt(d1[0])) * 12 + (parseInt(d2[1]) - parseInt(d1[1])) + 1;
-    if (mesesT < 1) mesesT = 1;
-
-    // Solo pagos con concepto exacto al plan (sin historicos)
-    var totalPagado = 0;
+    // ── MODELO NUEVO: vigencia por cuota ──────────────────────────
+    var pagadoPorMes = {};
+    var pagadoFueraRango = 0;
     (CUOTAS_DB.cuotas || []).forEach(function(row) {
       var docPago  = (row[0] || '').toString().trim();
       var concepto = (row[2] || '').toString().trim();
-      var mesPago  = normFecha((row[5] || '').toString().trim()).substring(0, 7);
       var monto    = Number(row[6]) || 0;
       if (docPago !== dni) return;
       if (concepto.indexOf('Historico') === 0) return;
       if (concepto !== insc.plan) return;
-      if (mesPago < mD || mesPago > mH) return;
-      totalPagado += monto;
+      if (monto <= 0) return;
+
+      var pD = normFecha((row[3]||'').toString().trim()).substring(0,7);
+      var pH = normFecha((row[4]||'').toString().trim()).substring(0,7);
+      if (!pD || !pH) {
+        var fp = normFecha((row[5]||'').toString().trim()).substring(0,7);
+        if (!pD) pD = fp;
+        if (!pH) pH = fp;
+      }
+      if (!pD || !pH) { pagadoFueraRango += monto; return; }
+      if (pD > pH) { var tmp = pD; pD = pH; pH = tmp; }
+
+      var nMeses = 1;
+      var iter = pD;
+      while (iter < pH) { nMeses++; iter = _mesSiguiente(iter); }
+      var montoPorMes = monto / nMeses;
+      iter = pD;
+      while (true) {
+        if (iter >= mD && iter <= mH) {
+          pagadoPorMes[iter] = (pagadoPorMes[iter] || 0) + montoPorMes;
+        } else {
+          pagadoFueraRango += montoPorMes;
+        }
+        if (iter === pH) break;
+        iter = _mesSiguiente(iter);
+      }
     });
 
-    var totalRequerido = mesesT * pm;
-    var diff = totalPagado - totalRequerido;
+    var deudaInsc = 0;
+    var favorInsc = pagadoFueraRango;
+    var mesesT = 0;
+    var totalPagadoEnRango = 0;
+    var mesesAdeudados = [];
+    var iterMes = mD;
+    while (true) {
+      mesesT++;
+      var pagadoMes = pagadoPorMes[iterMes] || 0;
+      totalPagadoEnRango += pagadoMes;
+      if (pagadoMes >= pm - 0.5) {
+        favorInsc += (pagadoMes - pm);
+      } else {
+        var falta = pm - pagadoMes;
+        deudaInsc += falta;
+        mesesAdeudados.push({ mes: iterMes, falta: falta, parcial: pagadoMes > 0 });
+      }
+      if (iterMes === mH) break;
+      iterMes = _mesSiguiente(iterMes);
+    }
 
-    var estadoInsc = diff >= 0 ? 'ok' : (diff > -pm ? 'parcial' : 'debe');
+    var totalRequerido = mesesT * pm;
+    var estadoInsc;
+    if (deudaInsc <= 0.5) estadoInsc = 'ok';
+    else if (deudaInsc < pm) estadoInsc = 'parcial';
+    else estadoInsc = 'debe';
     if ((prioridad[estadoInsc]||0) > (prioridad[estadoPeor]||0)) estadoPeor = estadoInsc;
 
-    if (diff < 0) deudaTotal += Math.abs(diff);
-    else          favorTotal += diff;
+    deudaTotal += deudaInsc;
+    favorTotal += favorInsc;
 
     detalle.push({
       plan: insc.plan, monto: pm,
-      mesesT: mesesT, totalPagado: totalPagado, totalRequerido: totalRequerido,
-      diff: diff, estado: estadoInsc,
+      mesesT: mesesT,
+      totalPagado: totalPagadoEnRango + pagadoFueraRango,
+      totalRequerido: totalRequerido,
+      diff: (totalPagadoEnRango + pagadoFueraRango) - totalRequerido,
+      deudaPorMes: deudaInsc, favorPorMes: favorInsc,
+      mesesAdeudados: mesesAdeudados,
+      estado: estadoInsc,
       vigente: !insc.hasta || normFecha(insc.hasta).substring(0,7) >= mesHoy
     });
   });
@@ -3374,6 +3632,19 @@ function calcularEstadoTiempoReal(f) {
       if (deudaTotal === 0 && estadoPeor !== 'none') estadoPeor = 'ok';
     }
   }
+
+  // Compensar favor contra deuda.
+  var compensacion = Math.min(deudaTotal, favorTotal);
+  if (compensacion > 0) {
+    deudaTotal -= compensacion;
+    favorTotal -= compensacion;
+    if (deudaTotal === 0 && estadoPeor !== 'none') estadoPeor = 'ok';
+  }
+
+  // Capturar estado natural (sin ajuste manual) para que el modal Edit Saldo
+  // pueda mostrar "saldo deseado" correctamente.
+  var deudaSinAjuste = deudaTotal;
+  var favorSinAjuste = favorTotal;
 
   // Ajuste manual (signed): + absorbe deuda primero, luego suma a favor.
   // - (negativo) consume favor primero, luego crea deuda.
@@ -3409,11 +3680,347 @@ function calcularEstadoTiempoReal(f) {
     planMonto:      planMonto,
     saldoNeto:      favorTotal - deudaTotal,
     ajusteSaldo:    ajuste,
+    // Estado natural sin ajuste manual (para "saldo final deseado")
+    deudaSinAjuste: deudaSinAjuste,
+    favorSinAjuste: favorSinAjuste,
+    saldoNetoSinAjuste: favorSinAjuste - deudaSinAjuste,
+    // Flag util para reportes: ¿tiene al menos una insc vigente HOY?
+    tieneVigente:   inscVigentes.length > 0,
     detalle:        detalle
   };
 }
 
-function estadoCuotaV2(f) { return calcularEstadoTiempoReal(f); }// -- RENDER SOCIOS ------------------------------------------------
+function estadoCuotaV2(f) { return calcularEstadoTiempoReal(f); }
+
+// ── Herramienta de diagnostico: imprimir todo el desglose de un socio ──
+// Uso desde consola F12:  diagnosticoSocio('38123456')  o  diagnosticoSocio('Santino Cantero')
+window.diagnosticoSocio = function(query) {
+  query = String(query || '').trim().toLowerCase();
+  if (!query) { console.log('Uso: diagnosticoSocio("DNI") o diagnosticoSocio("nombre o apellido")'); return; }
+  var rows = (DB.jugadores || []).slice(1);
+  var match = rows.filter(function(f){
+    var dni = String(f[COL.DNI] || f[COL.TARJETA] || '').trim();
+    var nombre = ((f[COL.APELLIDO]||'') + ' ' + (f[COL.NOMBRE]||'')).toLowerCase();
+    return dni === query || nombre.indexOf(query) >= 0;
+  });
+  if (!match.length) { console.warn('[diagnostico] no encontre socio con "' + query + '"'); return; }
+  match.forEach(function(f){
+    var dni = String(f[COL.DNI] || f[COL.TARJETA] || '').trim();
+    var nombre = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
+    console.group('%c[diagnostico] ' + nombre + ' (DNI ' + dni + ')', 'color:#6de097;font-weight:bold;');
+    var inscs = (DB.inscripciones||[]).filter(function(i){ return (i.dni||'').toString().trim() === dni; });
+    console.log('Inscripciones (' + inscs.length + '):');
+    console.table(inscs.map(function(i){
+      return { plan: i.plan, monto: i.monto, descuentoHno: i.descuentoHno||0, desde: i.desde, hasta: i.hasta||'(sin fin)', _row: i._row };
+    }));
+    var cuotas = (CUOTAS_DB.cuotas||[]).filter(function(r){ return (r[0]||'').toString().trim() === dni; });
+    console.log('Cuotas pagadas (' + cuotas.length + '):');
+    console.table(cuotas.map(function(r){
+      return { concepto: r[2], periodoDesde: r[3], periodoHasta: r[4], fechaPago: r[5], monto: r[6], metodo: r[7], cobrador: r[8], obs: r[9], _fsId: r._fsId };
+    }));
+    var cv = calcularEstadoTiempoReal(f);
+    console.log('%cEstado final:', 'font-weight:bold;color:var(--secondary)', cv.estado);
+    console.log('Deuda:', cv.deuda, '/ A favor:', cv.saldoAFavor, '/ Ajuste manual:', cv.ajusteSaldo);
+    console.log('Detalle por inscripcion:');
+    console.table(cv.detalle);
+
+    var hoy = new Date();
+    var mesHoy = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+    inscs.forEach(function(insc){
+      var pm = Number(insc.monto)||0;
+      var dh = Number(insc.descuentoHno)||0;
+      if (dh > 0 && dh < pm) pm = pm - dh;
+      if (!pm) return;
+      var mD = insc.desde ? normFecha(insc.desde).substring(0,7) : '';
+      if (!mD || mD > mesHoy) return;
+      var mHRaw = insc.hasta ? normFecha(insc.hasta).substring(0,7) : '';
+      var mH = mHRaw && mHRaw < mesHoy ? mHRaw : mesHoy;
+      var pagadoPorMes = {};
+      var fueraRango = [];
+      cuotas.forEach(function(row){
+        if ((row[2]||'').indexOf('Historico') === 0) return;
+        if (row[2] !== insc.plan) return;
+        var monto = Number(row[6])||0;
+        if (monto <= 0) return;
+        var pD = normFecha((row[3]||'').toString().trim()).substring(0,7);
+        var pH = normFecha((row[4]||'').toString().trim()).substring(0,7);
+        if (!pD || !pH) {
+          var fp = normFecha((row[5]||'').toString().trim()).substring(0,7);
+          if (!pD) pD = fp;
+          if (!pH) pH = fp;
+        }
+        if (!pD || !pH) { fueraRango.push({mes:'(sin periodo)', monto:monto, fsId:row._fsId}); return; }
+        if (pD > pH) { var tmp=pD; pD=pH; pH=tmp; }
+        var nMeses = 1, it = pD;
+        while (it < pH) { nMeses++; it = _mesSiguiente(it); }
+        var montoPorMes = monto / nMeses;
+        it = pD;
+        while (true) {
+          if (it >= mD && it <= mH) {
+            pagadoPorMes[it] = (pagadoPorMes[it]||0) + montoPorMes;
+          } else {
+            fueraRango.push({mes:it, monto:montoPorMes, fsId:row._fsId});
+          }
+          if (it === pH) break;
+          it = _mesSiguiente(it);
+        }
+      });
+      var mesesReq = [];
+      var iter = mD;
+      while (true) {
+        var p = pagadoPorMes[iter] || 0;
+        mesesReq.push({mes:iter, requerido:pm, pagado:Math.round(p*100)/100, diferencia:Math.round((p-pm)*100)/100, estado: p >= pm-0.5 ? 'ok' : (p > 0 ? 'parcial' : 'debe')});
+        if (iter === mH) break;
+        iter = _mesSiguiente(iter);
+      }
+      console.log('%cInsc "' + insc.plan + '" — desde ' + mD + ' hasta ' + mH + ' (' + mesesReq.length + ' meses × $' + pm + '):', 'color:#6de097;font-weight:bold;');
+      console.table(mesesReq);
+      if (fueraRango.length) {
+        console.log('  Pagos a meses fuera del rango (van a saldo a favor):');
+        console.table(fueraRango);
+      }
+    });
+
+    console.groupEnd();
+  });
+};
+
+window.diagnosticoCobranza = function() {
+  var hoy = new Date();
+  var mesHoy = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+  console.log('%c[diagnosticoCobranza] mes actual: ' + mesHoy, 'color:#6de097;font-weight:bold;');
+  var raros = (DB.jugadores||[]).slice(1).filter(function(f){
+    var a = f[COL.ACTIVO]; if(!(a===true||String(a).toLowerCase()==='si')) return false;
+    var cv = calcularEstadoTiempoReal(f);
+    return cv.estado === 'parcial' || (cv.deuda > 0 && cv.saldoAFavor > 0);
+  }).map(function(f){
+    var cv = calcularEstadoTiempoReal(f);
+    return {
+      nombre: (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||''),
+      dni: f[COL.DNI] || f[COL.TARJETA],
+      estado: cv.estado, deuda: cv.deuda, aFavor: cv.saldoAFavor, plan: cv.planNom
+    };
+  });
+  console.table(raros);
+  console.log('Total con anomalias:', raros.length);
+};
+
+// ── Reparar cuotas con valores raros (consecuencia del escalado proporcional viejo) ──
+// ── Escanear y reparar Cuotas Sociales con monto inconsistente ─────
+window.escanearInconsistenciasCS = function(opts) {
+  opts = opts || {};
+  var soloDni = opts.dni ? String(opts.dni).trim() : '';
+  var montoEstandar = opts.montoEstandar ? Number(opts.montoEstandar) : null;
+  var inconsistencias = [];
+  CUOTAS_DB.cuotas.forEach(function(c) {
+    var concepto = (c[2]||'').toString().trim();
+    if (concepto.indexOf('Historico') === 0) return;
+    if (!/cuota\s*social/i.test(concepto)) return;
+    var dni = (c[0]||'').toString().trim();
+    if (soloDni && dni !== soloDni) return;
+    var montoActual = Number(c[6])||0;
+    var insc = (DB.inscripciones||[]).find(function(i){
+      return (i.dni||'').toString().trim() === dni && /cuota\s*social/i.test(i.plan||'');
+    });
+    var inscMonto = montoEstandar !== null ? montoEstandar : (insc ? Number(insc.monto)||0 : 0);
+    if (inscMonto <= 0) return;
+    var pD = normFecha((c[3]||'').toString().trim()).substring(0,7);
+    var pH = normFecha((c[4]||'').toString().trim()).substring(0,7);
+    var nMeses = 1;
+    if (pD && pH) {
+      var iter = pD;
+      while (iter < pH) { nMeses++; iter = _mesSiguiente(iter); }
+    }
+    var esperado = inscMonto * nMeses;
+    if (Math.abs(montoActual - esperado) > 0.5) {
+      inconsistencias.push({
+        fsId: c._fsId, dni: dni, socio: (c[1]||'').toString().trim(),
+        periodoDesde: c[3], periodoHasta: c[4], fechaPago: c[5],
+        montoActual: montoActual, montoEsperado: esperado, diff: esperado - montoActual,
+        nMeses: nMeses, inscMonto: inscMonto
+      });
+    }
+  });
+  if (!inconsistencias.length) {
+    console.log('%c[escanearInconsistenciasCS] No hay inconsistencias en Cuota Social.', 'color:#6de097');
+    return [];
+  }
+  console.log('%c[escanearInconsistenciasCS] ' + inconsistencias.length + ' inconsistencias detectadas:', 'color:var(--secondary);font-weight:bold');
+  console.table(inconsistencias);
+  return inconsistencias;
+};
+
+window.repararCuotasSocialFeas = function(opts) {
+  opts = opts || {};
+  var dryRun = opts.dryRun !== false;
+  var inconsistencias = window.escanearInconsistenciasCS(opts);
+  if (!inconsistencias.length) return [];
+  var cambios = [];
+  var sinPair = [];
+  inconsistencias.forEach(function(inc) {
+    var grupo = CUOTAS_DB.cuotas.filter(function(c){
+      return (c[0]||'').toString().trim() === inc.dni
+          && (c[5]||'') === inc.fechaPago
+          && (c[3]||'') === inc.periodoDesde
+          && (c[4]||'') === inc.periodoHasta
+          && (c[2]||'').indexOf('Historico') !== 0;
+    });
+    if (grupo.length < 2) { sinPair.push(Object.assign({motivo:'No hay cuota deportiva en el mismo cobro'}, inc)); return; }
+    var csCuota = grupo.find(function(c){ return /cuota\s*social/i.test(c[2]||''); });
+    var deportiva = grupo.find(function(c){ return !/cuota\s*social/i.test(c[2]||''); });
+    if (!csCuota || !deportiva) { sinPair.push(Object.assign({motivo:'Falta CS o deportiva'}, inc)); return; }
+    var csNuevo = inc.montoEsperado;
+    var diff = csNuevo - Number(csCuota[6]);
+    var depNuevo = Number(deportiva[6]) - diff;
+    if (depNuevo < 0) { sinPair.push(Object.assign({motivo:'Deportiva quedaria negativa $'+depNuevo}, inc)); return; }
+    cambios.push({
+      socio: inc.socio, dni: inc.dni, fechaPago: inc.fechaPago,
+      cs_fsId: csCuota._fsId, cs_old: Number(csCuota[6]), cs_new: csNuevo,
+      dep_fsId: deportiva._fsId, dep_plan: deportiva[2], dep_old: Number(deportiva[6]), dep_new: depNuevo,
+      diff: diff
+    });
+  });
+  if (sinPair.length) {
+    console.warn('[repararCuotasSocialFeas] ' + sinPair.length + ' inconsistencias NO reparables automaticamente:');
+    console.table(sinPair);
+  }
+  if (!cambios.length) { console.log('%cNada que reparar.', 'color:var(--muted)'); return []; }
+  console.log('%c[repararCuotasSocialFeas] ' + cambios.length + ' correcciones a aplicar:', 'color:var(--secondary);font-weight:bold');
+  console.table(cambios);
+  if (dryRun) {
+    console.log('%c==== MODO SIMULACION ====', 'background:#ffc107;color:#000;font-weight:bold;padding:4px;');
+    console.log('Para aplicar: repararCuotasSocialFeas({dryRun: false})');
+    console.log('Para forzar $10k: repararCuotasSocialFeas({montoEstandar: 10000, dryRun: false})');
+    return cambios;
+  }
+  if (!confirm('Aplicar ' + cambios.length + ' correcciones? La suma de cada cobro se mantiene.')) return [];
+  var promesas = [];
+  for (var b = 0; b < cambios.length; b += 200) {
+    var batch = db.batch();
+    cambios.slice(b, b+200).forEach(function(ch){
+      batch.update(db.collection('cuotas').doc(ch.cs_fsId), { monto: ch.cs_new });
+      batch.update(db.collection('cuotas').doc(ch.dep_fsId), { monto: ch.dep_new });
+    });
+    promesas.push(batch.commit());
+  }
+  return Promise.all(promesas).then(function(){
+    cambios.forEach(function(ch){
+      var i1 = CUOTAS_DB.cuotas.findIndex(function(c){ return c._fsId === ch.cs_fsId; });
+      if (i1 >= 0) CUOTAS_DB.cuotas[i1][6] = ch.cs_new;
+      var i2 = CUOTAS_DB.cuotas.findIndex(function(c){ return c._fsId === ch.dep_fsId; });
+      if (i2 >= 0) CUOTAS_DB.cuotas[i2][6] = ch.dep_new;
+    });
+    renderCuotas(); renderPlayers();
+    toast('Reparados ' + cambios.length + ' pagos de Cuota Social', 'ok');
+    console.log('%cOK, aplicados ' + cambios.length + ' cambios.', 'color:#6de097;font-weight:bold');
+    return cambios.length;
+  }).catch(function(e){ console.error('Error:', e); toast('Error: ' + (e.message||e), 'err'); });
+};
+
+window.repararCuotasFeas = function(opts) {
+  opts = opts || {};
+  var dryRun = opts.dryRun !== false;
+  var soloDni = opts.dni ? String(opts.dni).trim() : '';
+  var groups = {};
+  CUOTAS_DB.cuotas.forEach(function(c) {
+    if (!c._fsId) return;
+    var concepto = (c[2]||'').toString().trim();
+    if (concepto.indexOf('Historico') === 0) return;
+    var dni = (c[0]||'').toString().trim();
+    if (soloDni && dni !== soloDni) return;
+    var key = [dni, c[5]||'', c[7]||'', c[8]||'', c[3]||'', c[4]||''].join('||');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  });
+  var cambios = [];
+  Object.keys(groups).forEach(function(key) {
+    var grupo = groups[key];
+    if (grupo.length < 2) return;
+    var dni = (grupo[0][0]||'').toString().trim();
+    var total = grupo.reduce(function(s, c){ return s + Number(c[6]||0); }, 0);
+    var inscs = grupo.map(function(c) {
+      return (DB.inscripciones||[]).find(function(i){
+        return (i.dni||'').toString().trim() === dni && i.plan === c[2];
+      });
+    });
+    if (inscs.some(function(i){ return !i; })) return;
+    var sugeridos = grupo.map(function(c, i) {
+      var pm = Number(inscs[i].monto) || 0;
+      var pD = c[3] ? normFecha(c[3]).substring(0,7) : '';
+      var pH = c[4] ? normFecha(c[4]).substring(0,7) : '';
+      var nMeses = 1;
+      if (pD && pH) {
+        var iter = pD;
+        while (iter < pH) { nMeses++; iter = _mesSiguiente(iter); }
+      }
+      return pm * nMeses;
+    });
+    var sumSug = sugeridos.reduce(function(s,x){ return s+x; }, 0);
+    var todoLimpio = grupo.every(function(c, i){
+      return Math.abs(Number(c[6]||0) - sugeridos[i]) <= 0.5;
+    });
+    if (todoLimpio) return;
+    var nuevoMontos = sugeridos.slice();
+    var pendiente = sumSug - total;
+    var idxsOrden = nuevoMontos.map(function(_, i){ return i; }).sort(function(a,b){
+      return nuevoMontos[b] - nuevoMontos[a];
+    });
+    if (pendiente > 0) {
+      for (var k = 0; k < idxsOrden.length && pendiente > 0.5; k++) {
+        var ix = idxsOrden[k];
+        var resto = Math.min(pendiente, nuevoMontos[ix]);
+        nuevoMontos[ix] -= resto;
+        pendiente -= resto;
+      }
+    } else if (pendiente < 0) {
+      nuevoMontos[idxsOrden[0]] += (-pendiente);
+    }
+    grupo.forEach(function(c, i){
+      var oldM = Number(c[6]||0);
+      var newM = nuevoMontos[i];
+      if (Math.abs(oldM - newM) > 0.5) {
+        cambios.push({
+          fsId: c._fsId, dni: dni, socio: (c[1]||'').toString().trim(),
+          plan: c[2], fechaPago: c[5],
+          oldMonto: oldM, newMonto: newM, diff: newM - oldM
+        });
+      }
+    });
+  });
+  if (!cambios.length) { console.log('%c[repararCuotasFeas] No hay cuotas para limpiar.', 'color:#6de097'); return []; }
+  console.log('%c[repararCuotasFeas] cambios detectados: ' + cambios.length, 'color:var(--secondary);font-weight:bold');
+  console.table(cambios);
+  if (dryRun) {
+    console.log('%c==== MODO SIMULACION ====', 'background:#ffc107;color:#000;font-weight:bold;padding:4px;');
+    console.log('Para aplicar: repararCuotasFeas({dryRun: false})');
+    console.log('Para 1 socio:  repararCuotasFeas({dni: "DNI_AQUI"})');
+    return cambios;
+  }
+  if (!confirm('Aplicar ' + cambios.length + ' cambios de monto a Firestore? Esto NO se puede revertir automaticamente.')) {
+    console.log('Cancelado.'); return [];
+  }
+  var promesas = [];
+  for (var b = 0; b < cambios.length; b += 400) {
+    var batch = db.batch();
+    cambios.slice(b, b+400).forEach(function(ch){
+      batch.update(db.collection('cuotas').doc(ch.fsId), { monto: ch.newMonto });
+    });
+    promesas.push(batch.commit());
+  }
+  return Promise.all(promesas).then(function(){
+    console.log('%cOK, aplicados ' + cambios.length + ' cambios.', 'color:#6de097;font-weight:bold');
+    cambios.forEach(function(ch){
+      var idx = CUOTAS_DB.cuotas.findIndex(function(c){ return c._fsId === ch.fsId; });
+      if (idx >= 0) CUOTAS_DB.cuotas[idx][6] = ch.newMonto;
+    });
+    renderCuotas(); renderPlayers();
+    toast('Reparados ' + cambios.length + ' montos de cuotas', 'ok');
+    return cambios.length;
+  }).catch(function(e){
+    console.error('Error aplicando:', e);
+    toast('Error: ' + (e.message||e), 'err');
+  });
+};// -- RENDER SOCIOS ------------------------------------------------
 function renderPlayers() {
   // Si el filtro es Inactivos y no están cargados, cargarlos primero
   var estFil = document.getElementById('fEstado');
@@ -3714,7 +4321,13 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
   document.getElementById('mp-hasta').value = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().split('T')[0];
   document.getElementById('mp-monto').value = _moSugerido || '';
   document.getElementById('mp-obs').value = '';
-  document.getElementById('mp-cobrador').innerHTML = DB.profesores.map(function(p){ return '<option>' + p[0] + '</option>'; }).join('') || '<option>Sin especificar</option>';
+  // Cobrador: poblar lista y poner Juana Sestua por default si existe
+  var _cobSel = document.getElementById('mp-cobrador');
+  _cobSel.innerHTML = DB.profesores.map(function(p){ return '<option>' + p[0] + '</option>'; }).join('') || '<option>Sin especificar</option>';
+  for (var _ci = 0; _ci < _cobSel.options.length; _ci++) {
+    var _txt = (_cobSel.options[_ci].text || '').trim().toLowerCase();
+    if (_txt.indexOf('juana') >= 0 && _txt.indexOf('sestua') >= 0) { _cobSel.selectedIndex = _ci; break; }
+  }
   // Poblar planes vigentes del socio
   var dniStr = (dni||'').toString().trim();
   var inscVig = getInscripcionesVigentes(dniStr, null);
@@ -3768,10 +4381,10 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
 function cerrarModalPago(){ document.getElementById('modalPago').classList.remove('open'); pagoCtx = null; }
 
 function recalcularTotalPago() {
+  // El usuario cambio un checkbox o toggle de extra: recomputar sugerido y limpiar override manual.
   var checks = document.querySelectorAll('#mp-planes-lista input[name="pp_check"]:checked');
   var total = 0;
   checks.forEach(function(cb){ total += Number(cb.getAttribute('data-monto'))||0; });
-  // Extra
   var extraCheck = document.getElementById('mp-extra-check');
   if(extraCheck && extraCheck.checked) {
     total += Number(document.getElementById('mp-extra-monto').value)||0;
@@ -3779,6 +4392,7 @@ function recalcularTotalPago() {
   var calcEl = document.getElementById('mp-total-calc');
   if(calcEl) calcEl.innerText = '$' + total.toLocaleString('es-AR');
   document.getElementById('mp-monto').value = total || '';
+  if (pagoCtx) pagoCtx._montoOverride = null;
 }
 
 function togglePagoExtra() {
@@ -3789,9 +4403,13 @@ function togglePagoExtra() {
 }
 
 function sincronizarMontoManual() {
-  // cuando el usuario edita monto a mano, actualizar total mostrado
+  // El usuario edito el monto total manualmente. NO tocamos los data-monto
+  // (eso produce feedback loop con keystrokes). Solo actualizamos el label
+  // mostrado y marcamos un flag para que confirmarPago haga el override.
+  var montoTotal = Number(document.getElementById('mp-monto').value) || 0;
   var calcEl = document.getElementById('mp-total-calc');
-  if(calcEl) calcEl.innerText = '$' + (Number(document.getElementById('mp-monto').value)||0).toLocaleString('es-AR');
+  if(calcEl) calcEl.innerText = '$' + montoTotal.toLocaleString('es-AR');
+  if (pagoCtx) pagoCtx._montoOverride = montoTotal;
 }
 
 function toggleUsarFavor() {
@@ -3852,18 +4470,38 @@ function confirmarPago() {
       if(extraMonto > 0) pagos.push({plan: extraDesc, monto: extraMonto});
     }
     // QA-014: si el usuario edito #mp-monto a un total distinto del sugerido
-    // por la suma de los data-monto, respetar ese override.
-    //   - 1 solo pago: el monto manual se aplica directo a ese pago.
-    //   - multiples pagos: se escala proporcionalmente cada monto para que
-    //     la suma sea igual al total editado.
-    var _montoManual = Number((document.getElementById('mp-monto')||{}).value) || 0;
-    var _montoSug    = pagos.reduce(function(s,p){ return s + p.monto; }, 0);
-    if (_montoManual > 0 && pagos.length > 0 && Math.abs(_montoManual - _montoSug) > 0.5) {
+    // (override manual), respetar ese override aplicando la diferencia al pago
+    // mas grande para mantener numeros limpios en los demas.
+    var _montoOverride = (pagoCtx && pagoCtx._montoOverride) || 0;
+    if (!_montoOverride) {
+      var _montoMP = Number((document.getElementById('mp-monto')||{}).value) || 0;
+      var _sugTmp  = pagos.reduce(function(s,p){ return s + p.monto; }, 0);
+      if (_montoMP > 0 && Math.abs(_montoMP - _sugTmp) > 0.5) _montoOverride = _montoMP;
+    }
+    var _montoSug = pagos.reduce(function(s,p){ return s + p.monto; }, 0);
+    if (_montoOverride > 0 && pagos.length > 0 && _montoSug > 0 && Math.abs(_montoOverride - _montoSug) > 0.5) {
+      try { console.log('[confirmarPago] override manual: $' + _montoOverride + ' vs sug $' + _montoSug); } catch(_){}
       if (pagos.length === 1) {
-        pagos[0].monto = _montoManual;
-      } else if (_montoSug > 0) {
-        var _factor = _montoManual / _montoSug;
-        pagos.forEach(function(p){ p.monto = Math.round(p.monto * _factor); });
+        pagos[0].monto = _montoOverride;
+      } else {
+        // Cuota Social NUNCA se ajusta: la diff cae en el pago no-CS mas grande.
+        var pendiente = _montoSug - _montoOverride;
+        var idxsAjustables = pagos.map(function(p, i){ return i; })
+          .filter(function(i){ return !/cuota\s*social/i.test(pagos[i].plan); })
+          .sort(function(a, b){ return pagos[b].monto - pagos[a].monto; });
+        var idxsAjuste = idxsAjustables.length > 0
+          ? idxsAjustables
+          : pagos.map(function(_, i){ return i; }).sort(function(a, b){ return pagos[b].monto - pagos[a].monto; });
+        if (pendiente > 0) {
+          for (var _k = 0; _k < idxsAjuste.length && pendiente > 0.5; _k++) {
+            var ix = idxsAjuste[_k];
+            var resto = Math.min(pendiente, pagos[ix].monto);
+            pagos[ix].monto -= resto;
+            pendiente -= resto;
+          }
+        } else {
+          pagos[idxsAjuste[0]].monto += (-pendiente);
+        }
       }
     }
   }
@@ -3906,7 +4544,7 @@ function confirmarPago() {
       // Agregar a memoria con fsId para poder editar/eliminar después
       var newRow = [p.doc, p.nombre, p.plan, p.periodoDesde, p.periodoHasta, p.fechaPago, p.monto, p.metodo, p.cobrador, p.obs];
       newRow._fsId = (res && res.id) || '';
-      CUOTAS_DB.cuotas.push(newRow);
+      _pushCuotaUnique(newRow);
       if(++done === pagos.length) {
         var _finalizarPago = function(){
           window._ultimoPago = {
@@ -3982,7 +4620,7 @@ function _marcarTodosMesConfirmado() {
     callScript({action:'registrarPago', pago:p, pass:TOKEN}, function(res){
       var newRow = [p.doc, p.nombre, p.plan, p.periodoDesde, p.periodoHasta, p.fechaPago, p.monto, p.metodo, p.cobrador, p.obs];
       newRow._fsId = (res && res.id) || '';
-      CUOTAS_DB.cuotas.push(newRow);
+      _pushCuotaUnique(newRow);
       if(++done === pend.length){ ocultarLoader(); renderCuotas(); renderPlayers(); toast('Pagos registrados', 'ok'); }
     });
   });
@@ -4109,8 +4747,10 @@ function matcheaTurno(catJugador, catBase, liga) {
   return false;
 }
 
+var asistSemaforoActual = {}; // estado de semaforo en admin: {dni: 'verde'|'amarillo'|'rojo'}
+
 function cargarListaAsist(turnoId) {
-  asistActual = {}; // limpiar estado anterior
+  asistActual = {}; asistSemaforoActual = {}; // limpiar estado anterior
   var partes = turnoId.split('_');
   var hIdx = parseInt(partes[1]);
   var hd = DB.horarios[hIdx];
@@ -4128,13 +4768,20 @@ function cargarListaAsist(turnoId) {
     return true;
   });
 
-  // Cargar asistencias previas
+  // Cargar asistencias previas (incluyendo semaforo)
   var previas = {};
+  var previasSem = {};
   asistencias.filter(function(r){ return r[1] === turnoId; }).forEach(function(r){
     previas[r[3]] = (r[5]===true||String(r[5]).toLowerCase()==='true');
+    var sem = (r[6]||'').toString().trim().toLowerCase();
+    if (sem === 'verde' || sem === 'amarillo' || sem === 'rojo') previasSem[r[3]] = sem;
   });
   var tienePrevias = Object.keys(previas).length > 0;
-  lista.forEach(function(f){ var d = (f[COL.DNI]||f[COL.TARJETA]||'').toString(); asistActual[d] = d in previas ? previas[d] : true; });
+  lista.forEach(function(f){
+    var d = (f[COL.DNI]||f[COL.TARJETA]||'').toString();
+    asistActual[d] = d in previas ? previas[d] : true;
+    if (previasSem[d]) asistSemaforoActual[d] = previasSem[d];
+  });
 
   var nP = Object.values(asistActual).filter(Boolean).length;
   var nA = lista.length - nP;
@@ -4164,8 +4811,15 @@ function cargarListaAsist(turnoId) {
     var _fotoHtml = _fotoUrl
       ? '<img src="' + _fotoUrl + '" loading="lazy" class="asist-foto" onerror="this.style.display=\'none\';var ph=this.nextElementSibling;if(ph)ph.style.display=\'flex\';"><div class="asist-foto-ph" style="display:none;">&#128100;</div>'
       : '<div class="asist-foto-ph">&#128100;</div>';
+    var semSel = asistSemaforoActual[dni] || '';
+    var semHtml = '<div class="sem-group-admin ' + (pres ? '' : 'disabled') + '" id="sema-' + dni + '" title="C&oacute;mo se sinti&oacute; el alumno hoy">'
+      + '<button class="sem-btn-admin verde'    + (semSel==='verde'    ? ' activo' : '') + '" onclick="toggleSemaforoAdmin(\''+dni+'\',\'verde\')"    title="Bien"></button>'
+      + '<button class="sem-btn-admin amarillo' + (semSel==='amarillo' ? ' activo' : '') + '" onclick="toggleSemaforoAdmin(\''+dni+'\',\'amarillo\')" title="Regular"></button>'
+      + '<button class="sem-btn-admin rojo'     + (semSel==='rojo'     ? ' activo' : '') + '" onclick="toggleSemaforoAdmin(\''+dni+'\',\'rojo\')"     title="Mal"></button>'
+      + '</div>';
     html += '<div class="asist-row" data-dni="' + dni + '" data-nom="' + nom.toLowerCase() + '">';
     html += '<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">' + _fotoHtml + '<div style="min-width:0;flex:1;"><div class="asist-nombre">' + nom + catBadge + '</div><div class="asist-info">Doc: ' + dni + ' | ' + (f[COL.CATEGORIA_APP]||'') + (catSec && esPorSecundaria ? ' &rarr; ' + catSec : '') + '</div></div></div>';
+    html += semHtml;
     html += '<button class="toggle-asist ' + (pres?'presente':'ausente') + '" id="tas-' + dni + '" onclick="toggleAsist(\'' + dni + '\',' + lista.length + ')"></button>';
     html += '</div>';
   });
@@ -4186,6 +4840,7 @@ function marcarTodosPresentes(total) {
     var dni = btn.parentElement.dataset.dni;
     if(dni) asistActual[dni] = true;
   });
+  document.querySelectorAll('.sem-group-admin').forEach(function(g){ g.classList.remove('disabled'); });
   document.getElementById('cnt-p').innerText = total;
   document.getElementById('cnt-a').innerText = 0;
 }
@@ -4194,9 +4849,36 @@ function toggleAsist(dni, total) {
   asistActual[dni] = !asistActual[dni];
   var btn = document.getElementById('tas-' + dni) || document.querySelector('.asist-row[data-dni="' + dni + '"] .toggle-asist');
   if(btn){ btn.classList.toggle('presente', asistActual[dni]); btn.classList.toggle('ausente', !asistActual[dni]); }
+  var grp = document.getElementById('sema-'+dni);
+  if (grp) {
+    if (asistActual[dni]) {
+      grp.classList.remove('disabled');
+    } else {
+      grp.classList.add('disabled');
+      delete asistSemaforoActual[dni];
+      grp.querySelectorAll('.sem-btn-admin').forEach(function(b){ b.classList.remove('activo'); });
+    }
+  }
   var nP = Object.values(asistActual).filter(Boolean).length;
   document.getElementById('cnt-p').innerText = nP;
   document.getElementById('cnt-a').innerText = total - nP;
+}
+
+function toggleSemaforoAdmin(dni, color) {
+  if (asistActual[dni] === false) return;
+  if (asistSemaforoActual[dni] === color) {
+    delete asistSemaforoActual[dni];
+  } else {
+    asistSemaforoActual[dni] = color;
+  }
+  var grp = document.getElementById('sema-'+dni);
+  if (!grp) return;
+  grp.querySelectorAll('.sem-btn-admin').forEach(function(b){ b.classList.remove('activo'); });
+  var sel = asistSemaforoActual[dni];
+  if (sel) {
+    var act = grp.querySelector('.sem-btn-admin.' + sel);
+    if (act) act.classList.add('activo');
+  }
 }
 
 function guardarAsist() {
@@ -4210,7 +4892,9 @@ function guardarAsist() {
   var lbl = hd ? ((hd[0]||'') + ' ' + (hd[1]||'') + ' - ' + (hd[4]||'')) : turnoId;
   var registros = Object.keys(asistActual).map(function(dni){
     var f = DB.jugadores.slice(1).find(function(j){ return (j[COL.DNI]||j[COL.TARJETA]||'').toString() === dni; });
-    return [fecha, turnoId, lbl, dni, (f ? (f[COL.APELLIDO]||'') + ' ' + (f[COL.NOMBRE]||'') : ''), asistActual[dni]];
+    var pres = asistActual[dni];
+    var sem = pres && asistSemaforoActual[dni] ? asistSemaforoActual[dni] : '';
+    return [fecha, turnoId, lbl, dni, (f ? (f[COL.APELLIDO]||'') + ' ' + (f[COL.NOMBRE]||'') : ''), pres, sem];
   });
   if(!registros.length) return alert('Sin alumnos para registrar');
   mostrarLoader('Guardando asistencia...');
@@ -4288,6 +4972,7 @@ function abrirM(ai) {
       ecHtml += '<span style="color:var(--red);font-weight:700;">DEBE $' + Number(cv.deudaActividad).toLocaleString('es-AR') + '</span>';
     }
     ecHtml += ' <small style="color:var(--muted);">(' + decorarPlanNom(cv.planNom) + ')</small></div>';
+    if (cv.deudaActividad > 0) ecHtml += desgloseDeudaSocioHTML(cv);
   } else { ecHtml = '<span style="color:var(--muted);">Sin plan asignado</span>'; }
   document.getElementById('m-estado-cuota').innerHTML = ecHtml;
   // Info del ajuste aplicado + historial
@@ -4847,38 +5532,136 @@ function renderHistorialAjusteSaldo(dni) {
     .catch(function(e){ el.innerHTML = '<div style="color:var(--muted);font-size:11px;">(historial no disponible)</div>'; });
 }
 
+var _esModalCtx = null;
+
+// ── Modal Editar Identidad (apellido / nombre / DNI) ───────────────
+var _meiCtx = null;
+function abrirModalEditId() {
+  if (!itemSel || !itemSel.dni) return alert('Abri primero la ficha de un socio');
+  var f = DB.jugadores[itemSel.arrIdx]; if (!f) return;
+  _meiCtx = { f: f, oldDni: itemSel.dni.toString(), arrIdx: itemSel.arrIdx };
+  document.getElementById('mei-apellido').value = (f[COL.APELLIDO]||'').toString();
+  document.getElementById('mei-nombre').value   = (f[COL.NOMBRE]||'').toString();
+  document.getElementById('mei-dni').value      = _meiCtx.oldDni;
+  document.getElementById('mei-dni-info').innerText = '';
+  document.getElementById('modalEditId').classList.add('open');
+}
+function cerrarModalEditId(){ document.getElementById('modalEditId').classList.remove('open'); _meiCtx = null; }
+
+function guardarEditId() {
+  if (!_meiCtx) return;
+  var f = _meiCtx.f;
+  var oldDni = _meiCtx.oldDni;
+  var apellido = (document.getElementById('mei-apellido').value||'').trim().toUpperCase();
+  var nombre   = (document.getElementById('mei-nombre').value||'').trim().toUpperCase();
+  var newDni   = (document.getElementById('mei-dni').value||'').replace(/\./g,'').replace(/\s/g,'').trim();
+  if (!apellido || !nombre || !newDni) return alert('Completá apellido, nombre y DNI');
+  var apellidoOld = (f[COL.APELLIDO]||'').toString().toUpperCase();
+  var nombreOld   = (f[COL.NOMBRE]||'').toString().toUpperCase();
+  var cambioDni   = newDni !== oldDni;
+  var cambioNom   = apellido !== apellidoOld || nombre !== nombreOld;
+  if (!cambioDni && !cambioNom) return alert('No hay cambios para guardar');
+  if (cambioDni) {
+    var msg = '¿Cambiar el DNI de ' + apellido + ', ' + nombre + ' de ' + oldDni + ' → ' + newDni + '?\n\n'
+            + 'Esto reasigna TODAS las cuotas, inscripciones, asistencias y auditorías del socio. NO se puede revertir automáticamente.';
+    if (!confirm(msg)) return;
+  }
+  mostrarLoader(cambioDni ? 'Cambiando DNI y reasignando registros...' : 'Guardando...');
+  callScript({
+    action: 'cambiarIdentidadSocio',
+    oldDni: oldDni, newDni: newDni, apellido: apellido, nombre: nombre,
+    pass: TOKEN
+  }, function(res){
+    ocultarLoader();
+    f[COL.APELLIDO] = apellido;
+    f[COL.NOMBRE]   = nombre;
+    if (cambioDni) {
+      f[COL.DNI] = newDni;
+      (CUOTAS_DB.cuotas||[]).forEach(function(c){ if ((c[0]||'').toString().trim() === oldDni) c[0] = newDni; });
+      (DB.inscripciones||[]).forEach(function(i){ if ((i.dni||'').toString().trim() === oldDni) i.dni = newDni; });
+      (asistencias||[]).forEach(function(r){ if ((r[3]||'').toString().trim() === oldDni) r[3] = newDni; });
+      itemSel.dni = newDni; itemSel.row = newDni;
+    }
+    cerrarModalEditId();
+    document.getElementById('m-nombre').innerText = apellido + ', ' + nombre;
+    document.getElementById('m-dni-sub').innerText = 'Doc: ' + (cambioDni ? newDni : oldDni) + (f[COL.FECHA_NAC] ? ' | Nac: ' + f[COL.FECHA_NAC] : '');
+    try { renderPlayers(); } catch(_){}
+    var n = (res && res.cuotasActualizadas !== undefined)
+      ? ' (' + res.cuotasActualizadas + ' cuotas, ' + (res.inscripcionesActualizadas||0) + ' inscripciones, ' + (res.asistenciasActualizadas||0) + ' asistencias)'
+      : '';
+    toast('Identidad actualizada' + n, 'ok');
+  }, function(e){ ocultarLoader(); alert('Error: ' + e); });
+}
+
 function abrirModalEditSaldo() {
   if(!itemSel || !itemSel.dni) return alert('Abri primero la ficha de un socio');
   var f = DB.jugadores[itemSel.arrIdx]; if(!f) return;
   var cv = estadoCuotaV2(f);
+  _esModalCtx = { f: f, cv: cv };
   document.getElementById('es-nombre').innerText = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
   document.getElementById('es-dni-lbl').innerText = 'DNI ' + itemSel.dni;
-  var neto = Number(cv.saldoNeto)||0;
-  var netoColor = neto >= 0 ? '#6de097' : 'var(--red)';
-  document.getElementById('es-saldo-actual').innerHTML = '<span style="color:' + netoColor + ';">$' + neto.toLocaleString('es-AR') + '</span>';
+
+  function _fmtSaldo(v){ var s = v > 0 ? '+' : (v < 0 ? '-' : ''); return s + '$' + Math.abs(v).toLocaleString('es-AR'); }
+  function _colorSaldo(v){ return v > 0 ? '#6de097' : (v < 0 ? 'var(--red)' : 'var(--muted)'); }
+
+  var natural = Number(cv.saldoNetoSinAjuste)||0;
+  document.getElementById('es-saldo-natural').innerHTML = '<span style="color:' + _colorSaldo(natural) + ';">' + _fmtSaldo(natural) + '</span>';
+
   var aj = Number(f.ajusteSaldo)||0;
-  var ajColor = aj > 0 ? '#6de097' : (aj < 0 ? 'var(--red)' : 'var(--muted)');
-  var ajSign = aj > 0 ? '+' : '';
-  document.getElementById('es-ajuste-actual').innerHTML = '<span style="color:' + ajColor + ';">' + ajSign + '$' + Math.abs(aj).toLocaleString('es-AR') + '</span>';
-  document.getElementById('es-nuevo-ajuste').value = aj || '';
+  document.getElementById('es-ajuste-actual').innerHTML = '<span style="color:' + _colorSaldo(aj) + ';">' + _fmtSaldo(aj) + '</span>';
+
+  var neto = Number(cv.saldoNeto)||0;
+  document.getElementById('es-saldo-actual').innerHTML = '<span style="color:' + _colorSaldo(neto) + ';">' + _fmtSaldo(neto) + '</span>';
+
+  document.getElementById('es-saldo-final').value = neto || '';
   document.getElementById('es-motivo').value = '';
+  document.getElementById('es-preview-ajuste').innerHTML = '';
   document.getElementById('modalEditSaldo').classList.add('open');
+  previsualizarAjusteSaldo();
 }
-function cerrarModalEditSaldo(){ document.getElementById('modalEditSaldo').classList.remove('open'); }
+function cerrarModalEditSaldo(){ document.getElementById('modalEditSaldo').classList.remove('open'); _esModalCtx = null; }
+
+function previsualizarAjusteSaldo() {
+  if (!_esModalCtx) return;
+  var raw = document.getElementById('es-saldo-final').value;
+  var prev = document.getElementById('es-preview-ajuste');
+  if (!prev) return;
+  if (raw === '' || raw === null) { prev.innerHTML = ''; return; }
+  var deseado = Number(raw);
+  if (!isFinite(deseado)) { prev.innerHTML = '<span style="color:var(--red);">Monto invalido</span>'; return; }
+  var natural = Number(_esModalCtx.cv.saldoNetoSinAjuste)||0;
+  var ajusteActual = Number(_esModalCtx.cv.ajusteSaldo)||0;
+  var ajusteNuevo = Math.round((deseado - natural) * 100) / 100;
+  var delta = ajusteNuevo - ajusteActual;
+
+  var ajColor = ajusteNuevo > 0 ? '#6de097' : (ajusteNuevo < 0 ? 'var(--red)' : 'var(--muted)');
+  var ajSign = ajusteNuevo > 0 ? '+' : '';
+  var deltaColor = delta > 0 ? '#6de097' : (delta < 0 ? 'var(--red)' : 'var(--muted)');
+  var deltaSign = delta > 0 ? '+' : '';
+  var html = '<div>Nuevo ajuste a guardar: <span style="color:' + ajColor + ';font-weight:700;">' + ajSign + '$' + Math.abs(ajusteNuevo).toLocaleString('es-AR') + '</span></div>';
+  if (Math.abs(delta) > 0.5) {
+    html += '<div style="margin-top:2px;">Delta vs anterior: <span style="color:' + deltaColor + ';font-weight:700;">' + deltaSign + '$' + Math.abs(delta).toLocaleString('es-AR') + '</span></div>';
+  } else {
+    html += '<div style="margin-top:2px;color:var(--muted);">El ajuste no cambia respecto al actual.</div>';
+  }
+  prev.innerHTML = html;
+}
 
 function guardarAjusteSaldo() {
   if(!itemSel || !itemSel.dni) return alert('Abri primero la ficha de un socio');
   var f = DB.jugadores[itemSel.arrIdx]; if(!f) return;
   var dni = String(itemSel.dni);
-  var raw = document.getElementById('es-nuevo-ajuste').value;
-  if (raw === '' || raw === null) return alert('Ingresa un monto (0 para borrar el ajuste)');
-  var nuevo = Number(raw);
-  if (!isFinite(nuevo)) return alert('Monto invalido');
-  nuevo = Math.round(nuevo * 100) / 100;
+  var raw = document.getElementById('es-saldo-final').value;
+  if (raw === '' || raw === null) return alert('Ingresa el saldo final deseado (0 para que quede al dia)');
+  var deseado = Number(raw);
+  if (!isFinite(deseado)) return alert('Monto invalido');
+  var cv = estadoCuotaV2(f);
+  var natural = Number(cv.saldoNetoSinAjuste) || 0;
+  var nuevo = Math.round((deseado - natural) * 100) / 100;
   var motivo = (document.getElementById('es-motivo').value||'').trim();
   if (!motivo) return alert('El motivo es obligatorio');
   var anterior = Number(f.ajusteSaldo) || 0;
-  if (nuevo === anterior) return alert('El ajuste no cambio. Cancelá o ingresá un valor distinto.');
+  if (Math.abs(nuevo - anterior) < 0.5) return alert('El ajuste no cambio. Cancelá o ingresá un saldo distinto.');
   var delta = nuevo - anterior;
   var usuario = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
   var nombreSocio = (f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'');
@@ -4909,6 +5692,7 @@ function guardarAjusteSaldo() {
           ecHtml += '<span style="color:var(--red);font-weight:700;">DEBE $' + Number(cv.deudaActividad).toLocaleString('es-AR') + '</span>';
         }
         ecHtml += ' <small style="color:var(--muted);">(' + decorarPlanNom(cv.planNom) + ')</small></div>';
+        if (cv.deudaActividad > 0) ecHtml += desgloseDeudaSocioHTML(cv);
       } else { ecHtml = '<span style="color:var(--muted);">Sin plan asignado</span>'; }
       var ec = document.getElementById('m-estado-cuota'); if(ec) ec.innerHTML = ecHtml;
       renderAjusteSaldoInfo(dni, cv);
@@ -5827,6 +6611,203 @@ function cancelarEditPrecio() {
   document.getElementById('btn-cancel-precio').style.display = 'none';
 }
 
+// ── CSV de precios ───────────────────────────────────────────────
+function exportarPreciosCSV() {
+  var actividades = (DB.actividades || []).map(function(a){ return a.nombre; });
+  var categorias  = (DB.categorias || []).map(function(c){ return c[0]; });
+  var preciosByKey = {};
+  (DB.precios || []).forEach(function(p){
+    preciosByKey[p.actividad + '||' + p.categoria] = Number(p.monto) || 0;
+  });
+  var rows = ['actividad,categoria,monto'];
+  actividades.forEach(function(act){
+    categorias.forEach(function(cat){
+      var key = act + '||' + cat;
+      var monto = preciosByKey[key] || '';
+      rows.push('"' + act.replace(/"/g,'""') + '","' + cat.replace(/"/g,'""') + '",' + monto);
+    });
+  });
+  var blob = new Blob(['﻿' + rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'precios_' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV de precios descargado (' + (rows.length-1) + ' filas)', 'ok');
+}
+
+function _parseCSVLine(line) {
+  var out = [], cur = '', inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (inQ) {
+      if (ch === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') inQ = false;
+      else cur += ch;
+    } else {
+      if (ch === '"') inQ = true;
+      else if (ch === ',') { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+function importarPreciosCSV(ev) {
+  var f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var txt = String(e.target.result || '').replace(/^﻿/, '');
+    var lines = txt.split(/\r?\n/).filter(function(l){ return l.trim().length > 0; });
+    if (lines.length < 2) { toast('CSV vacío o sin datos', 'err'); return; }
+
+    var header = _parseCSVLine(lines[0]).map(function(h){ return h.trim().toLowerCase(); });
+    var iAct = header.indexOf('actividad');
+    var iCat = header.indexOf('categoria');
+    var iMonto = header.indexOf('monto');
+    if (iAct < 0 || iCat < 0 || iMonto < 0) {
+      alert('CSV inválido. Header esperado: "actividad,categoria,monto" (en cualquier orden).');
+      return;
+    }
+
+    var preciosByKey = {};
+    (DB.precios || []).forEach(function(p){
+      preciosByKey[(p.actividad+'||'+p.categoria).toLowerCase()] = p;
+    });
+
+    var actSet = {}, catSet = {};
+    (DB.actividades || []).forEach(function(a){ actSet[a.nombre.toLowerCase()] = a.nombre; });
+    (DB.categorias  || []).forEach(function(c){ catSet[c[0].toLowerCase()]   = c[0]; });
+
+    var cambios = [];
+    var errores = [];
+
+    for (var li = 1; li < lines.length; li++) {
+      var cols = _parseCSVLine(lines[li]);
+      var actCSV = (cols[iAct] || '').trim();
+      var catCSV = (cols[iCat] || '').trim();
+      var montoCSV = (cols[iMonto] || '').trim().replace(/\$|\.|\s/g,'').replace(',','.');
+      if (!actCSV && !catCSV && !montoCSV) continue;
+
+      var actNom = actSet[actCSV.toLowerCase()];
+      var catNom = catSet[catCSV.toLowerCase()];
+      if (!actNom) { errores.push('Línea '+(li+1)+': actividad desconocida "'+actCSV+'"'); continue; }
+      if (!catNom) { errores.push('Línea '+(li+1)+': categoría desconocida "'+catCSV+'"'); continue; }
+
+      var monto = montoCSV === '' ? null : Number(montoCSV);
+      if (monto !== null && (isNaN(monto) || monto < 0)) {
+        errores.push('Línea '+(li+1)+': monto inválido "'+montoCSV+'"');
+        continue;
+      }
+
+      var existing = preciosByKey[(actNom+'||'+catNom).toLowerCase()];
+      var montoActual = existing ? Number(existing.monto) || 0 : null;
+
+      if (monto === null) {
+        if (existing) cambios.push({actividad:actNom, categoria:catNom, montoActual:montoActual, montoNuevo:null, accion:'borrar', row: existing._row});
+      } else if (existing) {
+        if (Math.abs(montoActual - monto) > 0.5) {
+          cambios.push({actividad:actNom, categoria:catNom, montoActual:montoActual, montoNuevo:monto, accion:'actualizar', row: existing._row});
+        }
+      } else {
+        cambios.push({actividad:actNom, categoria:catNom, montoActual:null, montoNuevo:monto, accion:'crear', row: null});
+      }
+    }
+
+    var preview = document.getElementById('csv-precios-preview');
+    if (!preview) return;
+    preview.style.display = 'block';
+
+    if (errores.length) {
+      var errHtml = '<div style="color:var(--red);font-weight:700;margin-bottom:6px;">' + errores.length + ' errores en el CSV — corregilos antes de aplicar:</div>'
+        + '<ul style="color:var(--red);font-size:11px;max-height:120px;overflow:auto;padding-left:18px;">' + errores.map(function(e){ return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>';
+      preview.innerHTML = errHtml;
+      ev.target.value = '';
+      return;
+    }
+
+    if (!cambios.length) {
+      preview.innerHTML = '<div style="color:var(--muted);">El CSV no trae cambios respecto a los precios actuales.</div>';
+      ev.target.value = '';
+      return;
+    }
+
+    var c = cambios.reduce(function(acc, x){ acc[x.accion] = (acc[x.accion]||0) + 1; return acc; }, {});
+    var listaHtml = cambios.slice(0, 50).map(function(x){
+      var monStr = x.accion === 'borrar'
+        ? '<span style="color:var(--red);">borrar</span>'
+        : (x.accion === 'crear'
+            ? '<span style="color:#6de097;">crear</span> $' + Number(x.montoNuevo).toLocaleString('es-AR')
+            : '$' + Number(x.montoActual).toLocaleString('es-AR') + ' → <span style="color:var(--secondary);">$' + Number(x.montoNuevo).toLocaleString('es-AR') + '</span>');
+      return '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
+        + '<span>' + esc(x.actividad) + ' / ' + esc(x.categoria) + '</span>'
+        + '<span>' + monStr + '</span></div>';
+    }).join('');
+    var more = cambios.length > 50 ? '<div style="color:var(--muted);font-size:10px;">… y ' + (cambios.length - 50) + ' cambios más</div>' : '';
+
+    preview.innerHTML =
+      '<div style="font-weight:700;color:var(--secondary);margin-bottom:6px;">' + cambios.length + ' cambios detectados '
+      + '(' + (c.crear||0) + ' crear / ' + (c.actualizar||0) + ' actualizar / ' + (c.borrar||0) + ' borrar)</div>'
+      + '<div style="max-height:200px;overflow:auto;background:rgba(0,0,0,.2);padding:6px;border-radius:6px;">' + listaHtml + more + '</div>'
+      + '<div style="display:flex;gap:6px;margin-top:8px;">'
+      + '<button class="btn btn-save" style="flex:1;padding:8px;font-weight:700;" onclick="aplicarCambiosPreciosCSV()">&#x2705; APLICAR ' + cambios.length + ' CAMBIOS</button>'
+      + '<button class="btn" style="background:var(--muted);color:#fff;padding:8px;" onclick="cancelarImportPrecios()">Cancelar</button>'
+      + '</div>';
+
+    window._cambiosPreciosCSV = cambios;
+    ev.target.value = '';
+  };
+  reader.readAsText(f, 'utf-8');
+}
+
+function cancelarImportPrecios() {
+  window._cambiosPreciosCSV = null;
+  var p = document.getElementById('csv-precios-preview');
+  if (p) { p.style.display = 'none'; p.innerHTML = ''; }
+}
+
+function aplicarCambiosPreciosCSV() {
+  var cambios = window._cambiosPreciosCSV || [];
+  if (!cambios.length) return;
+  if (!confirm('¿Aplicar ' + cambios.length + ' cambios a los precios?')) return;
+
+  mostrarLoader('Aplicando cambios... 0/' + cambios.length);
+  var done = 0, errores = 0;
+  function siguiente(i) {
+    if (i >= cambios.length) {
+      ocultarLoader();
+      cancelarImportPrecios();
+      renderListPrecios();
+      poblarSelectsPrecios();
+      if (errores) toast('Aplicado con ' + errores + ' errores. Revisá la lista.', 'err');
+      else toast('Cambios aplicados (' + done + '/' + cambios.length + ')', 'ok');
+      return;
+    }
+    var x = cambios[i];
+    mostrarLoader('Aplicando ' + (i+1) + '/' + cambios.length + '...');
+    if (x.accion === 'borrar') {
+      callScript({action:'deletePrecio', rowIndex:x.row, pass:TOKEN, _noRetry:true}, function(){
+        DB.precios = DB.precios.filter(function(p){ return p._row !== x.row; });
+        done++; siguiente(i+1);
+      }, function(){ errores++; siguiente(i+1); });
+    } else {
+      callScript({action:'savePrecio', actividad:x.actividad, categoria:x.categoria, monto:x.montoNuevo, rowIndex:x.row||null, pass:TOKEN, _noRetry:true}, function(r){
+        var nuevo = {actividad:x.actividad, categoria:x.categoria, monto:x.montoNuevo, _row: r.fila};
+        if (x.row) {
+          DB.precios = DB.precios.map(function(p){ return p._row === x.row ? nuevo : p; });
+        } else {
+          DB.precios.push(nuevo);
+        }
+        done++; siguiente(i+1);
+      }, function(){ errores++; siguiente(i+1); });
+    }
+  }
+  siguiente(0);
+}
+
 function guardarPrecio() {
   var act   = document.getElementById('precio-act').value;
   var cat   = document.getElementById('precio-cat').value;
@@ -6232,6 +7213,13 @@ function iniciarReportes() {
   selectRptCat('pagos');
 }
 
+// Debounce: el input de socio dispara renderReporte mientras el usuario escribe.
+var _renderReporteTimer = null;
+function _debouncedRenderReporte() {
+  if (_renderReporteTimer) clearTimeout(_renderReporteTimer);
+  _renderReporteTimer = setTimeout(function(){ renderReporte(); }, 300);
+}
+
 function renderReporte() {
   var tipo = document.getElementById('rTipo').value;
   // Limpiar notas/extras del reporte anterior antes de renderizar el nuevo
@@ -6252,11 +7240,13 @@ function renderReporte() {
   var _re = document.getElementById('r-empty'); if(_re) _re.style.display = 'none';
   var _sd = function(id,v){ var e = document.getElementById(id); if(e) e.style.display = v; };
   _sd('r-filter-mes', tipo === 'tipo_pago' ? '' : 'none');
-  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
-  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-desde', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria','ajustes_saldo','semaforo_matriz'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-hasta', ['pagos_mes','asistencia','ranking_asist','asist_por_dia','asist_matriz','auditoria','ajustes_saldo','semaforo_matriz'].includes(tipo) ? '' : 'none');
   _sd('r-filter-caja-fecha', tipo === 'caja_dia' ? '' : 'none');
-  _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia','auditoria'].includes(tipo) ? '' : 'none');
-  _sd('r-filter-plan', ['pagos_mes','deudores','al_dia','tipo_pago','caja_dia','jugadores'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-cat', ['deudores','al_dia','jugadores','asist_matriz','asistencia','asist_por_dia','ranking_asist','pagos_mes','caja_dia','auditoria','cit_matriz','semaforo_matriz'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-plan', ['pagos_mes','deudores','al_dia','tipo_pago','caja_dia','jugadores','auditoria'].includes(tipo) ? '' : 'none');
+  _sd('r-filter-socio', ['auditoria','ajustes_saldo'].includes(tipo) ? '' : 'none');
+  // Default rDesde: siempre el 1° del mes actual (no auto-amplificar)
   // Eliminados: mostramos los ultimos 500 eventos sin filtro de fecha — no toca rDesde/rHasta
   if(tipo === 'deudores') rptDeudores();
   else if(tipo === 'al_dia') rptAlDia();
@@ -6270,6 +7260,9 @@ function renderReporte() {
   else if(tipo === 'caja_dia') rptCajaDia();
   else if(tipo === 'auditoria') rptAuditoria();
   else if(tipo === 'eliminados') rptEliminados();
+  else if(tipo === 'cit_matriz') rptCitacionesMatriz();
+  else if(tipo === 'ajustes_saldo') rptAjustesSaldo();
+  else if(tipo === 'semaforo_matriz') rptSemaforoMatriz();
 }
 
 // ── Pills + charts ───────────────────────────────────────────────
@@ -6280,17 +7273,22 @@ var R_CAT_MAP = {
     {v:'al_dia',     i:'\u2705',       l:'Al d\u00EDa'},
     {v:'tipo_pago',  i:'\uD83D\uDCB3', l:'Por tipo de pago'},
     {v:'caja_dia',   i:'\uD83C\uDFE6', l:'Caja del d\u00EDa'},
-    {v:'auditoria',  i:'\uD83D\uDD0D', l:'Auditor\u00EDa'}
+    {v:'auditoria',  i:'\uD83D\uDD0D', l:'Auditor\u00EDa'},
+    {v:'ajustes_saldo', i:'\u2696\uFE0F', l:'Ajustes de saldo'}
   ],
   asist:  [
     {v:'asistencia',    i:'\u2705',       l:'Asistencia'},
     {v:'asist_matriz',  i:'\uD83D\uDD22', l:'Matriz'},
     {v:'asist_por_dia', i:'\uD83D\uDCC5', l:'Por d\u00EDa'},
-    {v:'ranking_asist', i:'\uD83C\uDFC6', l:'Ranking'}
+    {v:'ranking_asist', i:'\uD83C\uDFC6', l:'Ranking'},
+    {v:'semaforo_matriz', i:'\uD83D\uDEA6', l:'Sem\u00E1foro emociones'}
   ],
   socios: [
     {v:'jugadores',  i:'\uD83D\uDCCB', l:'Listado completo'},
     {v:'eliminados', i:'\uD83D\uDDD1\uFE0F', l:'Eliminados'}
+  ],
+  citaciones: [
+    {v:'cit_matriz', i:'\uD83D\uDD22', l:'Matriz de citaciones'}
   ]
 };
 function selectRptCat(cat){
@@ -6329,8 +7327,78 @@ function _rptChartColors(n){
   var out = []; for(var i=0;i<n;i++) out.push(base[i % base.length]); return out;
 }
 
-function setTablaHeaders(cols){ document.getElementById('r-thead').innerHTML = '<tr>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr>'; }
-function setTablaRows(rows){ document.getElementById('r-tbody').innerHTML = rows.join(''); document.getElementById('r-empty').style.display = rows.length ? 'none' : ''; }
+// ── Tablas ordenables por columna ─────────────────────────────────
+var _rRowsCurrent = [];
+var _rSortColIdx = -1;
+var _rSortAsc = true;
+
+function _extractCellText(rowHtml, idx) {
+  var matches = rowHtml.match(/<td[^>]*>[\s\S]*?<\/td>/g);
+  if (matches && matches[idx] !== undefined) {
+    return matches[idx]
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&mdash;/g, '-')
+      .trim();
+  }
+  return '';
+}
+
+function _parseCellSort(text) {
+  var hasDigit = /\d/.test(text);
+  if (hasDigit) {
+    var clean = text.replace(/[\$%\s]/g,'').replace(/\./g,'').replace(',','.');
+    var num = Number(clean);
+    if (!isNaN(num)) return { num: num, str: text.toLowerCase(), isNum: true };
+  }
+  return { num: 0, str: text.toLowerCase(), isNum: false };
+}
+
+function _sortReporte(idx) {
+  if (_rSortColIdx === idx) {
+    _rSortAsc = !_rSortAsc;
+  } else {
+    _rSortColIdx = idx;
+    _rSortAsc = true;
+  }
+  var asc = _rSortAsc;
+  var sorted = _rRowsCurrent.slice().sort(function(a, b) {
+    var va = _parseCellSort(_extractCellText(a, idx));
+    var vb = _parseCellSort(_extractCellText(b, idx));
+    var cmp;
+    if (va.isNum && vb.isNum) cmp = va.num - vb.num;
+    else cmp = va.str.localeCompare(vb.str, 'es', {sensitivity:'base', numeric:true});
+    return asc ? cmp : -cmp;
+  });
+  var tbody = document.getElementById('r-tbody');
+  if (tbody) tbody.innerHTML = sorted.join('');
+  var ths = document.querySelectorAll('#r-thead th');
+  for (var i = 0; i < ths.length; i++) {
+    var ind = ths[i].querySelector('.sort-indicator');
+    if (ind) ind.innerHTML = '';
+    ths[i].style.color = '';
+  }
+  if (ths[idx]) {
+    var indActiva = ths[idx].querySelector('.sort-indicator');
+    if (indActiva) indActiva.innerHTML = _rSortAsc ? ' &#9650;' : ' &#9660;';
+    ths[idx].style.color = 'var(--secondary)';
+  }
+}
+
+function setTablaHeaders(cols){
+  document.getElementById('r-thead').innerHTML = '<tr>' + cols.map(function(c, i){
+    return '<th onclick="_sortReporte(' + i + ')" style="cursor:pointer;user-select:none;" title="Click para ordenar">' + c + '<span class="sort-indicator" style="color:var(--secondary);font-size:10px;font-weight:normal;"></span></th>';
+  }).join('') + '</tr>';
+  _rSortColIdx = -1;
+  _rSortAsc = true;
+}
+
+function setTablaRows(rows){
+  _rRowsCurrent = rows.slice();
+  document.getElementById('r-tbody').innerHTML = rows.join('');
+  document.getElementById('r-empty').style.display = rows.length ? 'none' : '';
+}
 function setCards(cards){ document.getElementById('r-cards').innerHTML = cards.map(function(c){ return '<div class="r-card"><div class="r-card-val" style="color:' + (c.color||'var(--secondary)') + ';">' + c.val + '</div><div class="r-card-lbl">' + c.lbl + '</div></div>'; }).join(''); }
 function getMesSeleccionado(){ return document.getElementById('rMes').value; }
 function getPlanFiltro(){ var e = document.getElementById('rPlan'); return e ? (e.value||'').trim() : ''; }
@@ -6361,6 +7429,52 @@ function normFecha(f) {
   return s;
 }
 function enRango(f, desde, hasta){ var fn = normFecha(f); return (!desde || fn >= desde) && (!hasta || fn <= hasta); }
+
+// Helper: dado 'yyyy-MM' devuelve el mes siguiente como 'yyyy-MM' (rolling year).
+function _mesNombreCorto(yyyymm) {
+  var p = String(yyyymm||'').split('-');
+  var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var m = parseInt(p[1],10);
+  if (isNaN(m) || m < 1 || m > 12) return yyyymm;
+  var nombre = meses[m-1];
+  var anio = parseInt(p[0],10);
+  var anioActual = new Date().getFullYear();
+  return anio === anioActual ? nombre : nombre + ' ' + anio;
+}
+
+function desgloseDeudaSocioHTML(cv) {
+  if (!cv || !cv.detalle) return '';
+  var filas = [];
+  cv.detalle.forEach(function(d){
+    if (!d.mesesAdeudados || !d.mesesAdeudados.length) return;
+    d.mesesAdeudados.forEach(function(m){
+      filas.push({ mes: m.mes, plan: d.plan, falta: m.falta, parcial: m.parcial });
+    });
+  });
+  if (!filas.length) return '';
+  filas.sort(function(a, b){ return a.mes.localeCompare(b.mes) || a.plan.localeCompare(b.plan); });
+  var html = '<div style="margin-top:6px;padding:8px 10px;background:rgba(220,53,69,.08);border-left:3px solid var(--red);border-radius:4px;font-size:11px;">'
+    + '<div style="font-weight:700;color:var(--red);margin-bottom:4px;">Detalle de la deuda:</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+  filas.forEach(function(f){
+    var nombreMes = _mesNombreCorto(f.mes);
+    var parcialNote = f.parcial ? ' <span style="color:var(--muted);font-size:10px;">(parcial)</span>' : '';
+    html += '<tr>'
+      + '<td style="padding:2px 4px;color:var(--muted);width:35%;">' + esc(nombreMes) + '</td>'
+      + '<td style="padding:2px 4px;width:40%;">' + esc(f.plan) + parcialNote + '</td>'
+      + '<td style="padding:2px 4px;text-align:right;color:var(--red);font-weight:700;">$' + Number(f.falta).toLocaleString('es-AR') + '</td>'
+      + '</tr>';
+  });
+  html += '</table></div>';
+  return html;
+}
+
+function _mesSiguiente(yyyymm) {
+  var p = String(yyyymm||'').split('-');
+  var yyyy = parseInt(p[0],10), mm = parseInt(p[1],10) + 1;
+  if (mm > 12) { yyyy++; mm = 1; }
+  return yyyy + '-' + String(mm).padStart(2,'0');
+}
 
 function rptDeudores() {
   var cat = document.getElementById('rCat').value;
@@ -6400,12 +7514,21 @@ function rptAlDia() {
   var cat = document.getElementById('rCat').value;
   var plan = getPlanFiltro();
   var rows = [];
+  var hoy = new Date();
   DB.jugadores.slice(1).filter(function(f){ var a = f[COL.ACTIVO]; return a===true||String(a).toLowerCase()==='si'; }).forEach(function(f){
     var cv = estadoCuotaV2(f);
     if(cv.estado !== 'ok' && cv.estado !== 'vence') return;
+    // Solo socios con al menos UNA inscripcion vigente HOY (evita mostrar "al dia"
+    // a socios cuyas inscripciones expiraron — ej. hasta=Abril, hoy=Mayo).
+    if (!cv.tieneVigente) return;
     if(cat && String(f[COL.CATEGORIA_APP]||'').trim() !== String(cat).trim()) return;
     if(plan && !socioTienePlan(f[COL.DNI]||f[COL.TARJETA]||'', plan)) return;
-    rows.push('<tr>' + td((f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'')) + td(f[COL.DNI]||f[COL.TARJETA]||'','muted') + td(f[COL.CATEGORIA_APP]||'','muted') + td(cv.planNom||'-','muted') + td(cv.hasta?formatDate(cv.hasta):'-','ok') + '</tr>');
+    var pm = Number(cv.planMonto) || 0;
+    var favor = Number(cv.saldoAFavor) || 0;
+    var mesesFavor = pm > 0 ? Math.floor(favor / pm) : 0;
+    var fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1 + mesesFavor, 0);
+    var vigStr = String(fin.getDate()).padStart(2,'0') + '/' + String(fin.getMonth()+1).padStart(2,'0') + '/' + fin.getFullYear();
+    rows.push('<tr>' + td((f[COL.APELLIDO]||'') + ', ' + (f[COL.NOMBRE]||'')) + td(f[COL.DNI]||f[COL.TARJETA]||'','muted') + td(f[COL.CATEGORIA_APP]||'','muted') + td(cv.planNom||'-','muted') + td(vigStr,'ok') + '</tr>');
   });
   setCards([{val:rows.length, lbl:'Al dia', color:'#6de097'}]);
   setTablaHeaders([T('socio'),'Documento',T('grupo'),'Plan','Vigente hasta']);
@@ -6448,8 +7571,9 @@ function rptPagosMes() {
     return true;
   });
   var total = pagos.reduce(function(s,c){ return s + Number(c[6]||0); }, 0);
-  var rows = pagos.sort(function(a,b){ return (b[5]||'').localeCompare(a[5]||''); }).map(function(c){
-    return '<tr>' + td(c[5]||'-','muted') + td(c[1]||c[0]||'-') + td(c[2]||'-','muted') + td(c[7]||'-','muted') + td('$'+Number(c[6]).toLocaleString('es-AR'),'ok num') + '</tr>';
+  var rows = pagos.sort(function(a,b){ return (b._ts||0) - (a._ts||0) || (b[5]||'').localeCompare(a[5]||''); }).map(function(c){
+    var fechaShow = c._ts ? formatDateTime(new Date(c._ts)) : (c[5]||'-');
+    return '<tr>' + td(fechaShow,'muted') + td(c[1]||c[0]||'-') + td(c[2]||'-','muted') + td(c[7]||'-','muted') + td('$'+Number(c[6]).toLocaleString('es-AR'),'ok num') + '</tr>';
   });
   setCards([{val:pagos.length, lbl:'Pagos'}, {val:'$'+total.toLocaleString('es-AR'), lbl:'Total recaudado', color:'#6de097'}]);
   setTablaHeaders(['Fecha',T('socio'),'Plan','Metodo','Monto']);
@@ -6474,7 +7598,9 @@ function rptTipoPago() {
   var mes = getMesSeleccionado();
   var plan = getPlanFiltro();
   var pagos = CUOTAS_DB.cuotas.filter(function(c){
-    if(!(c[5]||'').startsWith(mes.replace('-','/')||mes)) return false;
+    // Normalizar fechaPago a yyyy-MM (soporta ISO 'yyyy-MM-dd' y legacy 'dd/MM/yyyy')
+    var mp = normFecha((c[5]||'').toString().trim()).substring(0,7);
+    if (mp !== mes) return false;
     if(plan && String(c[2]||'').trim() !== plan) return false;
     return true;
   });
@@ -6617,15 +7743,20 @@ function rptAsistenciaMatriz() {
     return;
   }
 
-  // Indexar asistencias por DNI+fecha
-  var idx = {}; // idx[dni][fecha] = true|false
+  // Indexar asistencias por DNI+fecha (presente + semaforo)
+  var idx = {};
+  var semIdx = {};
   asistFiltradas.forEach(function(r){
     var dni  = (r[3]||'').toString();
     var fecha= r[0]||'';
     var pres = r[5]===true || String(r[5]).toLowerCase()==='true';
     if(!idx[dni]) idx[dni] = {};
-    // Si hay varios registros del mismo socio el mismo dia, queda el ultimo
     idx[dni][fecha] = pres;
+    var sem = (r[6]||'').toString().trim().toLowerCase();
+    if (pres && (sem === 'verde' || sem === 'amarillo' || sem === 'rojo')) {
+      if (!semIdx[dni]) semIdx[dni] = {};
+      semIdx[dni][fecha] = sem;
+    }
   });
 
   // Socios activos con registros en el periodo, filtrados por cat
@@ -6686,9 +7817,12 @@ function rptAsistenciaMatriz() {
     html += '<td class="mat-nombre">' + nombre + '</td>';
     fechas.forEach(function(f){
       var val = idx[dni] ? idx[dni][f] : undefined;
+      var sem = semIdx[dni] ? semIdx[dni][f] : null;
       if(val === true){
         pres++; total++;
-        html += '<td class="mat-cell-pres" title="Presente">&#x2713;</td>';
+        var emoji = sem === 'verde' ? '&nbsp;&#x1F7E2;' : sem === 'amarillo' ? '&nbsp;&#x1F7E1;' : sem === 'rojo' ? '&nbsp;&#x1F534;' : '';
+        var titleP = sem ? 'Presente ' + sem : 'Presente';
+        html += '<td class="mat-cell-pres" title="' + titleP + '">&#x2713;' + emoji + '</td>';
       } else if(val === false){
         total++;
         html += '<td class="mat-cell-aus" title="Ausente">&#x2715;</td>';
@@ -6743,6 +7877,331 @@ function rptAsistenciaMatriz() {
   (document.getElementById('r-tabla') || document.getElementById('rTabla')).innerHTML = html;
 }
 
+// ── Matriz de citaciones (jugadores × partidos) ──────────────────
+function rptCitacionesMatriz() {
+  var cat = document.getElementById('rCat').value;
+  mostrarLoader('Cargando citaciones...');
+  callScript({ action: 'getCitaciones', pass: TOKEN }, function(res) {
+    ocultarLoader();
+    var todasCitaciones = (res.citaciones || []).slice();
+    try {
+      console.log('[rptCitMatriz] total citaciones recibidas:', todasCitaciones.length);
+      console.log('[rptCitMatriz] categorias disponibles:', todasCitaciones.map(function(c){ return c.categoria; }));
+      console.log('[rptCitMatriz] filtro rCat:', cat);
+      console.log('[rptCitMatriz] sample citacion:', todasCitaciones[0]);
+    } catch(_){}
+
+    if (!todasCitaciones.length) {
+      setCards([{val:0, lbl:'Sin citaciones registradas'}]);
+      var contEl0 = document.getElementById('r-tabla') || document.getElementById('rTabla');
+      if (contEl0) contEl0.innerHTML = '<p style="color:var(--muted);padding:20px;">No hay citaciones registradas todavía. Generá una desde el módulo Citaciones.</p>';
+      return;
+    }
+
+    var citaciones = todasCitaciones;
+    var filtroAplicado = false;
+    if (cat) {
+      var filtradas = todasCitaciones.filter(function(c){
+        return String(c.categoria || '').trim().toLowerCase() === String(cat).trim().toLowerCase();
+      });
+      if (filtradas.length > 0) {
+        citaciones = filtradas;
+        filtroAplicado = true;
+      } else {
+        try { console.warn('[rptCitMatriz] filtro "' + cat + '" no matchea ninguna citacion — mostrando TODAS'); } catch(_){}
+      }
+    }
+
+    if (!citaciones.length) {
+      setCards([{val:0, lbl:'Sin citaciones para los filtros'}]);
+      var contEl = document.getElementById('r-tabla') || document.getElementById('rTabla');
+      if (contEl) contEl.innerHTML = '<p style="color:var(--muted);padding:20px;">Sin citaciones registradas para esta categoría.</p>';
+      return;
+    }
+
+    citaciones.sort(function(a,b){
+      var fa = (a.fechaPartido || '');
+      var fb = (b.fechaPartido || '');
+      if (fa === fb) return (a.rival||'').localeCompare(b.rival||'');
+      return fa.localeCompare(fb);
+    });
+
+    var idx = {};
+    var jugInfo = {};
+    citaciones.forEach(function(c, ci){
+      var jugs = c.jugadores || [];
+      jugs.forEach(function(j){
+        var dni = String(j.dni || '').trim();
+        if (!dni) return;
+        if (!idx[dni]) idx[dni] = {};
+        idx[dni][ci] = true;
+        if (!jugInfo[dni]) {
+          jugInfo[dni] = {
+            apellido: String(j.apellido || '').trim() || String(j.nombre || '').split(',')[0].trim(),
+            nombre: String(j.pnombre || j.nombre || '').trim()
+          };
+        }
+      });
+    });
+
+    var jugByDni = {};
+    DB.jugadores.slice(1).forEach(function(f){
+      var d = String(f[COL.DNI] || f[COL.TARJETA] || '').trim();
+      if (d) jugByDni[d] = f;
+    });
+
+    var jugadores = Object.keys(idx).map(function(dni){
+      var dbJug = jugByDni[dni];
+      var apellido = dbJug ? String(dbJug[COL.APELLIDO] || '').trim() : jugInfo[dni].apellido;
+      var nombre   = dbJug ? String(dbJug[COL.NOMBRE]   || '').trim() : jugInfo[dni].nombre;
+      var catApp   = dbJug ? String(dbJug[COL.CATEGORIA_APP] || '').trim() : '';
+      return { dni: dni, apellido: apellido, nombre: nombre, cat: catApp };
+    }).sort(function(a,b){
+      return (a.apellido||'').localeCompare(b.apellido||'');
+    });
+
+    if (jugadores.length === 0) {
+      setCards([
+        {val: 0,                 lbl: 'Jugadores citados'},
+        {val: citaciones.length, lbl: 'Partidos'},
+        {val: 0,                 lbl: 'Citaciones', color: 'var(--muted)'}
+      ]);
+      var resumenCits = citaciones.map(function(c){
+        return '<li style="margin-bottom:4px;"><b>' + esc(c.categoria || '?') + '</b> &mdash; vs ' + esc(c.rival || '?')
+             + ' <span style="color:var(--muted);">(' + esc(c.fechaPartido || '?') + ')</span></li>';
+      }).join('');
+      var contEl2 = document.getElementById('r-tabla') || document.getElementById('rTabla');
+      if (contEl2) {
+        contEl2.innerHTML =
+          '<div style="padding:24px;color:var(--muted);">'
+          + '<div style="font-size:30px;text-align:center;margin-bottom:10px;">&#128203;</div>'
+          + '<div style="text-align:center;font-size:14px;font-weight:700;color:var(--secondary);margin-bottom:6px;">'
+          + 'Las ' + citaciones.length + ' citaciones existen pero no tienen jugadores asignados</div>'
+          + '<div style="text-align:center;font-size:12px;margin-bottom:14px;">'
+          + 'Editá una citación desde el módulo Citaciones y tildá los jugadores que van.</div>'
+          + '<div style="font-size:12px;font-weight:700;color:var(--secondary);margin-bottom:6px;">Citaciones registradas:</div>'
+          + '<ul style="font-size:12px;padding-left:20px;">' + resumenCits + '</ul>'
+          + '</div>';
+      }
+      return;
+    }
+
+    var html = '<div class="mat-wrap"><table class="mat-table">';
+    html += '<thead><tr>';
+    html += '<th class="mat-nombre">Socio</th>';
+    citaciones.forEach(function(c){
+      var f = c.fechaPartido || '';
+      var partes = f.split('-');
+      var label = partes.length === 3 ? (partes[2] + '/' + partes[1]) : f;
+      var titleParts = [c.categoria || '', 'vs ' + (c.rival || ''), c.fechaPartido || '', c.estadio || ''].filter(Boolean);
+      var rivalShort = (c.rival || '').substring(0, 8);
+      html += '<th class="mat-fecha" title="' + esc(titleParts.join(' — ')) + '">'
+            + label + '<br><span style="font-size:9px;font-weight:400;color:var(--muted);">' + esc(rivalShort) + '</span></th>';
+    });
+    html += '<th class="mat-total" title="Citaciones del jugador">C</th>';
+    html += '<th class="mat-total" title="Total partidos en la categoría">T</th>';
+    html += '<th class="mat-total">%</th>';
+    html += '</tr></thead>';
+
+    html += '<tbody>';
+    jugadores.forEach(function(j){
+      var citCount = 0;
+      html += '<tr>';
+      var nombreFull = j.apellido + (j.nombre ? ', ' + j.nombre : '');
+      html += '<td class="mat-nombre" title="DNI ' + esc(j.dni) + (j.cat ? ' — ' + esc(j.cat) : '') + '">' + esc(nombreFull) + '</td>';
+      citaciones.forEach(function(c, ci){
+        if (idx[j.dni] && idx[j.dni][ci]) {
+          citCount++;
+          html += '<td class="mat-cell-pres" title="Citado">&#x2713;</td>';
+        } else {
+          html += '<td class="mat-cell-na">&middot;</td>';
+        }
+      });
+      var pct = citaciones.length > 0 ? Math.round(citCount / citaciones.length * 100) : 0;
+      var cl  = pct >= 75 ? 'ok' : pct >= 50 ? '' : 'debe';
+      html += '<td class="mat-cell-total">' + citCount + '</td>';
+      html += '<td class="mat-cell-total" style="color:var(--muted);">' + citaciones.length + '</td>';
+      html += '<td class="mat-cell-total ' + cl + '">' + pct + '%</td>';
+      html += '</tr>';
+    });
+    html += '</tbody>';
+
+    html += '<tfoot><tr>';
+    html += '<td style="text-align:left;padding:4px 8px;font-weight:700;">TOTAL CITADOS</td>';
+    citaciones.forEach(function(c){
+      var n = (c.jugadores || []).length;
+      html += '<td style="text-align:center;font-size:11px;">' + n + '</td>';
+    });
+    html += '<td colspan="3"></td>';
+    html += '</tr></tfoot>';
+
+    html += '</table></div>';
+
+    var totalCitaciones = jugadores.reduce(function(s,j){
+      var n = 0; for (var k in (idx[j.dni]||{})) n++;
+      return s + n;
+    }, 0);
+    var promPct = (jugadores.length * citaciones.length) > 0
+      ? Math.round(totalCitaciones / (jugadores.length * citaciones.length) * 100) : 0;
+
+    setCards([
+      {val: jugadores.length,  lbl: 'Jugadores'},
+      {val: citaciones.length, lbl: 'Partidos'},
+      {val: totalCitaciones,   lbl: 'Citaciones', color: '#6de097'},
+      {val: promPct + '%',     lbl: 'Promedio',   color: promPct >= 75 ? '#6de097' : promPct >= 50 ? 'var(--secondary)' : 'var(--red)'}
+    ]);
+
+    var noticeHtml = '';
+    if (cat && !filtroAplicado) {
+      noticeHtml = '<div style="background:rgba(255,193,7,.1);border:1px solid rgba(255,193,7,.4);color:#ffc107;padding:8px 12px;border-radius:6px;margin-bottom:10px;font-size:12px;">'
+        + '&#9888;&#65039; Tu filtro de categor&iacute;a (<b>' + esc(cat) + '</b>) no matchea ninguna citaci&oacute;n. Mostrando <b>todas las ' + citaciones.length + '</b> citaciones.'
+        + '</div>';
+    } else if (filtroAplicado) {
+      noticeHtml = '<div style="background:rgba(26,122,60,.15);border:1px solid var(--primary-border);color:#6de097;padding:6px 12px;border-radius:6px;margin-bottom:10px;font-size:12px;">'
+        + 'Filtrado por categor&iacute;a: <b>' + esc(cat) + '</b>'
+        + '</div>';
+    }
+
+    var _th = document.getElementById('r-thead'); if(_th) _th.innerHTML = '';
+    var _tb = document.getElementById('r-tbody'); if(_tb) _tb.innerHTML = '';
+    (document.getElementById('r-tabla') || document.getElementById('rTabla')).innerHTML = noticeHtml + html;
+  }, function(err){
+    ocultarLoader();
+    try { console.error('[rptCitMatriz] error callScript:', err); } catch(_){}
+    toast('Error al cargar citaciones: ' + (err || 'desconocido'), 'err');
+  });
+}
+
+// ── Matriz de semaforo de emociones ──────────────────────────────
+function rptSemaforoMatriz() {
+  var rango = getRangoFechas();
+  var cat = document.getElementById('rCat').value;
+
+  var asistFiltradas = asistencias.filter(function(r){
+    return enRango(r[0], rango.desde, rango.hasta);
+  });
+
+  var fechaSet = {};
+  asistFiltradas.forEach(function(r){ if (r[5] === true) fechaSet[r[0]||''] = true; });
+  var fechas = Object.keys(fechaSet).filter(Boolean).sort();
+
+  if (!fechas.length) {
+    setCards([{val:0, lbl:'Sin asistencias presentes en el rango'}]);
+    var contEmpty = document.getElementById('r-tabla') || document.getElementById('rTabla');
+    if (contEmpty) contEmpty.innerHTML = '<p style="color:var(--muted);padding:20px;">Sin datos en el rango.</p>';
+    return;
+  }
+
+  var idx = {};
+  asistFiltradas.forEach(function(r){
+    var dni  = (r[3]||'').toString();
+    var fecha= r[0]||'';
+    var pres = r[5] === true;
+    var sem  = (r[6]||'').toString().trim().toLowerCase();
+    if (!pres) return;
+    if (!idx[dni]) idx[dni] = {};
+    if (sem === 'verde' || sem === 'amarillo' || sem === 'rojo') idx[dni][fecha] = sem;
+    else idx[dni][fecha] = 'presente_sin';
+  });
+
+  var socios = DB.jugadores.slice(1).filter(function(f){
+    var a = f[COL.ACTIVO]; if(!(a===true||String(a).toLowerCase()==='si')) return false;
+    if(cat && String(f[COL.CATEGORIA_APP]||'').trim() !== String(cat).trim()) return false;
+    var dni = (f[COL.DNI]||f[COL.TARJETA]||'').toString();
+    return !!idx[dni];
+  }).sort(function(a,b){
+    return (a[COL.APELLIDO]||'').localeCompare(b[COL.APELLIDO]||'');
+  });
+
+  if (!socios.length) {
+    setCards([{val:0, lbl:'Sin socios con registros'}]);
+    document.getElementById('r-tabla').innerHTML = '<p style="color:var(--muted);padding:20px;">Sin socios con asistencias presentes en el rango seleccionado.</p>';
+    return;
+  }
+
+  var totPorFecha = {};
+  fechas.forEach(function(f){ totPorFecha[f] = {verde:0, amarillo:0, rojo:0, sinSem:0}; });
+  socios.forEach(function(s){
+    var dni = (s[COL.DNI]||s[COL.TARJETA]||'').toString();
+    fechas.forEach(function(f){
+      var v = idx[dni] && idx[dni][f];
+      if (v === 'verde') totPorFecha[f].verde++;
+      else if (v === 'amarillo') totPorFecha[f].amarillo++;
+      else if (v === 'rojo') totPorFecha[f].rojo++;
+      else if (v === 'presente_sin') totPorFecha[f].sinSem++;
+    });
+  });
+
+  var statG = {verde:0, amarillo:0, rojo:0, sinSem:0};
+  fechas.forEach(function(f){
+    statG.verde    += totPorFecha[f].verde;
+    statG.amarillo += totPorFecha[f].amarillo;
+    statG.rojo     += totPorFecha[f].rojo;
+    statG.sinSem   += totPorFecha[f].sinSem;
+  });
+
+  var html = '<div class="mat-wrap"><table class="mat-table">';
+  html += '<thead><tr>';
+  html += '<th class="mat-nombre">Socio</th>';
+  fechas.forEach(function(f){
+    var partes = f.split('-');
+    var label = partes.length === 3 ? (partes[2] + '/' + partes[1]) : f;
+    html += '<th class="mat-fecha">' + label + '</th>';
+  });
+  html += '<th class="mat-total" title="Verdes">&#x1F7E2;</th>';
+  html += '<th class="mat-total" title="Amarillos">&#x1F7E1;</th>';
+  html += '<th class="mat-total" title="Rojos">&#x1F534;</th>';
+  html += '</tr></thead>';
+
+  html += '<tbody>';
+  socios.forEach(function(s){
+    var dni = (s[COL.DNI]||s[COL.TARJETA]||'').toString();
+    var nombre = (s[COL.APELLIDO]||'') + ', ' + (s[COL.NOMBRE]||'');
+    var nVerde=0, nAmarillo=0, nRojo=0;
+    html += '<tr>';
+    html += '<td class="mat-nombre">' + esc(nombre) + '</td>';
+    fechas.forEach(function(f){
+      var v = idx[dni] && idx[dni][f];
+      if (v === 'verde')         { nVerde++;    html += '<td class="mat-cell-pres" title="Verde">&#x1F7E2;</td>'; }
+      else if (v === 'amarillo') { nAmarillo++; html += '<td class="mat-cell-pres" title="Amarillo">&#x1F7E1;</td>'; }
+      else if (v === 'rojo')     { nRojo++;     html += '<td class="mat-cell-aus" title="Rojo">&#x1F534;</td>'; }
+      else if (v === 'presente_sin') { html += '<td class="mat-cell-na" title="Presente, sin semaforo">&#x2713;</td>'; }
+      else { html += '<td class="mat-cell-na" title="Ausente o sin registro">&middot;</td>'; }
+    });
+    html += '<td class="mat-cell-total" style="color:#22c55e;">' + nVerde + '</td>';
+    html += '<td class="mat-cell-total" style="color:#eab308;">' + nAmarillo + '</td>';
+    html += '<td class="mat-cell-total" style="color:#ef4444;">' + nRojo + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody>';
+
+  html += '<tfoot>';
+  ['verde','amarillo','rojo'].forEach(function(color){
+    var emoji = color === 'verde' ? '&#x1F7E2;' : color === 'amarillo' ? '&#x1F7E1;' : '&#x1F534;';
+    html += '<tr>';
+    html += '<td style="text-align:left;padding:4px 8px;font-weight:700;">' + emoji + '</td>';
+    fechas.forEach(function(f){
+      var v = totPorFecha[f][color];
+      html += '<td style="text-align:center;font-size:11px;">' + (v || '') + '</td>';
+    });
+    html += '<td colspan="3"></td></tr>';
+  });
+  html += '</tfoot>';
+
+  html += '</table></div>';
+
+  setCards([
+    {val: socios.length,  lbl: 'Socios'},
+    {val: statG.verde,    lbl: '🟢 Verde',    color:'#22c55e'},
+    {val: statG.amarillo, lbl: '🟡 Amarillo', color:'#eab308'},
+    {val: statG.rojo,     lbl: '🔴 Rojo',     color:'#ef4444'}
+  ]);
+
+  var _th = document.getElementById('r-thead'); if(_th) _th.innerHTML = '';
+  var _tb = document.getElementById('r-tbody'); if(_tb) _tb.innerHTML = '';
+  (document.getElementById('r-tabla') || document.getElementById('rTabla')).innerHTML = html;
+}
+
 function rptRankingAsist() {
   var rango = getRangoFechas();
   var cat = document.getElementById('rCat').value;
@@ -6786,8 +8245,10 @@ function rptRankingAsist() {
 }
 
 function rptAuditoria() {
-  var rango = getRangoFechas();
   var cat = document.getElementById('rCat').value;
+  var plan = getPlanFiltro();
+  var rango = getRangoFechas();
+  var qSocio = (document.getElementById('rSocio') ? document.getElementById('rSocio').value : '').trim().toLowerCase();
   var dniByCat = null;
   if(cat){
     dniByCat = {};
@@ -6802,21 +8263,32 @@ function rptAuditoria() {
     .then(function(snap) {
       _contarLecturas(snap.size);
       ocultarLoader();
+      try { console.log('[rptAuditoria] docs recibidos:', snap.size); } catch(_){}
       var rows = [];
       var count = 0;
       snap.forEach(function(doc) {
         var d = doc.data();
         var orig = d.pagoOriginal || {};
-        var fechaDia = (d.fecha||'').substring(0,10);
-        if(!enRango(fechaDia, rango.desde, rango.hasta)) return;
         if(dniByCat && !dniByCat[(orig.dni||'').toString().trim()]) return;
+        if (plan && String(orig.plan||orig.concepto||'').trim() !== plan) return;
+        // Filtro fecha (d.fecha puede ser "4/5/2026 19:42", ISO o Timestamp)
+        var fechaDia = _fechaAuditISO(d.fecha);
+        if (fechaDia) {
+          if (rango.desde && fechaDia < rango.desde) return;
+          if (rango.hasta && fechaDia > rango.hasta) return;
+        }
+        if (qSocio) {
+          var nombreLow = String(orig.nombre||'').toLowerCase();
+          var dniLow    = String(orig.dni||'').toLowerCase();
+          if (nombreLow.indexOf(qSocio) < 0 && dniLow.indexOf(qSocio) < 0) return;
+        }
         var tipoColor = d.tipo === 'ELIMINAR' ? 'var(--red)' : 'var(--secondary)';
         var detalle = d.tipo === 'EDITAR' && d.pagoNuevo
           ? 'Monto: $' + Number(orig.monto).toLocaleString('es-AR') + ' → $' + Number(d.pagoNuevo.monto).toLocaleString('es-AR')
           : '$' + Number(orig.monto||0).toLocaleString('es-AR') + ' — ' + (orig.metodo||'-');
         rows.push('<tr>'
           + td('<span style="color:'+tipoColor+';font-weight:700;">'+d.tipo+'</span>')
-          + td(d.fecha||'-','muted')
+          + td(d.fecha ? formatDateTime(d.fecha) : '-','muted')
           + td((orig.nombre||'-')+'<br><small style="color:var(--muted)">'+orig.dni+'</small>')
           + td(orig.plan||'-','muted')
           + td(detalle)
@@ -6827,8 +8299,93 @@ function rptAuditoria() {
       setCards([{val:count, lbl:'Registros de auditoría', color:'var(--secondary)'}]);
       setTablaHeaders(['Tipo','Fecha','Socio','Plan','Detalle','Motivo']);
       setTablaRows(rows);
-      if(!rows.length) document.getElementById('r-empty').style.display='';
-    }).catch(function(e){ ocultarLoader(); toast('Error: '+e.message,'err'); });
+      if(!rows.length){
+        var empty = document.getElementById('r-empty');
+        if(empty){
+          empty.style.display = '';
+          empty.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);">'
+            + '<div style="font-size:30px;margin-bottom:6px;">&#128202;</div>'
+            + '<div style="font-size:14px;font-weight:700;">Sin registros de auditor&iacute;a</div>'
+            + '<div style="font-size:12px;margin-top:4px;">'
+            + 'La colecci&oacute;n <code>auditoria_pagos</code> est&aacute; vac&iacute;a o no hay '
+            + 'eventos para la categor&iacute;a seleccionada. Se registran al editar o eliminar pagos.'
+            + '</div></div>';
+        }
+      }
+    }).catch(function(e){
+      ocultarLoader();
+      try { console.error('[rptAuditoria] error:', e); } catch(_){}
+      toast('Error al cargar auditoría: ' + (e.message || e) + ' (code: ' + (e.code || 'n/a') + ')', 'err');
+    });
+}
+
+// ── Reporte: Ajustes de saldo (auditoria_saldos) ──────────────────
+function rptAjustesSaldo() {
+  var rango = getRangoFechas();
+  var qSocio = (document.getElementById('rSocio') ? document.getElementById('rSocio').value : '').trim().toLowerCase();
+  mostrarLoader('Cargando ajustes de saldo...');
+  db.collection('auditoria_saldos').orderBy('fecha','desc').limit(500).get()
+    .then(function(snap){
+      _contarLecturas(snap.size);
+      ocultarLoader();
+      try { console.log('[rptAjustesSaldo] docs recibidos:', snap.size); } catch(_){}
+      var rows = [];
+      var totalDelta = 0, posCount = 0, negCount = 0, mostrados = 0;
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var fechaDate = d.fecha && d.fecha.toDate ? d.fecha.toDate() : null;
+        var fechaStr = fechaDate ? formatDateTime(fechaDate) : (d.fecha||'-');
+        if (fechaDate) {
+          var diaIso = fechaDate.toISOString().substring(0,10);
+          if (rango.desde && diaIso < rango.desde) return;
+          if (rango.hasta && diaIso > rango.hasta) return;
+        }
+        if (qSocio) {
+          var nombreLow = String(d.nombreSocio||'').toLowerCase();
+          var dniLow    = String(d.dni||'').toLowerCase();
+          if (nombreLow.indexOf(qSocio) < 0 && dniLow.indexOf(qSocio) < 0) return;
+        }
+        mostrados++;
+        var delta = Number(d.delta)||0;
+        var anterior = Number(d.montoAnterior)||0;
+        var nuevo = Number(d.montoNuevo)||0;
+        if (delta > 0) posCount++; else if (delta < 0) negCount++;
+        totalDelta += delta;
+        var deltaColor = delta > 0 ? '#6de097' : (delta < 0 ? 'var(--red)' : 'var(--muted)');
+        var deltaSign = delta > 0 ? '+' : '';
+        rows.push('<tr>'
+          + td(fechaStr, 'muted')
+          + td((d.nombreSocio||'-')+'<br><small style="color:var(--muted)">'+(d.dni||'-')+'</small>')
+          + td('$' + anterior.toLocaleString('es-AR'), 'muted num')
+          + td('<span style="color:'+deltaColor+';font-weight:700;">'+deltaSign+'$' + delta.toLocaleString('es-AR') + '</span>', 'num')
+          + td('$' + nuevo.toLocaleString('es-AR'), 'num')
+          + td(d.motivo||'-','muted')
+          + td(d.modificadoPor||'-','muted')
+          + '</tr>');
+      });
+      setCards([
+        {val: mostrados,    lbl: 'Ajustes',                color:'var(--secondary)'},
+        {val: posCount,     lbl: 'A favor (+)',            color:'#6de097'},
+        {val: negCount,     lbl: 'Descuentos (-)',         color:'var(--red)'},
+        {val: '$' + totalDelta.toLocaleString('es-AR'), lbl: 'Delta neto', color: totalDelta >= 0 ? '#6de097' : 'var(--red)'}
+      ]);
+      setTablaHeaders(['Fecha','Socio','Saldo anterior','Delta','Saldo nuevo','Motivo','Usuario']);
+      setTablaRows(rows);
+      if(!rows.length){
+        var empty = document.getElementById('r-empty');
+        if(empty){
+          empty.style.display = '';
+          empty.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);">'
+            + '<div style="font-size:30px;margin-bottom:6px;">&#9878;&#65039;</div>'
+            + '<div style="font-size:14px;font-weight:700;">Sin ajustes de saldo</div>'
+            + '<div style="font-size:12px;margin-top:4px;">Se registran cuando edit&aacute;s el saldo a favor de un socio desde su ficha o cuando se descuenta saldo a favor en un cobro.</div></div>';
+        }
+      }
+    }).catch(function(e){
+      ocultarLoader();
+      try { console.error('[rptAjustesSaldo] error:', e); } catch(_){}
+      toast('Error al cargar ajustes: ' + (e.message || e) + ' (code: ' + (e.code || 'n/a') + ')', 'err');
+    });
 }
 
 function rptEliminados() {
@@ -6844,7 +8401,7 @@ function rptEliminados() {
       var totalElim = 0, totalRest = 0;
       snap.forEach(function(doc){
         var d = doc.data();
-        var fechaStr = d.fecha && d.fecha.toDate ? formatDate(d.fecha.toDate()) : (d.fecha||'-');
+        var fechaStr = d.fecha && d.fecha.toDate ? formatDateTime(d.fecha.toDate()) : (d.fecha||'-');
         var accion = d.accion || '-';
         var color = accion === 'eliminar' ? 'var(--red)' : '#6de097';
         var snap2 = d.snapshot || {};
@@ -7018,7 +8575,9 @@ function lazyCargarCuotasEInscripciones(cb) {
         var mp = (c[3]||'').substring(0,7);
         return mp !== periodo;
       });
-      results[idx].forEach(function(doc){ var r = cuotaToRow(doc.data(), doc.id); CUOTAS_DB.cuotas.push(r); });
+      results[idx].forEach(function(doc){ var r = cuotaToRow(doc.data(), doc.id); _pushCuotaUnique(r); });
+      _dedupCuotas();
+      try { renderPlayers(); } catch(_){}
       _contarLecturas(results[idx].size); idx++;
       _cargado[cacheKey] = true;
       _cargado.cuotas = true;
@@ -7038,7 +8597,7 @@ function lazyCargarAsistencias(cb, mesesAtras) {
   db.collection('asistencias').where('fecha', '>=', corte).get()
     .then(function(snap) {
       asistencias = [];
-      snap.forEach(function(doc){ var d=doc.data(); asistencias.push([d.fecha||'',d.turnoId||'',d.label||'',d.dni||'',d.nombre||'',d.presente===true]); });
+      snap.forEach(function(doc){ var d=doc.data(); asistencias.push([d.fecha||'',d.turnoId||'',d.label||'',d.dni||'',d.nombre||'',d.presente===true,d.semaforo||'']); });
       _contarLecturas(snap.size);
       _cargado[cacheKey] = true;
       _cargado.asistencias = true;
