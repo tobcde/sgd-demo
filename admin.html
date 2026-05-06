@@ -1641,7 +1641,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.40</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.41</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3664,6 +3664,16 @@ function calcularEstadoTiempoReal(f) {
       _d.mesesAdeudados = (_d.mesesAdeudados || []).filter(function(_m){ return _m.falta > 0.5; });
       _d.deudaPorMes = (_d.mesesAdeudados || []).reduce(function(s, _m){ return s + _m.falta; }, 0);
     });
+    // Tambien restar la compensacion al favorPorMes de las inscs (FIFO) para
+    // que el modal de cobro y la card no muestren "debe + favor" a la vez.
+    var _restCmpFav = compensacion;
+    for (var _fi = 0; _fi < detalle.length && _restCmpFav > 0.5; _fi++) {
+      var _df = detalle[_fi];
+      if (!_df.favorPorMes || _df.favorPorMes <= 0) continue;
+      var _takeF = Math.min(_df.favorPorMes, _restCmpFav);
+      _df.favorPorMes -= _takeF;
+      _restCmpFav -= _takeF;
+    }
   }
 
   // Capturar estado natural (sin ajuste manual) para que el modal Edit Saldo
@@ -4301,17 +4311,20 @@ function calcularSaldoPorInscripcion(insc) {
   }
   if (!d) return {saldoPesos:0, faltaPesos:pm, estado:'debe', mesesExtra:0};
 
-  if (d.diff > 0) {
+  // Usar deudaPorMes/favorPorMes (post-compensacion FIFO) para que el modal
+  // refleje el saldo NETO por insc, no el bruto pre-compensacion.
+  var _deuda = Number(d.deudaPorMes) || 0;
+  var _favor = Number(d.favorPorMes) || 0;
+  if (_favor > 0.5) {
     var pagoParcialActual = d.totalPagado % pm;
     var faltaParaCompletar = pagoParcialActual > 0 ? (pm - pagoParcialActual) : 0;
-    return {saldoPesos:d.diff, faltaPesos:faltaParaCompletar,
-            estado:'favor', mesesExtra:Math.floor(d.diff/pm)};
-  } else if (d.diff === 0) {
-    return {saldoPesos:0, faltaPesos:pm, estado:'exacto', mesesExtra:0};
-  } else if (d.diff > -pm) {
-    return {saldoPesos:0, faltaPesos:Math.abs(d.diff), estado:'parcial', mesesExtra:0};
+    return {saldoPesos:_favor, faltaPesos:faltaParaCompletar,
+            estado:'favor', mesesExtra:Math.floor(_favor/pm)};
+  } else if (_deuda > 0.5) {
+    return {saldoPesos:0, faltaPesos:_deuda,
+            estado: (_deuda < pm ? 'parcial' : 'debe'), mesesExtra:0};
   } else {
-    return {saldoPesos:0, faltaPesos:Math.abs(d.diff), estado:'debe', mesesExtra:0};
+    return {saldoPesos:0, faltaPesos:pm, estado:'exacto', mesesExtra:0};
   }
 }
 
