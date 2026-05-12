@@ -1401,14 +1401,16 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     </div>
 
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">&#x1F514; Recordatorios de cuota</div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#ffb84d;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">&#x1F514;</span> Recordatorios de cuota</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
           <input type="checkbox" id="em-rec-on" onchange="emailGuardarConfig()">
           <span style="font-size:14px;color:var(--text);">Habilitar envío de recordatorios</span>
         </label>
-        <button class="btn" onclick="emailAbrirRecordatorios()" style="background:linear-gradient(135deg,#1a7a3c,#6db4e0);color:white;padding:12px 20px;border:none;border-radius:8px;font-weight:700;cursor:pointer;align-self:flex-start;margin-top:6px;">&#x1F4E8; Enviar recordatorios ahora</button>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Última corrida: <span id="em-rec-ultima">—</span></div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+          <button class="btn" onclick="emailAbrirRecordatorios()" style="background:linear-gradient(135deg,#d97706,#f59e0b);color:white;padding:12px 22px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 2px 8px rgba(217,119,6,.35);">&#x1F4E8; Enviar recordatorios ahora</button>
+          <div style="font-size:11px;color:var(--muted);">Última corrida: <span id="em-rec-ultima" style="color:var(--text);">—</span></div>
+        </div>
       </div>
     </div>
 
@@ -1425,12 +1427,12 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <!-- Modal Recordatorios -->
 <div id="modalRecordatorios" class="modal">
   <div class="modal-content" style="max-width:880px;width:95%;max-height:90vh;display:flex;flex-direction:column;padding:0;">
-    <div style="background:linear-gradient(135deg,#1a7a3c,#4a8cb8);padding:20px;color:white;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center;">
+    <div style="background:linear-gradient(135deg,#d97706,#f59e0b);padding:20px;color:white;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center;">
       <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;">RECORDATORIOS DE CUOTA</div>
-        <div style="font-size:12px;opacity:.85;margin-top:2px;">Seleccioná a quiénes mandar el email</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;">&#x1F514; RECORDATORIOS DE CUOTA</div>
+        <div style="font-size:12px;opacity:.9;margin-top:2px;">Seleccioná a quiénes mandar el email</div>
       </div>
-      <button onclick="document.getElementById('modalRecordatorios').classList.remove('open')" style="background:transparent;border:none;color:white;font-size:24px;cursor:pointer;">×</button>
+      <button onclick="document.getElementById('modalRecordatorios').classList.remove('open')" style="background:rgba(0,0,0,.2);border:none;color:white;font-size:22px;cursor:pointer;width:32px;height:32px;border-radius:50%;">×</button>
     </div>
     <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2);">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end;">
@@ -1736,7 +1738,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.45</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.46</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
