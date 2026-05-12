@@ -1641,7 +1641,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.42</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.43</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -8743,9 +8743,44 @@ function cambiarTab(ev, id) {
     citInicializar(); // citaciones se cargan dentro de citInicializar con su propio lazy
   }
   if(id === 'reportes'){
-    // Reportes necesitan cuotas + asistencias + inscripciones
-    lazyCargarCuotasEInscripciones(function(){
-      lazyCargarAsistencias(function(){ iniciarReportes(); });
+    // Hard refresh: cada entrada a Reportes recarga TODO desde Firestore.
+    // Los reportes deben reflejar el estado real de la base (no datos viejos
+    // en memoria) — el usuario puede haber cobrado/ajustado algo en otra pestaña.
+    mostrarLoader('Actualizando datos para reportes...');
+    var _meses = 3;
+    var _corte = new Date(); _corte.setMonth(_corte.getMonth() - _meses); _corte.setDate(1);
+    var _corteStr = _corte.toLocaleDateString('sv');
+    Promise.all([
+      db.collection('socios').get(),
+      db.collection('inscripciones').get(),
+      db.collection('cuotas').get(),
+      db.collection('asistencias').where('fecha', '>=', _corteStr).get()
+    ]).then(function(snaps){
+      var sociosSnap = snaps[0], inscSnap = snaps[1], cuotasSnap = snaps[2], asistSnap = snaps[3];
+      var _header = (DB.jugadores && DB.jugadores[0]) ? DB.jugadores[0] : [];
+      DB.jugadores = [_header];
+      sociosSnap.forEach(function(doc){ DB.jugadores.push(socioToRow(doc, doc.id)); });
+      DB.inscripciones = [];
+      inscSnap.forEach(function(doc){ DB.inscripciones.push(inscToObj(doc)); });
+      CUOTAS_DB.cuotas = [];
+      cuotasSnap.forEach(function(doc){ _pushCuotaUnique(cuotaToRow(doc.data(), doc.id)); });
+      _dedupCuotas();
+      asistencias = [];
+      asistSnap.forEach(function(doc){ var d=doc.data(); asistencias.push([d.fecha||'',d.turnoId||'',d.label||'',d.dni||'',d.nombre||'',d.presente===true,d.semaforo||'']); });
+      Object.keys(_cargado).forEach(function(k){ delete _cargado[k]; });
+      _cargado.inscripciones = true;
+      _cargado.cuotas = true;
+      _cargado.asistencias = true;
+      _cargado.inactivos = true;
+      _cargado['asist_' + _meses] = true;
+      _contarLecturas(sociosSnap.size + inscSnap.size + cuotasSnap.size + asistSnap.size);
+      ocultarLoader();
+      try { renderPlayers(); } catch(_){}
+      iniciarReportes();
+    }).catch(function(e){
+      ocultarLoader();
+      toast('Error refrescando datos: ' + e.message, 'err');
+      iniciarReportes();
     });
   }
   if(id === 'institucion'){ cargarFormInstitucion(); cargarCamposExtra(); }
