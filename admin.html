@@ -1641,7 +1641,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.41</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.42</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -4380,6 +4380,7 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
       var _sc = calcularSaldoPorInscripcion(i);
       var _badge = '';
       var _montoSugerido = Number(i.monto);
+      var _esCS = /cuota\s*social/i.test(i.plan || '');
       if(_sc.estado === 'favor') {
         var _extra = _sc.mesesExtra > 0 ? ' (' + _sc.mesesExtra + ' mes' + (_sc.mesesExtra > 1 ? 'es' : '') + ' adelantado)' : '';
         _badge = '<span style="background:rgba(26,122,60,.25);color:#6de097;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">'
@@ -4400,6 +4401,11 @@ function abrirModalPago(dni, nom, pl, hoja, mo, plSoc, moSoc) {
           + 'debe $' + Number(_sc.faltaPesos).toLocaleString('es-AR') + '</span>';
         _montoSugerido = _sc.faltaPesos;
       }
+      // Cuota Social SIEMPRE se cobra 1 mes a la vez al valor base. Si la
+      // persona debe 2 meses de CS, son 2 cobros separados — no se acumula.
+      // Asi evitamos que un override del total deportivo baje AFA y deje CS
+      // en $18k (2 meses) cuando deberia ser $9k.
+      if (_esCS) _montoSugerido = Math.min(_montoSugerido || Number(i.monto), Number(i.monto));
       return '<label class="pago-plan-row" style="flex-wrap:wrap;gap:4px;">'
         + '<input type="checkbox" name="pp_check" value="' + idx + '" checked data-plan="' + i.plan + '" data-monto="' + _montoSugerido + '" onchange="recalcularTotalPago()">'
         + '<span class="emoji" style="font-size:16px;">' + icono + '</span>'
