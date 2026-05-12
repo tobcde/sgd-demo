@@ -359,6 +359,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   <div class="tab" onclick="cambiarTab(event,'admin')">&#x1F6E0;&#xFE0F; ADMINISTRACION</div>
   <div class="tab" onclick="cambiarTab(event,'reportes')">&#x1F4CA; REPORTES</div>
   <div class="tab" onclick="cambiarTab(event,'institucion')" style="color:var(--secondary);">&#x2699; INSTITUCION</div>
+  <div class="tab" onclick="cambiarTab(event,'emails')" style="color:#6db4e0;">&#x1F4E7; EMAILS</div>
   <div class="tab" onclick="cambiarTab(event,'ayuda')" style="color:#6de097;">&#x2753; AYUDA</div>
 </div>
 
@@ -1366,6 +1367,100 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
 </div>
 
+<!-- TAB EMAILS -->
+<div id="tab-emails" class="tab-content" style="display:none;">
+  <div style="padding:20px;max-width:960px;margin:0 auto;">
+    <div style="background:linear-gradient(135deg,#1a3a55,#0a1a2a);border:1px solid #4a8cb8;border-radius:12px;padding:20px;margin-bottom:20px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:1px;">&#x1F4E7; Emails</div>
+      <div style="font-size:13px;color:#aaa;margin-top:4px;">Configuración y envío de notificaciones al socio</div>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Estado de envíos</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Remitente</div><div id="em-remitente" style="font-size:13px;color:var(--text);margin-top:2px;word-break:break-all;">—</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Enviados hoy</div><div style="font-size:22px;font-weight:900;color:var(--secondary);"><span id="em-cuenta-hoy">0</span> <span style="font-size:12px;color:var(--muted);">/ <span id="em-cuota-dia">100</span></span></div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;">Cuota diaria</div><select id="em-cuota-tipo" onchange="emailGuardarCuota()" class="filter-select" style="margin-top:2px;"><option value="100">Gmail gratuito (100/día)</option><option value="1500">Workspace (1500/día)</option><option value="2000">Workspace EDU (2000/día)</option></select></div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--muted);">El contador se reinicia cada día a las 4:00 AM (hora del Pacífico, según Google).</div>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">&#x1F9FE; Comprobantes de pago</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+          <input type="checkbox" id="em-comp-on" onchange="emailGuardarConfig()">
+          <span style="font-size:14px;color:var(--text);">Habilitar envío de comprobantes</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+          <input type="checkbox" id="em-comp-auto" onchange="emailGuardarConfig()">
+          <span style="font-size:14px;color:var(--text);">Enviar automáticamente al cobrar (sin pedir confirmación)</span>
+        </label>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Hoy se enviaron <span id="em-comp-hoy" style="color:var(--secondary);font-weight:700;">0</span> comprobantes.</div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">&#x1F514; Recordatorios de cuota</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+          <input type="checkbox" id="em-rec-on" onchange="emailGuardarConfig()">
+          <span style="font-size:14px;color:var(--text);">Habilitar envío de recordatorios</span>
+        </label>
+        <button class="btn" onclick="emailAbrirRecordatorios()" style="background:linear-gradient(135deg,#1a7a3c,#6db4e0);color:white;padding:12px 20px;border:none;border-radius:8px;font-weight:700;cursor:pointer;align-self:flex-start;margin-top:6px;">&#x1F4E8; Enviar recordatorios ahora</button>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Última corrida: <span id="em-rec-ultima">—</span></div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+        <span>&#x1F4CA; Historial reciente</span>
+        <button class="btn" onclick="emailRefrescarHistorial()" style="background:var(--surface);color:var(--text);padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;">Refrescar</button>
+      </div>
+      <div id="em-historial" style="max-height:300px;overflow:auto;"><div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Cargando...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Recordatorios -->
+<div id="modalRecordatorios" class="modal">
+  <div class="modal-content" style="max-width:880px;width:95%;max-height:90vh;display:flex;flex-direction:column;padding:0;">
+    <div style="background:linear-gradient(135deg,#1a7a3c,#4a8cb8);padding:20px;color:white;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;">RECORDATORIOS DE CUOTA</div>
+        <div style="font-size:12px;opacity:.85;margin-top:2px;">Seleccioná a quiénes mandar el email</div>
+      </div>
+      <button onclick="document.getElementById('modalRecordatorios').classList.remove('open')" style="background:transparent;border:none;color:white;font-size:24px;cursor:pointer;">×</button>
+    </div>
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2);">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end;">
+        <div>
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Filtro</label>
+          <select id="em-rec-filtro" class="filter-select" onchange="emailRenderRecordatorios()">
+            <option value="todos_deben">Todos los que deben</option>
+            <option value="deben_1mes">Deben 1 mes</option>
+            <option value="deben_2mas">Deben 2+ meses</option>
+            <option value="todos_activos">Todos los socios activos</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Buscar</label>
+          <input id="em-rec-busq" class="filter-select" oninput="emailRenderRecordatorios()" placeholder="Nombre o DNI">
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn" onclick="emailRecSeleccionar('all')" style="background:var(--surface);color:var(--text);padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;flex:1;">Todos</button>
+          <button class="btn" onclick="emailRecSeleccionar('none')" style="background:var(--surface);color:var(--text);padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;flex:1;">Ninguno</button>
+        </div>
+      </div>
+    </div>
+    <div id="em-rec-lista" style="flex:1;overflow:auto;padding:8px 20px;min-height:200px;"><div style="text-align:center;color:var(--muted);font-size:13px;padding:30px;">Cargando…</div></div>
+    <div style="padding:16px 20px;border-top:1px solid var(--border);background:var(--surface2);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-radius:0 0 12px 12px;">
+      <div style="font-size:13px;color:var(--text);"><b id="em-rec-count">0</b> seleccionados · Cuota restante hoy: <span id="em-rec-restante" style="color:var(--secondary);font-weight:700;">—</span></div>
+      <button class="btn btn-save" onclick="emailEnviarRecordatorios()" style="padding:12px 24px;">&#x1F4E4; Enviar a seleccionados</button>
+    </div>
+  </div>
+</div>
+
 <!-- TAB AYUDA -->
 <div id="tab-ayuda" class="tab-content" style="display:none;">
 <div style="padding:20px;max-width:960px;margin:0 auto;">
@@ -1641,7 +1736,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.44</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.45</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -5528,6 +5623,9 @@ function guardarNuevoSocio() {
 // -- COMPROBANTE --------------------------------------------------
 function ofrecerEnvioComprobante(datos) {
   if(!datos) return;
+  if (!window._emailConfig) { try { emailCargarConfig(function(){ ofrecerEnvioComprobante(datos); }); } catch(_){} return; }
+  var cfg = window._emailConfig || {};
+  if (cfg.comprobantes_habilitado === false) return;
   document.getElementById('comp-nombre').innerText = datos.nombre||'';
   document.getElementById('comp-email').value = datos.email||'';
   document.getElementById('comp-plan').innerText = (datos.planAct||'') + (datos.plSoc ? ' + ' + datos.plSoc : '');
@@ -5535,6 +5633,7 @@ function ofrecerEnvioComprobante(datos) {
   document.getElementById('comp-periodo').innerText = datos.periodo||'';
   document.getElementById('comp-hasta').innerText = datos.vigente||'';
   document.getElementById('comp-cobrador').innerText = datos.cobrador||'';
+  if (cfg.comprobantes_auto && datos.email && datos.email.indexOf('@')>0) { enviarComprobanteEmail(); return; }
   document.getElementById('modalComprobante').classList.add('open');
 }
 function cerrarModalComprobante(){ document.getElementById('modalComprobante').classList.remove('open'); }
@@ -5595,8 +5694,22 @@ function enviarComprobanteEmail() {
         +'</body></html>';
     })(),
     pass:TOKEN, _noRetry:true},
-    function(r){ ocultarLoader(); if(r&&r.ok===false){alert('Error: '+(r.error||''));return;} cerrarModalComprobante(); toast('Comprobante enviado a '+email, 'ok'); },
-    function(e){ ocultarLoader(); alert('Error al enviar: ' + e); }
+    function(r){
+      ocultarLoader();
+      if(r&&r.ok===false){
+        try { emailAuditar('comprobante', email, 'Comprobante de pago', 'error', String(r.error||''), { dni: datos.dni, nombre: datos.nombre }); } catch(_){}
+        alert('Error: '+(r.error||''));
+        return;
+      }
+      try { emailAuditar('comprobante', email, 'Comprobante de pago', 'ok', '', { dni: datos.dni, nombre: datos.nombre }); } catch(_){}
+      cerrarModalComprobante();
+      toast('Comprobante enviado a '+email, 'ok');
+    },
+    function(e){
+      ocultarLoader();
+      try { emailAuditar('comprobante', email, 'Comprobante de pago', 'error', String(e||''), { dni: datos.dni, nombre: datos.nombre }); } catch(_){}
+      alert('Error al enviar: ' + e);
+    }
   );
 }
 
@@ -8779,6 +8892,7 @@ function cambiarTab(ev, id) {
   }
   if(id === 'institucion'){ cargarFormInstitucion(); cargarCamposExtra(); }
   if(id === 'admin'){ initEmojiPicker(); }
+  if(id === 'emails'){ emailIniciar(); }
 }
 
 // -- TOAST --------------------------------------------------------
@@ -9980,6 +10094,336 @@ function ejecutarRecategorizacion() {
 
   // Si no hay cambios de alumnos ni de cats (caso raro)
   if(total === 0) { ocultarLoader(); cerrarRecat(); toast('No hay cambios que aplicar', 'ok'); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EMAILS — Panel de admin + recordatorios + auditoria
+// ══════════════════════════════════════════════════════════════════
+window._emailConfig = null;
+window._emailHoy = { total: 0, comprobante: 0, recordatorio: 0, pass: 0 };
+window._emailRecCache = [];
+
+function emailCargarConfig(cb) {
+  db.collection('config').doc('emails').get().then(function(doc){
+    if (doc.exists) {
+      window._emailConfig = doc.data();
+    } else {
+      window._emailConfig = {
+        comprobantes_habilitado: true,
+        comprobantes_auto: false,
+        recordatorio_habilitado: true,
+        cuota_dia_tipo: 100
+      };
+    }
+    if (cb) cb();
+  }).catch(function(e){
+    console.error('[emails] cargarConfig:', e);
+    window._emailConfig = { comprobantes_habilitado: true, comprobantes_auto: false, recordatorio_habilitado: true, cuota_dia_tipo: 100 };
+    if (cb) cb();
+  });
+}
+
+function emailGuardarConfig() {
+  if (!window._emailConfig) return;
+  var c = window._emailConfig;
+  var compOn = document.getElementById('em-comp-on');     if (compOn)   c.comprobantes_habilitado = compOn.checked;
+  var compAuto = document.getElementById('em-comp-auto'); if (compAuto) c.comprobantes_auto       = compAuto.checked;
+  var recOn = document.getElementById('em-rec-on');       if (recOn)    c.recordatorio_habilitado = recOn.checked;
+  db.collection('config').doc('emails').set(c, { merge: true })
+    .then(function(){ toast('Configuración guardada', 'ok'); })
+    .catch(function(e){ toast('Error al guardar: ' + e.message, 'err'); });
+}
+
+function emailGuardarCuota() {
+  if (!window._emailConfig) return;
+  var sel = document.getElementById('em-cuota-tipo');
+  window._emailConfig.cuota_dia_tipo = Number(sel ? sel.value : 100) || 100;
+  var disp = document.getElementById('em-cuota-dia'); if (disp) disp.innerText = window._emailConfig.cuota_dia_tipo;
+  db.collection('config').doc('emails').set(window._emailConfig, { merge: true })
+    .then(function(){ toast('Cuota actualizada', 'ok'); })
+    .catch(function(e){ toast('Error: ' + e.message, 'err'); });
+  emailActualizarRestante();
+}
+
+function emailContarHoy(cb) {
+  var hoyStart = new Date(); hoyStart.setHours(0,0,0,0);
+  db.collection('auditoria_emails').where('fecha', '>=', hoyStart).get()
+    .then(function(snap){
+      var t = { total:0, comprobante:0, recordatorio:0, pass:0 };
+      snap.forEach(function(d){
+        var x = d.data();
+        if (x.estado !== 'ok') return;
+        t.total++;
+        if (t[x.tipo] !== undefined) t[x.tipo]++;
+      });
+      window._emailHoy = t;
+      if (cb) cb();
+    }).catch(function(e){
+      console.error('[emails] contarHoy:', e);
+      if (cb) cb();
+    });
+}
+
+function emailAuditar(tipo, destinatario, asunto, estado, error, socio) {
+  var _user = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+  return db.collection('auditoria_emails').add({
+    tipo: tipo, destinatario: destinatario || '', asunto: asunto || '',
+    estado: estado, error: error || '',
+    socioDni: socio ? (socio.dni || '') : '',
+    socioNombre: socio ? (socio.nombre || '') : '',
+    enviadoPor: _user,
+    fecha: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(e){ console.error('[emails] auditar:', e); });
+}
+
+function emailPintarPanel() {
+  if (!window._emailConfig) return;
+  var c = window._emailConfig;
+  var rem = (typeof INST !== 'undefined' && INST && INST.emailRemitente) ? INST.emailRemitente : '(cuenta del GAS owner)';
+  var elRem = document.getElementById('em-remitente'); if (elRem) elRem.innerText = rem;
+  var ctyp = c.cuota_dia_tipo || 100;
+  var sel = document.getElementById('em-cuota-tipo'); if (sel) sel.value = String(ctyp);
+  var cuotaDia = document.getElementById('em-cuota-dia'); if (cuotaDia) cuotaDia.innerText = ctyp;
+  var on = document.getElementById('em-comp-on'); if (on) on.checked = !!c.comprobantes_habilitado;
+  var auto = document.getElementById('em-comp-auto'); if (auto) auto.checked = !!c.comprobantes_auto;
+  var rec = document.getElementById('em-rec-on'); if (rec) rec.checked = !!c.recordatorio_habilitado;
+  var ch = document.getElementById('em-cuenta-hoy'); if (ch) ch.innerText = window._emailHoy.total;
+  var compHoy = document.getElementById('em-comp-hoy'); if (compHoy) compHoy.innerText = window._emailHoy.comprobante;
+  var ult = document.getElementById('em-rec-ultima');
+  if (ult) {
+    if (c.ultima_corrida_recordatorio) {
+      try {
+        var f = c.ultima_corrida_recordatorio.toDate ? c.ultima_corrida_recordatorio.toDate() : new Date(c.ultima_corrida_recordatorio);
+        var r = c.ultima_corrida_resultado || {};
+        ult.innerText = f.toLocaleString('es-AR') + ' — ' + (r.enviados||0) + ' enviados, ' + (r.fallos||0) + ' fallos';
+      } catch(_) { ult.innerText = '—'; }
+    } else { ult.innerText = '—'; }
+  }
+}
+
+function emailIniciar() {
+  emailCargarConfig(function(){
+    emailContarHoy(function(){
+      emailPintarPanel();
+      emailRenderHistorial();
+    });
+  });
+}
+
+function emailRenderHistorial() {
+  var el = document.getElementById('em-historial'); if (!el) return;
+  db.collection('auditoria_emails').orderBy('fecha','desc').limit(40).get()
+    .then(function(snap){
+      if (snap.empty) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px;">Sin envíos registrados</div>'; return; }
+      var rows = [];
+      snap.forEach(function(d){
+        var x = d.data();
+        var f = x.fecha && x.fecha.toDate ? x.fecha.toDate() : null;
+        var fstr = f ? f.toLocaleString('es-AR') : '—';
+        var icon = x.estado === 'ok' ? '&#x2705;' : '&#x274C;';
+        var col = x.estado === 'ok' ? '#6de097' : '#f85149';
+        var tipoLabel = {comprobante:'Comprobante', recordatorio:'Recordatorio', pass:'Pass temp'}[x.tipo] || x.tipo;
+        rows.push('<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;gap:10px;">'
+          + '<div style="flex:1;min-width:0;"><span style="color:'+col+';">'+icon+'</span> <b>'+tipoLabel+'</b> &rarr; '+(x.destinatario||'—')+(x.socioNombre?' <span style="color:var(--muted);">('+x.socioNombre+')</span>':'')+(x.error?'<div style="color:#f85149;font-size:10px;margin-left:18px;">'+x.error+'</div>':'')+'</div>'
+          + '<div style="color:var(--muted);font-size:11px;white-space:nowrap;">'+fstr+'</div></div>');
+      });
+      el.innerHTML = rows.join('');
+    }).catch(function(e){ el.innerHTML = '<div style="color:#f85149;font-size:12px;padding:20px;">Error: '+e.message+'</div>'; });
+}
+
+function emailRefrescarHistorial() {
+  emailContarHoy(function(){ emailPintarPanel(); emailRenderHistorial(); });
+}
+
+function emailActualizarRestante() {
+  var cuota = (window._emailConfig && window._emailConfig.cuota_dia_tipo) || 100;
+  var rest = Math.max(0, cuota - (window._emailHoy.total||0));
+  var el = document.getElementById('em-rec-restante'); if (el) el.innerText = rest;
+}
+
+function emailAbrirRecordatorios() {
+  if (!window._emailConfig || !window._emailConfig.recordatorio_habilitado) {
+    return alert('Primero habilitá "Recordatorios de cuota" en el panel.');
+  }
+  var f = document.getElementById('em-rec-filtro'); if (f) f.value = 'todos_deben';
+  var b = document.getElementById('em-rec-busq'); if (b) b.value = '';
+  document.getElementById('modalRecordatorios').classList.add('open');
+  emailContarHoy(function(){ emailActualizarRestante(); });
+  emailRenderRecordatorios();
+}
+
+function emailRenderRecordatorios() {
+  var lista = document.getElementById('em-rec-lista'); if (!lista) return;
+  var filtroEl = document.getElementById('em-rec-filtro');
+  var busqEl   = document.getElementById('em-rec-busq');
+  var filtro = filtroEl ? filtroEl.value : 'todos_deben';
+  var busq   = ((busqEl && busqEl.value)||'').toLowerCase().trim();
+
+  var socios = DB.jugadores.slice(1).filter(function(f){
+    var a = f[COL.ACTIVO];
+    if (!(a===true||String(a).toLowerCase()==='si')) return false;
+    if (busq) {
+      var nombre = ((f[COL.APELLIDO]||'')+' '+(f[COL.NOMBRE]||'')).toLowerCase();
+      var dni = (f[COL.DNI]||'').toString();
+      if (nombre.indexOf(busq)<0 && dni.indexOf(busq)<0) return false;
+    }
+    return true;
+  });
+
+  var items = [];
+  socios.forEach(function(f){
+    var cv = estadoCuotaV2(f);
+    var deuda = Number(cv.deuda) || 0;
+    var mesesDebe = (cv.detalle||[]).reduce(function(s, d){ return s + ((d.mesesAdeudados||[]).length); }, 0);
+    var pasa = true;
+    if (filtro === 'todos_deben') pasa = deuda > 0.5;
+    else if (filtro === 'deben_1mes') pasa = deuda > 0.5 && mesesDebe === 1;
+    else if (filtro === 'deben_2mas') pasa = deuda > 0.5 && mesesDebe >= 2;
+    else if (filtro === 'todos_activos') pasa = true;
+    if (!pasa) return;
+    var email = (f[COL.EMAIL]||'').toString().trim();
+    items.push({
+      dni: f[COL.DNI]||'',
+      nombre: ((f[COL.APELLIDO]||'')+' '+(f[COL.NOMBRE]||'')).trim(),
+      email: email,
+      deuda: deuda,
+      mesesDebe: mesesDebe,
+      detalle: cv.detalle,
+      tieneEmail: !!(email && email.indexOf('@')>0)
+    });
+  });
+
+  items.sort(function(a, b){ return b.deuda - a.deuda; });
+  window._emailRecCache = items;
+
+  if (!items.length) {
+    lista.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px;font-size:13px;">No hay socios que cumplan el filtro.</div>';
+    emailRecActualizarCount();
+    return;
+  }
+
+  var rows = items.map(function(it, idx){
+    var emailDisp = it.tieneEmail ? it.email : '<span style="color:#f85149;">sin email</span>';
+    var deudaDisp = it.deuda > 0 ? '$' + it.deuda.toLocaleString('es-AR') : 'al día';
+    var deudaColor = it.deuda > 0 ? '#f85149' : '#6de097';
+    var mesesLbl = it.mesesDebe > 0 ? (it.mesesDebe + ' mes' + (it.mesesDebe>1?'es':'')) : '—';
+    return '<label style="display:grid;grid-template-columns:30px 1fr 1.4fr auto;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--border);cursor:'+(it.tieneEmail?'pointer':'not-allowed')+';opacity:'+(it.tieneEmail?'1':'0.55')+';">'
+      + '<input type="checkbox" class="em-rec-check" data-idx="'+idx+'" '+(it.tieneEmail?'':'disabled')+' onchange="emailRecActualizarCount()">'
+      + '<div><div style="font-weight:600;color:var(--text);font-size:13px;">'+it.nombre+'</div><div style="color:var(--muted);font-size:11px;">DNI '+it.dni+'</div></div>'
+      + '<div style="font-size:12px;color:var(--muted);word-break:break-all;">'+emailDisp+'</div>'
+      + '<div style="text-align:right;font-weight:700;color:'+deudaColor+';font-size:13px;white-space:nowrap;">'+deudaDisp+'<div style="font-size:10px;color:var(--muted);font-weight:400;">'+mesesLbl+'</div></div>'
+      + '</label>';
+  }).join('');
+
+  lista.innerHTML = rows;
+  emailRecActualizarCount();
+}
+
+function emailRecSeleccionar(modo) {
+  var checks = document.querySelectorAll('.em-rec-check:not(:disabled)');
+  checks.forEach(function(c){ c.checked = (modo === 'all'); });
+  emailRecActualizarCount();
+}
+
+function emailRecActualizarCount() {
+  var n = document.querySelectorAll('.em-rec-check:checked').length;
+  var el = document.getElementById('em-rec-count'); if (el) el.innerText = n;
+  emailActualizarRestante();
+}
+
+function emailEnviarRecordatorios() {
+  var checks = document.querySelectorAll('.em-rec-check:checked');
+  if (!checks.length) return alert('No hay socios seleccionados.');
+
+  var cuota = (window._emailConfig && window._emailConfig.cuota_dia_tipo) || 100;
+  var restante = Math.max(0, cuota - (window._emailHoy.total||0));
+
+  var sel = [];
+  checks.forEach(function(c){
+    var idx = Number(c.getAttribute('data-idx'));
+    var it = window._emailRecCache[idx];
+    if (it && it.tieneEmail) sel.push(it);
+  });
+
+  if (sel.length > restante) {
+    if (!confirm('Estás por enviar ' + sel.length + ' emails, pero hoy solo quedan ' + restante + ' antes del límite de Gmail.\n\nSe van a enviar los primeros ' + restante + ' (los de mayor deuda) y el resto te queda para mañana.\n\n¿Continuar?')) return;
+    sel = sel.slice(0, restante);
+  } else if (!confirm('Enviar recordatorio a ' + sel.length + ' socios?')) return;
+
+  mostrarLoader('Enviando 0 / ' + sel.length + '...');
+  var idx = 0, ok = 0, fail = 0;
+  var hacer = function() {
+    if (idx >= sel.length) {
+      db.collection('config').doc('emails').set({
+        ultima_corrida_recordatorio: firebase.firestore.FieldValue.serverTimestamp(),
+        ultima_corrida_resultado: { enviados: ok, fallos: fail }
+      }, { merge: true });
+      ocultarLoader();
+      toast(ok + ' recordatorios enviados' + (fail ? ', ' + fail + ' fallos' : ''), fail ? 'warn' : 'ok');
+      document.getElementById('modalRecordatorios').classList.remove('open');
+      emailIniciar();
+      return;
+    }
+    var it = sel[idx];
+    mostrarLoader('Enviando ' + (idx+1) + ' / ' + sel.length + '... (' + it.nombre + ')');
+    var asunto = 'Recordatorio de cuota - ' + ((typeof INST !== 'undefined' && INST && INST.nombre) || 'Club');
+    var htmlBody = emailTemplateRecordatorio(it);
+    callScript({action:'sendEmail', emailDest: it.email, logoUrl: ((INST||{}).logoUrl||''), asunto: asunto, htmlBody: htmlBody}, function(){
+      ok++;
+      emailAuditar('recordatorio', it.email, asunto, 'ok', '', { dni: it.dni, nombre: it.nombre });
+      idx++; setTimeout(hacer, 600);
+    }, function(err){
+      fail++;
+      emailAuditar('recordatorio', it.email, asunto, 'error', String(err||''), { dni: it.dni, nombre: it.nombre });
+      idx++; setTimeout(hacer, 800);
+    });
+  };
+  hacer();
+}
+
+function emailTemplateRecordatorio(it) {
+  var _logoUrl = (INST && INST.logoUrl) ? getDriveDisplay(INST.logoUrl) : '';
+  var _logo = _logoUrl ? '<img src="'+_logoUrl+'" style="width:80px;height:80px;object-fit:contain;background:white;border-radius:10px;padding:6px;" alt="">' : '';
+  var _nombre = (INST && INST.nombre) || 'Club';
+  var _color = (INST && INST.colorPrimario) || '#1a7a3c';
+
+  var filas = [];
+  (it.detalle||[]).forEach(function(d){
+    (d.mesesAdeudados||[]).forEach(function(m){ filas.push({ mes: m.mes, plan: d.plan, falta: m.falta, parcial: m.parcial }); });
+  });
+  filas.sort(function(a,b){ return a.mes.localeCompare(b.mes); });
+  var nm = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var detalleHtml = filas.map(function(r){
+    var p = r.mes.split('-'); var mesNombre = (nm[Number(p[1])-1] || r.mes) + ' ' + p[0];
+    return '<tr><td style="padding:8px 14px;color:#aaa;font-size:13px;border-bottom:1px solid #2a2a2a;">'+mesNombre+'</td>'
+      + '<td style="padding:8px 14px;color:#ccc;font-size:13px;border-bottom:1px solid #2a2a2a;">'+r.plan+(r.parcial?' (parcial)':'')+'</td>'
+      + '<td style="padding:8px 14px;font-size:13px;font-weight:700;color:#f85149;text-align:right;border-bottom:1px solid #2a2a2a;">$'+Number(r.falta).toLocaleString('es-AR')+'</td></tr>';
+  }).join('');
+
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">'
+    +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f0;padding:30px 0;"><tr><td align="center">'
+    +'<table width="520" cellpadding="0" cellspacing="0" style="background:#0a0d0a;border-radius:14px;overflow:hidden;border:2px solid '+_color+';">'
+    +'<tr><td style="background:linear-gradient(135deg,'+_color+',#0f5228);padding:28px 32px;text-align:center;">'
+    +(_logo ? '<div style="margin-bottom:12px;">'+_logo+'</div>' : '')
+    +'<div style="font-family:Arial Black,sans-serif;font-size:20px;font-weight:900;color:white;text-transform:uppercase;letter-spacing:2px;">'+_nombre+'</div>'
+    +'<div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Recordatorio de cuota</div>'
+    +'</td></tr>'
+    +'<tr><td style="padding:24px 32px 8px;">'
+    +'<p style="color:#e8f0e8;font-size:15px;margin:0;">Hola <b style="color:#c9a227;">'+it.nombre+'</b>,</p>'
+    +'<p style="color:#7a927a;font-size:13px;margin:10px 0 16px;">Te recordamos que tenés una cuota pendiente. Acá el detalle:</p>'
+    +'</td></tr>'
+    +'<tr><td style="padding:0 32px 24px;">'
+    +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#121812;border-radius:10px;border:1px solid #253025;overflow:hidden;">'
+    +'<tr><td colspan="3" style="padding:10px 14px;background:#1a2a1a;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Detalle</td></tr>'
+    +(detalleHtml || '<tr><td colspan="3" style="padding:12px 14px;color:#888;text-align:center;">Sin detalle disponible</td></tr>')
+    +'<tr><td style="padding:14px;background:#1a2a1a;color:#fff;font-size:14px;font-weight:700;">TOTAL</td>'
+    +'<td style="padding:14px;background:#1a2a1a;"></td>'
+    +'<td style="padding:14px;background:#1a2a1a;color:#f85149;font-size:20px;font-weight:900;text-align:right;">$'+Number(it.deuda).toLocaleString('es-AR')+'</td></tr>'
+    +'</table>'
+    +'<p style="color:#7a927a;font-size:12px;margin:18px 0 0;text-align:center;">Si ya pagaste, ignorá este mensaje. Cualquier consulta, comunicate con secretaría.</p>'
+    +'</td></tr>'
+    +'<tr><td style="padding:16px;background:#050805;text-align:center;color:#5a6a5a;font-size:11px;">'+_nombre+' &middot; Mensaje automático</td></tr>'
+    +'</table></td></tr></table></body></html>';
 }
 
 </script>
