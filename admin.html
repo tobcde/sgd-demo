@@ -1738,7 +1738,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.48</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.49</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2360,6 +2360,9 @@ function inscToObj(doc) {
     monto: Number(d.monto)||0, desde: d.desde||'', hasta: d.hasta||'',
     obs: d.obs||'', descuentoHno: Number(d.descuentoHno)||0,
     hnoDe: d.hnoDe||'', _row: doc.id,
+    // manual=true: el monto fue seteado a mano (beca/excepcion) y NO se
+    // sobreescribe en cascadas masivas de precio.
+    manual: d.manual === true,
     // FASE 2
     planId: d.planId||'',
     _legacy: { plan: d.plan||'' }
@@ -2891,6 +2894,8 @@ function _fsDispatch(action, p, ok, err) {
         dni:normDoc(row[0]||''), nombre:row[1]||'', plan:_planNomI,
         monto:Number(row[3])||0, desde:row[4]||'', hasta:row[5]||'',
         obs:row[6]||'', descuentoHno:Number(row[7])||0, hnoDe:row[8]||'',
+        // Flag manual: monto distinto al precio configurado para esa categoria
+        manual: row[9] === true,
         // ── Migración Fase 1 ──
         planId: _planNomI ? resolveActId(_planNomI) : ''
       };
@@ -3443,11 +3448,12 @@ function renderInscripcionesModal(dni) {
     var montoBase = Number(i.monto);
     var montoEfectivo = descHno > 0 && descHno < montoBase ? montoBase - descHno : montoBase;
     var badgeHno = i.hnoDe ? ' <span style="background:rgba(201,162,39,.2);color:var(--secondary);font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;">HNO DE ' + i.hnoDe + '</span>' : '';
+    var badgeManual = i.manual === true ? ' <span style="background:rgba(255,184,77,.2);color:#ffb84d;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;" title="Monto manual / beca: no se sobrescribe en cambios de precio">&#x270B; MANUAL</span>' : '';
     var badgeDesc = descHno > 0 ? '<div style="font-size:10px;color:var(--muted);">Base $' + montoBase.toLocaleString('es-AR') + ' - $' + descHno.toLocaleString('es-AR') + '</div>' : '';
     return '<div class="insc-row' + (baja ? ' insc-baja' : '') + '">'
       + '<span style="font-size:18px;">' + (icono ? iconoHTML(icono, 22) : (emojiPorNombre(i.plan) || '&#x1F4CB;')) + '</span>'
       + '<div style="flex:1;">'
-      + '<div class="insc-plan">' + i.plan + (baja ? ' <span style="color:var(--red);font-size:10px;">[BAJA]</span>' : '') + badgeHno + '</div>'
+      + '<div class="insc-plan">' + i.plan + (baja ? ' <span style="color:var(--red);font-size:10px;">[BAJA]</span>' : '') + badgeHno + badgeManual + '</div>'
       + '<div class="insc-fechas">Desde ' + i.desde + ' &middot; ' + hastaStr + (i.obs ? ' &middot; ' + i.obs : '') + '</div>'
       + '</div>'
       + '<div style="text-align:right;"><div class="insc-monto">$' + montoEfectivo.toLocaleString('es-AR') + '</div>' + badgeDesc + '</div>'
@@ -3508,11 +3514,16 @@ function confirmarInscripcion() {
   var f = DB.jugadores[itemSel.arrIdx];
   var dni = (f[COL.DNI]||f[COL.TARJETA]||'').toString();
   var nombre = (f[COL.APELLIDO]||'') + ' ' + (f[COL.NOMBRE]||'');
-  var row = [dni, nombre, plan, Number(monto), desde, hasta||'', obs, descuentoHno||'', hnoDe||''];
+  // Detectar si el monto difiere del precio configurado para (plan, categoriaApp).
+  // Si difiere => es manual (beca/excepcion) y queda blindado contra cascadas.
+  var _catSocio  = (f[COL.CATEGORIA_APP]||'');
+  var _precioCat = getPrecio(plan, _catSocio);
+  var _esManual  = (_precioCat !== null && Number(monto) !== Number(_precioCat));
+  var row = [dni, nombre, plan, Number(monto), desde, hasta||'', obs, descuentoHno||'', hnoDe||'', _esManual];
   mostrarLoader('Guardando inscripcion...');
   callScript({action:'addInscripcion', rowArray:row, pass:TOKEN, _noRetry:true}, function(r){
     var _row = r && r.fila ? r.fila : (DB.inscripciones.length + 2);
-    DB.inscripciones.push({dni:dni, nombre:nombre, plan:plan, monto:Number(monto), desde:desde, hasta:hasta||'', obs:obs, descuentoHno:descuentoHno, hnoDe:hnoDe, _row:_row});
+    DB.inscripciones.push({dni:dni, nombre:nombre, plan:plan, monto:Number(monto), desde:desde, hasta:hasta||'', obs:obs, descuentoHno:descuentoHno, hnoDe:hnoDe, manual:_esManual, _row:_row});
     renderInscripcionesModal(dni);
     cerrarModalInscripcion();
     ocultarLoader();
@@ -7045,7 +7056,53 @@ function guardarPrecio() {
     renderListPrecios();
     poblarSelectsPrecios();
     toast('Precio guardado', 'ok');
+    // Cascada: ofrecer actualizar las inscripciones existentes que NO son manuales.
+    ofrecerCascadaPrecio(act, cat, monto);
   }, function(e){ ocultarLoader(); alert('Error: '+e); });
+}
+
+// Cascada de precio: actualiza el monto de todas las inscripciones (plan x categoria)
+// excepto las marcadas como manual (becas/excepciones). Pide confirmacion antes.
+function ofrecerCascadaPrecio(actividad, categoria, montoNuevo) {
+  if (!actividad || !categoria || !montoNuevo) return;
+  var afectadas = [];
+  (DB.inscripciones||[]).forEach(function(insc){
+    if ((insc.plan||'') !== actividad) return;
+    if (insc.manual === true) return;
+    if (Number(insc.monto) === Number(montoNuevo)) return;
+    var socio = DB.jugadores.slice(1).find(function(f){
+      return (f[COL.DNI]||'').toString().trim() === (insc.dni||'').toString().trim();
+    });
+    if (!socio) return;
+    if ((socio[COL.CATEGORIA_APP]||'') !== categoria) return;
+    afectadas.push(insc);
+  });
+  if (afectadas.length === 0) return;
+  var omitidas = (DB.inscripciones||[]).filter(function(insc){
+    if ((insc.plan||'') !== actividad) return false;
+    if (insc.manual !== true) return false;
+    var socio = DB.jugadores.slice(1).find(function(f){
+      return (f[COL.DNI]||'').toString().trim() === (insc.dni||'').toString().trim();
+    });
+    return socio && (socio[COL.CATEGORIA_APP]||'') === categoria;
+  }).length;
+  var msg = 'Detectamos ' + afectadas.length + ' inscripcion' + (afectadas.length>1?'es':'') + ' activas de "' + actividad + '" (' + categoria + ') con precio distinto a $' + Number(montoNuevo).toLocaleString('es-AR') + '.\n\n¿Querés actualizarlas todas al nuevo precio?';
+  if (omitidas > 0) msg += '\n\n(Se respetan ' + omitidas + ' inscripcion' + (omitidas>1?'es':'') + ' marcada' + (omitidas>1?'s':'') + ' como manual/beca — no se tocan.)';
+  if (!confirm(msg)) return;
+  mostrarLoader('Actualizando ' + afectadas.length + ' inscripciones...');
+  var batch = db.batch();
+  afectadas.forEach(function(insc){
+    batch.update(db.collection('inscripciones').doc(insc._row), { monto: Number(montoNuevo) });
+    insc.monto = Number(montoNuevo);
+  });
+  batch.commit().then(function(){
+    ocultarLoader();
+    toast(afectadas.length + ' inscripcion' + (afectadas.length>1?'es':'') + ' actualizada' + (afectadas.length>1?'s':''), 'ok');
+    try { renderPlayers(); } catch(_){}
+  }).catch(function(e){
+    ocultarLoader();
+    alert('Error al actualizar inscripciones: ' + (e && e.message ? e.message : e));
+  });
 }
 
 function getPrecio(actividad, categoria) {
