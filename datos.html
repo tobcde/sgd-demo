@@ -208,7 +208,7 @@ video{width:100%;display:block;}
         <h3>&#x1F4CB; Qu&eacute; necesit&aacute;s a mano</h3>
         <ul>
           <li>DNI (frente y dorso)</li>
-          <li>Foto tipo carnet (opcional)</li>
+          <li>Foto tipo carnet (obligatoria)</li>
           <li>Certificado m&eacute;dico / apto f&iacute;sico (opcional &mdash; imagen o PDF)</li>
           <li>Email y celular de contacto</li>
           <li>Datos de 1 o 2 contactos de emergencia</li>
@@ -396,7 +396,7 @@ video{width:100%;display:block;}
 <div class="step" id="step2">
   <div class="card">
     <div class="card-title">&#x1F4F7; Documento — Dorso</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Fotografiá el dorso del documento (opcional pero recomendado).</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Fotografiá el dorso del documento. <b style="color:var(--red);">Obligatorio</b> — el dorso tiene el domicilio que necesitamos para el registro.</p>
     <button class="btn btn-cam" onclick="toggleCam(2)" id="btn-cam2">&#x1F3A5; Usar cámara</button>
     <div class="cam-wrap" id="cam2-wrap">
       <video id="cam2-video" autoplay playsinline></video>
@@ -415,7 +415,7 @@ video{width:100%;display:block;}
   </div>
   <div class="btn-row">
     <button class="btn btn-outline" onclick="irPaso(1)">&#x2190; Volver</button>
-    <button class="btn btn-primary" id="btn-sig2" onclick="procesarOCR()">Procesar &#x2192;</button>
+    <button class="btn btn-primary" id="btn-sig2" onclick="procesarOCR()" disabled>Procesar &#x2192;</button>
   </div>
 </div>
 
@@ -455,7 +455,7 @@ video{width:100%;display:block;}
     </div>
     <div class="upload-zone" id="zona-foto" style="padding:18px;">
       <div class="upload-zone-icon">&#x1F933;</div>
-      <div class="upload-zone-label" style="margin-bottom:12px;">Foto tipo carnet (opcional)</div>
+      <div class="upload-zone-label" style="margin-bottom:12px;">Foto tipo carnet <b style="color:var(--red);">(obligatoria)</b></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
         <label class="btn btn-cam" style="flex:1 1 120px;margin:0;cursor:pointer;">
           &#x1F933; Selfie
@@ -499,7 +499,7 @@ video{width:100%;display:block;}
 
   <div class="btn-row">
     <button class="btn btn-outline" onclick="irPaso(3)">&#x2190; Volver</button>
-    <button class="btn btn-primary" onclick="irPaso(5)">Continuar &#x2192;</button>
+    <button class="btn btn-primary" onclick="validarPaso4YContinuar()">Continuar &#x2192;</button>
   </div>
 </div>
 
@@ -1046,6 +1046,7 @@ function setImagen(n, data) {
     prevWrap.style.display = 'block';
 
     if (n === 1) document.getElementById('btn-sig1').disabled = false;
+    if (n === 2) { var _b2=document.getElementById('btn-sig2'); if (_b2) _b2.disabled = false; }
   });
 }
 
@@ -1054,6 +1055,7 @@ function quitarImg(n) {
   document.getElementById('prev'+n+'-wrap').style.display='none';
   document.getElementById('zona'+n).style.display='block';
   if (n===1) document.getElementById('btn-sig1').disabled=true;
+  if (n===2) { var _b2=document.getElementById('btn-sig2'); if (_b2) _b2.disabled = true; }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1268,9 +1270,11 @@ function renderResumen() {
   html += '</div>';
 
   html += '<div class="resumen-section"><div class="resumen-title">Archivos</div>';
+  var _dorsoOk = _tieneDorso();
+  var _fotoOk  = _tieneFoto();
   html += '<div class="resumen-row"><span class="resumen-label">Doc. Frente</span><span class="resumen-val">'+(S.imgFront?'<span style="color:#6de097;">&#x2713; Listo</span>':'<span style="color:var(--red);">&#x2717; No cargado</span>')+'</span></div>';
-  html += '<div class="resumen-row"><span class="resumen-label">Doc. Dorso</span><span class="resumen-val">'+(S.imgBack?'<span style="color:#6de097;">&#x2713; Listo</span>':'<span style="color:var(--muted);">No cargado</span>')+'</span></div>';
-  html += '<div class="resumen-row"><span class="resumen-label">Foto</span><span class="resumen-val">'+(S.foto?'<span style="color:#6de097;">&#x2713; Lista</span>':'<span style="color:var(--muted);">No cargada</span>')+'</span></div>';
+  html += '<div class="resumen-row"><span class="resumen-label">Doc. Dorso <span style="color:var(--red);font-size:10px;">*</span></span><span class="resumen-val">'+(_dorsoOk?'<span style="color:#6de097;">&#x2713; Listo</span>':'<span style="color:var(--red);">&#x2717; Obligatorio</span>')+'</span></div>';
+  html += '<div class="resumen-row"><span class="resumen-label">Foto <span style="color:var(--red);font-size:10px;">*</span></span><span class="resumen-val">'+(_fotoOk?'<span style="color:#6de097;">&#x2713; Lista</span>':'<span style="color:var(--red);">&#x2717; Obligatoria</span>')+'</span></div>';
   html += '<div class="resumen-row"><span class="resumen-label">Certificado</span><span class="resumen-val">'+(S.apto?'<span style="color:#6de097;">&#x2713; Cargado</span>':'<span style="color:var(--muted);">No cargado</span>')+'</span></div>';
   html += '</div>';
 
@@ -1284,7 +1288,33 @@ function renderResumen() {
 // ══════════════════════════════════════════════════════════════════
 // GUARDAR — orquesta Drive + Firestore
 // ══════════════════════════════════════════════════════════════════
+// Helpers para validar archivos obligatorios (foto carnet + DNI dorso)
+function _tieneFoto()  { return !!S.foto    || !!(S.sistemaData && S.sistemaData.foto); }
+function _tieneDorso() { return !!S.imgBack || !!(S.sistemaData && S.sistemaData.dniDorso); }
+
+function validarPaso4YContinuar() {
+  if (!_tieneFoto()) {
+    toast('La foto tipo carnet es obligatoria', 'err');
+    var zona = document.getElementById('zona-foto');
+    if (zona) zona.scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
+  }
+  irPaso(5);
+}
+
 function confirmarGuardar() {
+  // Defense in depth: si por algun motivo se salto la validacion del paso 4 o 2,
+  // bloquear aca y mandar al paso correspondiente.
+  if (!_tieneDorso()) {
+    toast('Falta el dorso del DNI', 'err');
+    irPaso(2);
+    return;
+  }
+  if (!_tieneFoto()) {
+    toast('Falta la foto tipo carnet', 'err');
+    irPaso(4);
+    return;
+  }
   var campos = getCamposEditados();
   var dni = normalizarDni((S.ocrData && S.ocrData.dni) || campos.dni || '');
   if (!dni) { toast('No se pudo determinar el DNI', 'err'); return; }
