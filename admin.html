@@ -1738,7 +1738,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.49</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.50</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -7086,23 +7086,43 @@ function ofrecerCascadaPrecio(actividad, categoria, montoNuevo) {
     });
     return socio && (socio[COL.CATEGORIA_APP]||'') === categoria;
   }).length;
-  var msg = 'Detectamos ' + afectadas.length + ' inscripcion' + (afectadas.length>1?'es':'') + ' activas de "' + actividad + '" (' + categoria + ') con precio distinto a $' + Number(montoNuevo).toLocaleString('es-AR') + '.\n\n¿Querés actualizarlas todas al nuevo precio?';
-  if (omitidas > 0) msg += '\n\n(Se respetan ' + omitidas + ' inscripcion' + (omitidas>1?'es':'') + ' marcada' + (omitidas>1?'s':'') + ' como manual/beca — no se tocan.)';
-  if (!confirm(msg)) return;
-  mostrarLoader('Actualizando ' + afectadas.length + ' inscripciones...');
-  var batch = db.batch();
-  afectadas.forEach(function(insc){
-    batch.update(db.collection('inscripciones').doc(insc._row), { monto: Number(montoNuevo) });
-    insc.monto = Number(montoNuevo);
-  });
-  batch.commit().then(function(){
-    ocultarLoader();
-    toast(afectadas.length + ' inscripcion' + (afectadas.length>1?'es':'') + ' actualizada' + (afectadas.length>1?'s':''), 'ok');
-    try { renderPlayers(); } catch(_){}
-  }).catch(function(e){
-    ocultarLoader();
-    alert('Error al actualizar inscripciones: ' + (e && e.message ? e.message : e));
-  });
+  // Tomamos hasta 8 ejemplos para mostrar en el modal
+  var ejemplos = afectadas.slice(0, 8).map(function(insc){
+    var socio = DB.jugadores.slice(1).find(function(f){ return (f[COL.DNI]||'').toString().trim() === (insc.dni||'').toString().trim(); });
+    var nom = socio ? ((socio[COL.APELLIDO]||'')+' '+(socio[COL.NOMBRE]||'')).trim() : (insc.nombre||insc.dni);
+    return '<div style="display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid var(--border);font-size:12px;">'
+      + '<span style="color:var(--text);">' + nom + '</span>'
+      + '<span style="color:var(--muted);">$' + Number(insc.monto||0).toLocaleString('es-AR') + ' &rarr; <b style="color:#6de097;">$' + Number(montoNuevo).toLocaleString('es-AR') + '</b></span>'
+      + '</div>';
+  }).join('');
+  var extra = afectadas.length > 8 ? '<div style="text-align:center;color:var(--muted);font-size:11px;padding:6px;">y ' + (afectadas.length - 8) + ' más...</div>' : '';
+  var omitInfo = omitidas > 0
+    ? '<div style="margin-top:14px;padding:10px 12px;background:rgba(255,184,77,.1);border:1px solid rgba(255,184,77,.3);border-radius:8px;color:#ffb84d;font-size:12px;"><b>&#x270B; ' + omitidas + ' inscripcion' + (omitidas>1?'es':'') + ' marcada' + (omitidas>1?'s':'') + ' como manual/beca</b> — no se toca' + (omitidas>1?'n':'') + '.</div>'
+    : '';
+  var msg = '<div style="font-size:14px;color:var(--text);margin-bottom:14px;">'
+    + 'Hay <b style="color:var(--secondary);">' + afectadas.length + ' inscripcion' + (afectadas.length>1?'es':'') + '</b> activas de <b>"' + actividad + '"</b> (' + categoria + ') con precio distinto a <b style="color:#6de097;">$' + Number(montoNuevo).toLocaleString('es-AR') + '</b>.'
+    + '</div>'
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:280px;overflow-y:auto;">'
+    + ejemplos + extra
+    + '</div>'
+    + omitInfo
+    + '<div style="margin-top:14px;font-size:12px;color:var(--muted);">¿Actualizar todas al nuevo precio?</div>';
+  sgdConfirm(msg, function(){
+    mostrarLoader('Actualizando ' + afectadas.length + ' inscripciones...');
+    var batch = db.batch();
+    afectadas.forEach(function(insc){
+      batch.update(db.collection('inscripciones').doc(insc._row), { monto: Number(montoNuevo) });
+      insc.monto = Number(montoNuevo);
+    });
+    batch.commit().then(function(){
+      ocultarLoader();
+      toast(afectadas.length + ' inscripcion' + (afectadas.length>1?'es':'') + ' actualizada' + (afectadas.length>1?'s':''), 'ok');
+      try { renderPlayers(); } catch(_){}
+    }).catch(function(e){
+      ocultarLoader();
+      alert('Error al actualizar inscripciones: ' + (e && e.message ? e.message : e));
+    });
+  }, 'APLICAR A ' + afectadas.length);
 }
 
 function getPrecio(actividad, categoria) {
