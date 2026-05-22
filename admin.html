@@ -595,11 +595,25 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           <div style="flex:1;min-width:200px;">
             <label class="filter-label">Tabla a importar / exportar</label>
             <select id="impTablaSel" class="edit-input" style="width:100%;margin-top:4px;" onchange="impCambiarTabla(this.value)">
-              <option value="socios">&#x1F465; Socios</option>
-              <option value="inscripciones">&#x1F4CB; Inscripciones</option>
-              <option value="cuotas">&#x1F4B0; Pagos / Cuotas</option>
-              <option value="config_precios">&#x1F4B5; Precios (Actividad × Categoría)</option>
+              <optgroup label="── Catálogos (sin dependencias) ──">
+                <option value="config_actividades">&#x26BD; Actividades</option>
+                <option value="config_sedes">&#x1F3DF;&#xFE0F; Sedes</option>
+                <option value="profesores">&#x1F468;&#x200D;&#x1F3EB; Profesores</option>
+              </optgroup>
+              <optgroup label="── Dependen de catálogos ──">
+                <option value="config_categorias">&#x1F4D1; Categorías (necesita Actividades)</option>
+                <option value="horarios">&#x1F4C5; Horarios (necesita Actividades/Sedes/Categorías/Profesores)</option>
+                <option value="config_precios">&#x1F4B5; Precios (necesita Actividades/Categorías)</option>
+              </optgroup>
+              <optgroup label="── Personas y movimientos ──">
+                <option value="socios" selected>&#x1F465; Socios (necesita Categorías)</option>
+                <option value="inscripciones">&#x1F4CB; Inscripciones (necesita Socios/Actividades)</option>
+                <option value="cuotas">&#x1F4B0; Pagos / Cuotas (necesita Socios/Actividades)</option>
+              </optgroup>
             </select>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+              &#x1F4A1; <b>Orden recomendado para cliente nuevo</b>: Actividades → Sedes → Profesores → Categorías → Horarios → Precios → Socios → Inscripciones → Pagos.
+            </div>
           </div>
         </div>
         <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">
@@ -1769,23 +1783,40 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   <div class="ayuda-titulo">&#x1F4E5; 9. Importar / Exportar datos (Excel/CSV)</div>
   <p class="ayuda-p">Permite cargar masivamente datos desde un archivo Excel/CSV o descargar los datos actuales para backup, edición externa o migración. Se encuentra en <strong>Administración → primera card: 📥 Importar / Exportar datos</strong>.</p>
 
-  <div class="ayuda-subtitulo">Tablas disponibles</div>
+  <div class="ayuda-subtitulo">Tablas disponibles (9)</div>
   <div class="ayuda-tabla">
     <div class="ayuda-fila-h"><div>Tabla</div><div>Para qué sirve</div></div>
-    <div class="ayuda-fila"><div>&#x1F465; Socios</div><div>Cargar el padrón completo del club al iniciar, o agregar grupos nuevos de socios.</div></div>
-    <div class="ayuda-fila"><div>&#x1F4CB; Inscripciones</div><div>Migrar los planes activos (qué actividad y monto paga cada socio).</div></div>
-    <div class="ayuda-fila"><div>&#x1F4B0; Pagos / Cuotas</div><div>Importar el historial de pagos anteriores al uso del sistema.</div></div>
-    <div class="ayuda-fila"><div>&#x1F4B5; Precios</div><div>Cargar el catálogo de precios por actividad × categoría.</div></div>
+    <div class="ayuda-fila"><div>&#x26BD; Actividades</div><div>Catálogo de actividades/planes (ej: Futsala, Cuota Social, Mixto). <b>Tabla raíz</b>: no depende de nadie.</div></div>
+    <div class="ayuda-fila"><div>&#x1F3DF;&#xFE0F; Sedes</div><div>Lugares físicos donde se entrena. <b>Tabla raíz</b>.</div></div>
+    <div class="ayuda-fila"><div>&#x1F468;&#x200D;&#x1F3EB; Profesores</div><div>Personal docente. Crea automáticamente el login en Firebase Auth con email <code>DNI@sgd.app</code> y contraseña = DNI.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4D1; Categorías</div><div>Divisiones por edad/género (ej: Sub-15 Masculino). <b>Depende de:</b> Actividades.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4C5; Horarios</div><div>Turnos de entrenamiento. <b>Depende de:</b> Categorías, Sedes, Actividades, Profesores.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4B5; Precios</div><div>Monto por combinación Actividad × Categoría. <b>Depende de:</b> Actividades, Categorías.</div></div>
+    <div class="ayuda-fila"><div>&#x1F465; Socios</div><div>Padrón completo del club. <b>Depende de:</b> Categorías.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4CB; Inscripciones</div><div>Qué actividad/monto paga cada socio. <b>Depende de:</b> Socios, Actividades.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4B0; Pagos / Cuotas</div><div>Historial de pagos. <b>Depende de:</b> Socios, Actividades.</div></div>
   </div>
+
+  <div class="ayuda-subtitulo">Cómo funcionan los IDs internos</div>
+  <p class="ayuda-p">Firestore guarda <b>tanto el nombre como el ID</b> de las referencias. Ejemplo: una inscripción tiene <code>plan: "Futsala"</code> + <code>planId: "abc123"</code>. Los joins se hacen por <code>planId</code> (resiste renames), pero el nombre queda como fallback si el ID se borra.</p>
+  <p class="ayuda-p">Al importar, vos pasás el <strong>nombre</strong> de la actividad/categoría/etc. y el sistema busca el ID automáticamente con <code>resolveXxxId(nombre)</code>. Si el nombre no matchea con nada en memoria, el ID queda vacío y el sistema usa el fallback de nombre (no rompe nada, pero los reportes pueden verse desordenados).</p>
+
+  <div class="ayuda-subtitulo">Refresh automático de índices</div>
+  <p class="ayuda-p">Cuando importás <b>Actividades</b>, <b>Sedes</b>, <b>Categorías</b> o <b>Profesores</b>, el sistema recarga esa tabla desde Firestore y reconstruye los índices nombre→ID. Así, la siguiente import (de una tabla hija) resuelve correctamente las referencias. Vas a ver el mensaje <i>"índices actualizados"</i> en el toast de éxito.</p>
 
   <div class="ayuda-subtitulo">Flujo recomendado para un cliente nuevo</div>
   <ol class="ayuda-lista">
-    <li><strong>Configurar categorías y actividades primero</strong> (tab Administración → cards "Categorías" y "Actividades"). Sin esto, los socios importados no tendrán categoría válida.</li>
-    <li><strong>Importar Socios</strong>: bajar la plantilla, completar con los datos del cliente, subir.</li>
-    <li><strong>Importar Inscripciones</strong>: una fila por socio × plan. Si el socio paga 2 actividades (ej: Futsala + Cuota Social), son 2 filas con el mismo DNI.</li>
-    <li><strong>Importar Pagos históricos</strong> (opcional): últimos 3-12 meses de cobros para tener el saldo de cada socio real desde día 1.</li>
-    <li><strong>Importar Precios</strong> (opcional): si no se importa, los precios se ponen manualmente desde Administración → Precios.</li>
+    <li><strong>Actividades</strong> — qué se enseña. Sin esto, nada referencia bien.</li>
+    <li><strong>Sedes</strong> — dónde se entrena.</li>
+    <li><strong>Profesores</strong> — quiénes enseñan. Genera auth automático.</li>
+    <li><strong>Categorías</strong> — qué grupos hay y a qué actividades pertenecen.</li>
+    <li><strong>Horarios</strong> — qué turno se hace cada día, en qué sede, con qué profe.</li>
+    <li><strong>Precios</strong> — monto por (actividad × categoría). Opcional al inicio (después se puede llenar desde Administración → Precios).</li>
+    <li><strong>Socios</strong> — padrón del club. Acá ya pueden tener categoría asignada.</li>
+    <li><strong>Inscripciones</strong> — qué paga cada socio (una fila por plan, ej: Futsala + Cuota Social = 2 filas mismo DNI).</li>
+    <li><strong>Pagos / Cuotas</strong> — historial. Opcional pero útil para arrancar con saldos reales.</li>
   </ol>
+  <div class="ayuda-nota">Si seguís este orden, todas las foreign keys se resuelven solas. Si te salteás un paso (ej: Categorías antes de Actividades), el sistema no rompe pero el campo <code>actividadesIds[]</code> de Categorías queda vacío hasta que reimportes.</div>
 
   <div class="ayuda-subtitulo">Las 3 acciones disponibles</div>
   <div class="ayuda-tabla">
@@ -1844,6 +1875,60 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </div>
   <div class="ayuda-nota">Los pagos importados NO se deduplican (se permite cargar la misma fila 2 veces). Tené cuidado de no subir el mismo archivo 2 veces.</div>
 
+  <p class="ayuda-p" style="margin-top:14px;"><strong style="color:var(--secondary);">&#x26BD; Actividades</strong></p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
+    <div class="ayuda-fila"><div>Nombre *</div><div>Nombre único de la actividad (ej: Futsala, Cuota Social, AFA)</div></div>
+    <div class="ayuda-fila"><div>Ícono / Emoji</div><div>Emoji que aparece en la app (ej: ⚽, 🪪, 🏀)</div></div>
+    <div class="ayuda-fila"><div>Color (hex)</div><div>Color de identificación. Formato <code>#RRGGBB</code> (ej: #1a7a3c)</div></div>
+    <div class="ayuda-fila"><div>Monto sugerido</div><div>Precio mensual base de la actividad. Se sobreescribe por categoría desde Precios.</div></div>
+  </div>
+
+  <p class="ayuda-p" style="margin-top:14px;"><strong style="color:var(--secondary);">&#x1F3DF;&#xFE0F; Sedes</strong></p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
+    <div class="ayuda-fila"><div>Nombre *</div><div>Nombre único de la sede</div></div>
+    <div class="ayuda-fila"><div>Dirección</div><div>Texto libre</div></div>
+    <div class="ayuda-fila"><div>Observaciones</div><div>Texto libre</div></div>
+  </div>
+
+  <p class="ayuda-p" style="margin-top:14px;"><strong style="color:var(--secondary);">&#x1F468;&#x200D;&#x1F3EB; Profesores</strong></p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
+    <div class="ayuda-fila"><div>Nombre completo *</div><div>Texto libre</div></div>
+    <div class="ayuda-fila"><div>DNI *</div><div>Solo números. Es el identificador y se usa también para el login.</div></div>
+    <div class="ayuda-fila"><div>Fecha de nacimiento</div><div>DD/MM/AAAA o AAAA-MM-DD</div></div>
+    <div class="ayuda-fila"><div>Email</div><div>Email del profe (notificaciones)</div></div>
+    <div class="ayuda-fila"><div>Telegram (@usuario)</div><div>Usuario sin el <code>@</code> inicial</div></div>
+    <div class="ayuda-fila"><div>Telegram chat ID</div><div>ID del chat para enviar notificaciones por bot</div></div>
+  </div>
+  <div class="ayuda-nota">Al importar, se crea automáticamente el usuario en Firebase Auth con email <code>DNI@sgd.app</code> y contraseña inicial = DNI. Le pide cambiar la pass al primer login.</div>
+
+  <p class="ayuda-p" style="margin-top:14px;"><strong style="color:var(--secondary);">&#x1F4D1; Categorías</strong></p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
+    <div class="ayuda-fila"><div>Nombre *</div><div>Nombre único (ej: Sub-15, Senior, Infantil)</div></div>
+    <div class="ayuda-fila"><div>Color (hex)</div><div>Color del badge en la app</div></div>
+    <div class="ayuda-fila"><div>Año desde</div><div>Año de nacimiento mínimo (ej: 2010)</div></div>
+    <div class="ayuda-fila"><div>Año hasta</div><div>Año de nacimiento máximo (ej: 2011)</div></div>
+    <div class="ayuda-fila"><div>Género</div><div>Masculino / Femenino / Mixto</div></div>
+    <div class="ayuda-fila"><div>Actividades</div><div>Lista de actividades separadas por coma o punto y coma (ej: "Futsala, Cuota Social")</div></div>
+  </div>
+  <div class="ayuda-nota">Las actividades referenciadas deben existir previamente. Si una no matchea, el ID queda vacío pero el nombre se guarda.</div>
+
+  <p class="ayuda-p" style="margin-top:14px;"><strong style="color:var(--secondary);">&#x1F4C5; Horarios</strong></p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
+    <div class="ayuda-fila"><div>Día *</div><div>Lunes, Martes, Miércoles, Jueves, Viernes, Sábado, Domingo</div></div>
+    <div class="ayuda-fila"><div>Hora *</div><div>Formato HH:MM (ej: 18:00)</div></div>
+    <div class="ayuda-fila"><div>Sede</div><div>Nombre exacto de una sede ya cargada</div></div>
+    <div class="ayuda-fila"><div>Profesores</div><div>DNIs de profes separados por coma (ej: "25000123, 30111222"). Deben existir en Profesores.</div></div>
+    <div class="ayuda-fila"><div>Categoría / Grupo *</div><div>Nombre exacto de una categoría ya cargada</div></div>
+    <div class="ayuda-fila"><div>Actividad</div><div>Nombre exacto de una actividad ya cargada</div></div>
+    <div class="ayuda-fila"><div>Modalidad</div><div>Masculino / Femenino / Mixto</div></div>
+  </div>
+  <div class="ayuda-nota">Si la categoría no existe, la fila se descarta con error. Sede, actividad y profesores son opcionales pero si están y no matchean, el ID queda vacío.</div>
+
   <p class="ayuda-p" style="margin-top:14px;"><strong style="color:var(--secondary);">&#x1F4B5; Precios (Actividad × Categoría)</strong></p>
   <div class="ayuda-tabla">
     <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
@@ -1856,10 +1941,15 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   <p class="ayuda-p">Cada tabla tiene su propia regla para detectar registros que ya existen y evitar duplicarlos en la importación:</p>
   <div class="ayuda-tabla">
     <div class="ayuda-fila-h"><div>Tabla</div><div>Cómo detecta duplicados</div></div>
+    <div class="ayuda-fila"><div>Actividades</div><div>Por nombre (case-insensitive). Si ya existe se saltea.</div></div>
+    <div class="ayuda-fila"><div>Sedes</div><div>Por nombre (case-insensitive). Si ya existe se saltea.</div></div>
+    <div class="ayuda-fila"><div>Profesores</div><div>Por DNI. Si ya existe se saltea (no sobreescribe ni resetea pass).</div></div>
+    <div class="ayuda-fila"><div>Categorías</div><div>Por nombre (case-insensitive).</div></div>
+    <div class="ayuda-fila"><div>Horarios</div><div>Por Día + Hora + Categoría + Actividad. Si el mismo turno ya existe se saltea.</div></div>
+    <div class="ayuda-fila"><div>Precios</div><div>Por Actividad + Categoría.</div></div>
     <div class="ayuda-fila"><div>Socios</div><div>Por DNI. Si ya existe se saltea (no sobreescribe).</div></div>
-    <div class="ayuda-fila"><div>Inscripciones</div><div>Por DNI + Plan + Fecha desde. Si la misma inscripción ya está, se saltea.</div></div>
+    <div class="ayuda-fila"><div>Inscripciones</div><div>Por DNI + Plan + Fecha desde.</div></div>
     <div class="ayuda-fila"><div>Pagos</div><div>No detecta duplicados — cada fila genera un pago nuevo.</div></div>
-    <div class="ayuda-fila"><div>Precios</div><div>Por Actividad + Categoría. Si ya hay precio para esa combinación, se saltea.</div></div>
   </div>
 
   <div class="ayuda-subtitulo">Vista previa antes de importar</div>
@@ -1951,7 +2041,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.55</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.56</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11178,6 +11268,287 @@ var IMP_TABLAS = {
     }
   },
 
+  // ── CONFIG_ACTIVIDADES ──────────────────────────────────────────
+  config_actividades: {
+    label: 'Actividades',
+    collection: 'config_actividades',
+    docIdField: null,
+    campos: [
+      { key:'nombre', label:'Nombre', required:true,  hints:['nombre','name','actividad','disciplina'] },
+      { key:'icono',  label:'Ícono / Emoji', required:false, hints:['icono','icon','emoji','simbolo','símbolo'] },
+      { key:'color',  label:'Color (hex)', required:false, hints:['color','colour','col'] },
+      { key:'monto',  label:'Monto sugerido', required:false, hints:['monto','precio','valor','cuota'] }
+    ],
+    ejemplos: [
+      { nombre:'Futsala',      icono:'⚽', color:'#1a7a3c', monto:'45000' },
+      { nombre:'Cuota Social', icono:'🪪', color:'#c9a227', monto:'9000' }
+    ],
+    normalizarFila: function(out) {
+      if (!out.nombre) return { error:'Falta nombre' };
+      var m = _impNumero(out.monto); out.monto = (m && m > 0) ? m : 0;
+      if (out.color && !/^#[0-9a-fA-F]{3,8}$/.test(out.color)) out.color = '#555';
+      return { campos: out };
+    },
+    duplicadosExistentes: function() {
+      var set = {};
+      (DB.actividades||[]).forEach(function(a){ set[(a.nombre||'').toLowerCase().trim()] = true; });
+      return set;
+    },
+    obtenerId: function(c) { return c.nombre.toLowerCase().trim(); },
+    construirDoc: function(c) {
+      return { nombre:c.nombre, icono:c.icono||'', color:c.color||'#555', monto:c.monto||0 };
+    },
+    docToRow: function(doc) {
+      var d = doc.data();
+      return { nombre:d.nombre||'', icono:d.icono||'', color:d.color||'', monto:d.monto||0 };
+    },
+    refrescaIndices: ['actividades']
+  },
+
+  // ── CONFIG_SEDES ────────────────────────────────────────────────
+  config_sedes: {
+    label: 'Sedes',
+    collection: 'config_sedes',
+    docIdField: null,
+    campos: [
+      { key:'nombre',    label:'Nombre',     required:true,  hints:['nombre','name','sede','lugar'] },
+      { key:'direccion', label:'Dirección',  required:false, hints:['direccion','dirección','address','dir','domicilio'] },
+      { key:'obs',       label:'Observaciones', required:false, hints:['obs','nota','comentario','observacion'] }
+    ],
+    ejemplos: [
+      { nombre:'Sede Central', direccion:'Av. Belgrano 1234', obs:'' },
+      { nombre:'Anexo',        direccion:'Calle Falsa 567',   obs:'Solo turnos vespertinos' }
+    ],
+    normalizarFila: function(out) {
+      if (!out.nombre) return { error:'Falta nombre' };
+      return { campos: out };
+    },
+    duplicadosExistentes: function() {
+      var set = {};
+      (DB.sedes||[]).forEach(function(s){ set[(s[0]||'').toLowerCase().trim()] = true; });
+      return set;
+    },
+    obtenerId: function(c) { return c.nombre.toLowerCase().trim(); },
+    construirDoc: function(c) {
+      return { nombre:c.nombre, direccion:c.direccion||'', obs:c.obs||'' };
+    },
+    docToRow: function(doc) {
+      var d = doc.data();
+      return { nombre:d.nombre||'', direccion:d.direccion||d.dir||'', obs:d.obs||'' };
+    },
+    refrescaIndices: ['sedes']
+  },
+
+  // ── PROFESORES ──────────────────────────────────────────────────
+  profesores: {
+    label: 'Profesores',
+    collection: 'profesores',
+    docIdField: 'dni',
+    campos: [
+      { key:'nombre',           label:'Nombre completo', required:true, hints:['nombre','name','profe','profesor','docente'] },
+      { key:'dni',              label:'DNI',             required:true, hints:['dni','documento','doc','cedula','cuil'] },
+      { key:'fechaNac',         label:'Fecha de nacimiento', required:false, hints:['fecha nac','nacimiento','birth','fechanac'] },
+      { key:'email',            label:'Email',           required:false, hints:['email','mail','correo'] },
+      { key:'telegramUsername', label:'Telegram (@usuario)', required:false, hints:['telegram','tg','usuario telegram','tgusername'] },
+      { key:'telegramChatId',   label:'Telegram chat ID', required:false, hints:['telegram chat','chatid','tg chat','chat id'] }
+    ],
+    ejemplos: [
+      { nombre:'Juan Pérez', dni:'25000123', fechaNac:'10/05/1985', email:'jperez@ejemplo.com', telegramUsername:'juanperez', telegramChatId:'' },
+      { nombre:'María López', dni:'30111222', fechaNac:'22/07/1990', email:'mlopez@ejemplo.com', telegramUsername:'', telegramChatId:'' }
+    ],
+    normalizarFila: function(out) {
+      if (!out.nombre) return { error:'Falta nombre' };
+      out.dni = _impLimpiarDni(out.dni);
+      if (!out.dni) return { error:'Falta DNI' };
+      if (!/^\d{6,12}$/.test(out.dni)) return { error:'DNI inválido: '+out.dni };
+      if (out.email && out.email.indexOf('@')<0) out.email = '';
+      out.fechaNac = _impFechaDDMM(out.fechaNac);
+      out.telegramUsername = (out.telegramUsername||'').replace(/^@/, '');
+      return { campos: out };
+    },
+    duplicadosExistentes: function() {
+      var set = {};
+      (DB.profesores||[]).forEach(function(p){ var d = (p[1]||p[5]||'').toString().trim(); if (d) set[d] = true; });
+      return set;
+    },
+    obtenerId: function(c) { return c.dni; },
+    construirDoc: function(c) {
+      // Crear auth en Firebase si no existe (silenciar si ya existía)
+      try {
+        auth.createUserWithEmailAndPassword(c.dni+'@sgd.app', c.dni)
+          .catch(function(e){ if (e.code !== 'auth/email-already-in-use') console.warn('[importar] profe auth:', e.message); });
+      } catch(_){}
+      return {
+        nombre:c.nombre, dni:c.dni, fechaNac:c.fechaNac||'',
+        email:c.email||'', contrasena:c.dni, esPrimerLogin:true,
+        telegramUsername:c.telegramUsername||'', telegramChatId:c.telegramChatId||''
+      };
+    },
+    docToRow: function(doc) {
+      var d = doc.data();
+      return {
+        nombre:d.nombre||'', dni:d.dni||doc.id||'',
+        fechaNac:d.fechaNac||'', email:d.email||'',
+        telegramUsername:d.telegramUsername||'', telegramChatId:d.telegramChatId||''
+      };
+    },
+    refrescaIndices: ['profesores']
+  },
+
+  // ── CONFIG_CATEGORIAS ───────────────────────────────────────────
+  config_categorias: {
+    label: 'Categorías',
+    collection: 'config_categorias',
+    docIdField: null,
+    campos: [
+      { key:'nombre',      label:'Nombre',      required:true,  hints:['nombre','name','categoria','categoría','grupo','division'] },
+      { key:'color',       label:'Color (hex)', required:false, hints:['color','colour','col'] },
+      { key:'edadDesde',   label:'Año desde',   required:false, hints:['ano desde','año desde','edaddesde','edad desde','desde','min'] },
+      { key:'edadHasta',   label:'Año hasta',   required:false, hints:['ano hasta','año hasta','edadhasta','edad hasta','hasta','max'] },
+      { key:'genero',      label:'Género',      required:false, hints:['genero','género','gender','sexo','modalidad'] },
+      { key:'actividades', label:'Actividades (separadas por coma)', required:false, hints:['actividades','disciplinas','planes','activities'] }
+    ],
+    ejemplos: [
+      { nombre:'Sub-15', color:'#1a7a3c', edadDesde:'2010', edadHasta:'2011', genero:'Masculino', actividades:'Futsala, Cuota Social' },
+      { nombre:'Sub-12', color:'#c9a227', edadDesde:'2013', edadHasta:'2014', genero:'Mixto',     actividades:'Futsala, Cuota Social' }
+    ],
+    normalizarFila: function(out) {
+      if (!out.nombre) return { error:'Falta nombre' };
+      var g = (out.genero||'').toLowerCase();
+      if (['m','masc','masculino','male','h'].indexOf(g) >= 0) out.genero = 'Masculino';
+      else if (['f','fem','femenino','female'].indexOf(g) >= 0) out.genero = 'Femenino';
+      else if (g) out.genero = g.charAt(0).toUpperCase()+g.slice(1);
+      else out.genero = 'Mixto';
+      out.edadDesde = String(out.edadDesde||'');
+      out.edadHasta = String(out.edadHasta||'');
+      if (out.color && !/^#[0-9a-fA-F]{3,8}$/.test(out.color)) out.color = '#1a7a3c';
+      // Validar actividades referenciadas
+      var actsCsv = (out.actividades||'').toString().trim();
+      out._actividadesNombres = actsCsv ? actsCsv.split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean) : [];
+      out._actividadesNoMatch = [];
+      out._actividadesNombres.forEach(function(nm){
+        if (!resolveActId(nm)) out._actividadesNoMatch.push(nm);
+      });
+      return { campos: out };
+    },
+    duplicadosExistentes: function() {
+      var set = {};
+      (DB.categorias||[]).forEach(function(c){ set[(c[0]||'').toLowerCase().trim()] = true; });
+      return set;
+    },
+    obtenerId: function(c) { return c.nombre.toLowerCase().trim(); },
+    construirDoc: function(c) {
+      var actsCsv = (c._actividadesNombres||[]).join(',');
+      return {
+        nombre:c.nombre, color:c.color||'#1a7a3c',
+        edadDesde:c.edadDesde||'', edadHasta:c.edadHasta||'',
+        genero:c.genero||'Mixto', actividades:actsCsv,
+        actividadesIds: actsCsv ? resolveActIdsCsv(actsCsv) : []
+      };
+    },
+    docToRow: function(doc) {
+      var d = doc.data();
+      return {
+        nombre:d.nombre||'', color:d.color||'',
+        edadDesde:d.edadDesde||d.edadMin||'',
+        edadHasta:d.edadHasta||d.edadMax||'',
+        genero:d.genero||'Mixto',
+        actividades:d.actividades||''
+      };
+    },
+    refrescaIndices: ['categorias']
+  },
+
+  // ── HORARIOS ────────────────────────────────────────────────────
+  horarios: {
+    label: 'Horarios',
+    collection: 'horarios',
+    docIdField: null,
+    campos: [
+      { key:'dia',        label:'Día',         required:true,  hints:['dia','día','day','jornada'] },
+      { key:'hora',       label:'Hora',        required:true,  hints:['hora','time','horario'] },
+      { key:'sede',       label:'Sede',        required:false, hints:['sede','lugar','local'] },
+      { key:'profesores', label:'Profesores (DNIs separados por coma)', required:false, hints:['profe','profesores','docente','dni profe'] },
+      { key:'grupo',      label:'Categoría / Grupo', required:true,  hints:['categoria','categoría','grupo','division'] },
+      { key:'liga',       label:'Actividad',   required:false, hints:['actividad','liga','disciplina','plan'] },
+      { key:'modalidad',  label:'Modalidad',   required:false, hints:['modalidad','genero','género'] }
+    ],
+    ejemplos: [
+      { dia:'Lunes',    hora:'18:00', sede:'Sede Central', profesores:'25000123', grupo:'Sub-15', liga:'Futsala', modalidad:'Masculino' },
+      { dia:'Miércoles',hora:'18:00', sede:'Sede Central', profesores:'25000123, 30111222', grupo:'Sub-15', liga:'Futsala', modalidad:'Masculino' }
+    ],
+    normalizarFila: function(out) {
+      if (!out.dia) return { error:'Falta día' };
+      if (!out.hora) return { error:'Falta hora' };
+      if (!out.grupo) return { error:'Falta grupo / categoría' };
+      var d = (out.dia||'').toLowerCase().trim();
+      var diasMap = {'lunes':'Lunes','martes':'Martes','miercoles':'Miercoles','miércoles':'Miercoles','jueves':'Jueves','viernes':'Viernes','sabado':'Sabado','sábado':'Sabado','domingo':'Domingo'};
+      out.dia = diasMap[d] || (d.charAt(0).toUpperCase()+d.slice(1));
+      // Validar categoría existe
+      if (!resolveCatId(out.grupo)) return { error:'Categoría no existe: '+out.grupo };
+      // Sede y actividad opcionales pero advertir si no matchean
+      out._sedeNoMatch = (out.sede && !resolveSedeId(out.sede)) ? out.sede : '';
+      out._actNoMatch  = (out.liga && !resolveActId(out.liga))  ? out.liga  : '';
+      // Profesores: limpiar DNIs y validar que existan
+      var profCsv = (out.profesores||'').toString().trim();
+      var profDnis = profCsv ? profCsv.split(/[,;]/).map(function(s){ return _impLimpiarDni(s); }).filter(Boolean) : [];
+      out._profDnis = profDnis;
+      out._profNoMatch = [];
+      profDnis.forEach(function(dni){
+        var ok = (DB.profesores||[]).some(function(p){ return (p[1]||p[5]||'').toString().trim() === dni; });
+        if (!ok) out._profNoMatch.push(dni);
+      });
+      // Modalidad
+      var mo = (out.modalidad||'').toLowerCase();
+      if (['m','masc','masculino','male'].indexOf(mo) >= 0) out.modalidad = 'Masculino';
+      else if (['f','fem','femenino','female'].indexOf(mo) >= 0) out.modalidad = 'Femenino';
+      else if (mo) out.modalidad = mo.charAt(0).toUpperCase()+mo.slice(1);
+      else out.modalidad = 'Mixto';
+      return { campos: out };
+    },
+    duplicadosExistentes: function() {
+      var set = {};
+      (DB.horarios||[]).forEach(function(h){
+        // Identificador lógico: día + hora + grupo + actividad
+        set[(h[0]||'')+'|'+(h[1]||'')+'|'+(h[4]||'')+'|'+(h[5]||'')] = true;
+      });
+      return set;
+    },
+    obtenerId: function(c) { return c.dia+'|'+c.hora+'|'+c.grupo+'|'+(c.liga||''); },
+    construirDoc: function(c) {
+      var profCsv = (c._profDnis||[]).join(',');
+      return {
+        dia:c.dia, hora:c.hora,
+        sede:c.sede||'', profesores:profCsv,
+        grupo:c.grupo, liga:c.liga||'',
+        modalidad:c.modalidad||'Mixto',
+        idx: Date.now()+Math.floor(Math.random()*1000),
+        sedeId:        c.sede  ? resolveSedeId(c.sede)  : '',
+        categoriaId:   c.grupo ? resolveCatId(c.grupo)  : '',
+        actividadId:   c.liga  ? resolveActId(c.liga)   : '',
+        profesoresIds: c._profDnis || []
+      };
+    },
+    docToRow: function(doc) {
+      var d = doc.data();
+      var sedeNom = _nomBySedeId(d.sedeId) || d.sede || '';
+      var catNom  = _nomByCatId(d.categoriaId) || d.grupo || '';
+      var actNom  = _nomByActId(d.actividadId) || d.liga || d.extra || '';
+      var profCsv = '';
+      if (Array.isArray(d.profesoresIds) && d.profesoresIds.length) {
+        profCsv = d.profesoresIds.join(',');
+      } else {
+        profCsv = d.profesores || '';
+      }
+      return {
+        dia:d.dia||'', hora:d.hora||'',
+        sede:sedeNom, profesores:profCsv,
+        grupo:catNom, liga:actNom,
+        modalidad:d.modalidad||'Mixto'
+      };
+    }
+  },
+
   // ── CONFIG_PRECIOS ──────────────────────────────────────────────
   config_precios: {
     label: 'Precios (Actividad × Categoría)',
@@ -11547,12 +11918,78 @@ function impEjecutar() {
         fecha: firebase.firestore.FieldValue.serverTimestamp()
       });
     } catch(e) { console.warn('[importar] auditoria error', e); }
-    ocultarLoader();
-    if (tabla.collection === 'socios') { try { renderPlayers(); } catch(_){} }
-    toast(done + ' filas importadas' + (errores ? ', ' + errores + ' con error' : ''), errores ? 'warn' : 'ok');
-    impCancelar();
+    // Refrescar memoria local + indices si la tabla padre cambia
+    var refreshNeeded = (tabla.refrescaIndices || []).length > 0 ||
+                        ['horarios','config_precios'].indexOf(tabla.collection) >= 0;
+    if (refreshNeeded && done > 0) {
+      mostrarLoader('Refrescando datos locales...');
+      _impRefrescarTabla(tabla, function(){
+        ocultarLoader();
+        if (tabla.collection === 'socios') { try { renderPlayers(); } catch(_){} }
+        toast(done + ' filas importadas' + (errores ? ', ' + errores + ' con error' : '') + ' (índices actualizados)', errores ? 'warn' : 'ok');
+        impCancelar();
+      });
+    } else {
+      ocultarLoader();
+      if (tabla.collection === 'socios') { try { renderPlayers(); } catch(_){} }
+      toast(done + ' filas importadas' + (errores ? ', ' + errores + ' con error' : ''), errores ? 'warn' : 'ok');
+      impCancelar();
+    }
   }
   procesarChunk(0);
+}
+
+// Recarga la tabla recién importada y sus índices para que las próximas imports
+// (de tablas hijas) puedan resolver foreign keys por nombre.
+function _impRefrescarTabla(tabla, cb) {
+  db.collection(tabla.collection).get().then(function(snap){
+    switch(tabla.collection) {
+      case 'config_actividades':
+        DB.actividades = [];
+        snap.forEach(function(doc){ var d=doc.data(); DB.actividades.push({nombre:d.nombre||doc.id,icono:d.icono||'',color:d.color||'#555',monto:d.monto||0,_row:doc.id}); });
+        break;
+      case 'config_sedes':
+        DB.sedes = [];
+        snap.forEach(function(doc){ var d=doc.data(); DB.sedes.push([d.nombre||doc.id, doc.id]); });
+        break;
+      case 'config_categorias':
+        DB.categorias = [];
+        snap.forEach(function(doc){
+          var d = doc.data();
+          var desde = d.edadDesde || d.edadMin || '';
+          var hasta = d.edadHasta || d.edadMax || '';
+          var row = [d.nombre||doc.id, d.color||'#1a7a3c', desde.toString(), hasta.toString(), d.genero||'Mixto', d.actividades||'', doc.id];
+          row.actividadesIds = Array.isArray(d.actividadesIds) ? d.actividadesIds.slice() : [];
+          DB.categorias.push(row);
+        });
+        break;
+      case 'profesores':
+        DB.profesores = [];
+        snap.forEach(function(doc){ var d=doc.data(); DB.profesores.push([d.nombre||'', d.dni||doc.id, d.fechaNac||'', d.email||'', d.contrasena||'', doc.id, d.telegramUsername||'', d.telegramChatId||'']); });
+        break;
+      case 'horarios':
+        DB.horarios = [];
+        snap.forEach(function(doc){ DB.horarios.push(horarioToRow(doc)); });
+        break;
+      case 'config_precios':
+        DB.precios = [];
+        snap.forEach(function(doc){
+          var d = doc.data();
+          var actNom = _nomByActId(d.actividadId) || d.actividad || '';
+          var catNom = _nomByCatId(d.categoriaId) || d.categoria || '';
+          DB.precios.push({actividad:actNom, categoria:catNom, monto:Number(d.monto)||0, _row:doc.id});
+        });
+        break;
+    }
+    // Reconstruir los índices nombre→id que usan resolveXxxId
+    try { buildIdIndexes(); } catch(_){}
+    // Re-renderizar las pantallas que pueden estar visibles
+    try { if (typeof renderAll === 'function') renderAll(); } catch(_){}
+    if (cb) cb();
+  }).catch(function(e){
+    console.warn('[importar] refresh error', e);
+    if (cb) cb();
+  });
 }
 
 </script>
