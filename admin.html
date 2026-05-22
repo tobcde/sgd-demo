@@ -650,9 +650,23 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
             <button onclick="impExportarTodo(false)" class="btn" style="background:rgba(201,162,39,.15);color:var(--secondary);border:1px solid rgba(201,162,39,.4);font-weight:700;padding:10px 14px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;cursor:pointer;font-size:12px;">
               &#x1F4DD; BAJAR PLANTILLAS VACÍAS (con ejemplos)
             </button>
+            <label class="btn" style="background:linear-gradient(135deg,#1a7a3c,#0f5228);color:white;border:1px solid #0f5228;font-weight:800;padding:10px 14px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;cursor:pointer;font-size:12px;display:inline-block;">
+              &#x1F680; SUBIR TODO (en orden)
+              <input type="file" id="impBulkFile" accept=".xlsx,.xls" style="display:none;" onchange="impBulkArchivoElegido(event)">
+            </label>
           </div>
           <div style="font-size:10px;color:var(--muted);margin-top:8px;">
-            &#x1F4A1; En la versión vacía, cada hoja trae <b>una fila de ejemplo marcada con la columna <code>_EJEMPLO</code></b>. Al subirla, el sistema la ignora automáticamente — la podés dejar o borrarla a mano, da lo mismo.
+            &#x1F4A1; En la versión vacía, cada hoja trae <b>una fila de ejemplo marcada con la columna <code>_EJEMPLO</code></b>. Al subirla, el sistema la ignora automáticamente — la podés dejar o borrarla a mano, da lo mismo.<br>
+            &#x1F680; <b>SUBIR TODO</b>: tomá el archivo completo (con todas las hojas) y dejá que el sistema procese cada tabla automáticamente en orden de dependencias.
+          </div>
+          <!-- Panel inline de resumen previo al subir todo -->
+          <div id="impBulkPanel" style="display:none;margin-top:14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">&#x1F680; Plan de importación</div>
+            <div id="impBulkResumen" style="font-size:12px;"></div>
+            <div id="impBulkAcciones" style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+              <button onclick="impBulkEjecutar()" class="btn btn-save" style="padding:10px 18px;">&#x2705; CONFIRMAR IMPORTACIÓN</button>
+              <button onclick="impBulkCancelar()" class="btn" style="background:var(--muted);color:#fff;padding:10px 18px;">CANCELAR</button>
+            </div>
           </div>
         </div>
 
@@ -1845,7 +1859,18 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     <div class="ayuda-fila"><div>&#x2B07;&#xFE0F; EXPORTAR DATOS ACTUALES</div><div>Descarga todo el contenido actual de Firestore para la tabla seleccionada.</div></div>
     <div class="ayuda-fila"><div>&#x1F4E6; BAJAR TODO (con datos)</div><div>Genera un único <code>.xlsx</code> con TODAS las tablas en hojas separadas y los datos actuales de Firestore. Ideal para backup global o clonar un cliente.</div></div>
     <div class="ayuda-fila"><div>&#x1F4DD; BAJAR PLANTILLAS VACÍAS</div><div>Genera el mismo archivo de TODAS las tablas pero vacío, con 1 fila de ejemplo por hoja (marcada con la columna <code>_EJEMPLO</code>). Perfecto para entregarle al cliente nuevo.</div></div>
+    <div class="ayuda-fila"><div>&#x1F680; SUBIR TODO (en orden)</div><div>Subí un archivo Excel completo con varias hojas y el sistema lo procesa todo de una sola vez, en el orden correcto de dependencias. Muestra un resumen previo y refresca índices entre tablas para que las FKs se resuelvan bien.</div></div>
   </div>
+
+  <div class="ayuda-subtitulo">Cómo funciona el "Subir todo en orden"</div>
+  <ol class="ayuda-lista">
+    <li>Click en <b>🚀 SUBIR TODO</b> y elegí el .xlsx con todas las hojas (puede ser el que generamos en "BAJAR PLANTILLAS" o cualquier otro armado por vos con los nombres de hoja correctos).</li>
+    <li>El sistema identifica las hojas por nombre (Actividades, Sedes, Profesores, Categorías, Horarios, Precios, Socios, Inscripciones, Pagos / Cuotas). Las que se llamen "Instrucciones" o "Ayudas visuales" se ignoran.</li>
+    <li>Aparece un <b>resumen previo</b> con una fila por cada tabla detectada y sus contadores: nuevos (+), duplicados (~), inválidos (×), ejemplos (💡). Si alguna tabla tiene columnas obligatorias sin mapear, te lo avisa en rojo.</li>
+    <li>Click en <b>CONFIRMAR IMPORTACIÓN</b> y el sistema procesa cada tabla en orden de dependencias: Actividades → Sedes → Profesores → Categorías → Horarios → Precios → Socios → Inscripciones → Pagos.</li>
+    <li>Entre tabla y tabla, refresca los índices automáticamente (`actsById`, `catsById`, etc.) para que las FKs de la siguiente se resuelvan bien.</li>
+    <li>Al terminar, queda registrado en <code>auditoria_imports</code> con tipo <code>bulk_upload</code> y la lista de tablas afectadas.</li>
+  </ol>
 
   <div class="ayuda-subtitulo">Colores y emojis en Actividades / Categorías</div>
   <p class="ayuda-p">El Excel descargado para estas tablas trae una hoja extra llamada <strong>"Ayudas visuales"</strong> al inicio con:</p>
@@ -2081,7 +2106,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.59</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.60</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11982,6 +12007,298 @@ function impExportarTodo(conDatos) {
     });
   }
   siguiente();
+}
+
+// ── BULK UPLOAD ─────────────────────────────────────────────────
+// Subir un .xlsx con TODAS las hojas y procesarlas en orden topológico.
+window._impBulkPlan = null;
+
+// Auto-mapeo independiente del state global, recibe la tabla y headers
+function _impAutoMapPara(tabla, headers) {
+  var map = {};
+  var lower = headers.map(function(h){ return (h||'').toString().toLowerCase().trim(); });
+  tabla.campos.forEach(function(campo){
+    var found = '';
+    for (var i = 0; i < lower.length && !found; i++) {
+      var hClean = lower[i].replace(/\s*\*\s*$/,'').trim();
+      for (var j = 0; j < campo.hints.length; j++) {
+        var hint = campo.hints[j];
+        if (hClean === hint || hClean.indexOf(hint) >= 0) { found = headers[i]; break; }
+      }
+    }
+    map[campo.key] = found;
+  });
+  return map;
+}
+
+// Normaliza una fila con un mapeo dado (sin tocar window._impMap)
+function _impFilaConMap(tabla, rowObj, mapeo) {
+  var ejemploKeys = Object.keys(rowObj||{}).filter(function(k){ return /^_?ejemplo$/i.test(String(k||'').trim()); });
+  for (var i = 0; i < ejemploKeys.length; i++) {
+    if (String(rowObj[ejemploKeys[i]]||'').trim()) return { ejemplo:true };
+  }
+  var out = {};
+  tabla.campos.forEach(function(c){
+    var src = mapeo[c.key];
+    var v = src ? (rowObj[src] != null ? rowObj[src] : '') : '';
+    v = (v == null ? '' : String(v)).trim();
+    if (c.esColor && src) {
+      var fillHex = rowObj['__fill__'+src];
+      if (fillHex && fillHex !== 'FFFFFF' && fillHex !== '000000') {
+        v = '#' + fillHex.toLowerCase();
+      }
+    }
+    out[c.key] = v;
+  });
+  return tabla.normalizarFila(out);
+}
+
+// Parsea una hoja a (headers, rows) capturando fill colors
+function _impParsearHoja(sheet) {
+  var range = XLSX.utils.decode_range(sheet['!ref']||'A1');
+  var headers = [];
+  for (var c = range.s.c; c <= range.e.c; c++) {
+    var addr = XLSX.utils.encode_cell({ r: range.s.r, c: c });
+    headers.push(String((sheet[addr] && sheet[addr].v != null) ? sheet[addr].v : ''));
+  }
+  var rows = [];
+  for (var r = range.s.r + 1; r <= range.e.r; r++) {
+    var rowObj = {}; var hayDato = false;
+    for (var c = range.s.c; c <= range.e.c; c++) {
+      var addr = XLSX.utils.encode_cell({ r: r, c: c });
+      var cell = sheet[addr];
+      var key = headers[c - range.s.c]; if (!key) continue;
+      rowObj[key] = (cell && cell.v != null) ? cell.v : '';
+      if (rowObj[key] !== '' && rowObj[key] !== null) hayDato = true;
+      if (cell && cell.s && cell.s.fill) {
+        try {
+          var rgb = (cell.s.fill.fgColor && cell.s.fill.fgColor.rgb) ||
+                    (cell.s.fill.bgColor && cell.s.fill.bgColor.rgb) || null;
+          if (rgb && /^[0-9a-fA-F]{6,8}$/.test(rgb)) {
+            rowObj['__fill__'+key] = rgb.substring(rgb.length-6).toUpperCase();
+          }
+        } catch(_){}
+      }
+    }
+    if (hayDato) rows.push(rowObj);
+  }
+  return { headers: headers, rows: rows };
+}
+
+function impBulkArchivoElegido(ev) {
+  var file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') {
+    alert('La librería de Excel todavía no cargó. Esperá unos segundos y volvé a intentar.');
+    return;
+  }
+  mostrarLoader('Analizando archivo...');
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, { type:'array', cellDates:true, cellStyles:true });
+      // Mapear nombre de hoja → tabla
+      var labelToKey = {};
+      Object.keys(IMP_TABLAS).forEach(function(k){
+        var lbl = IMP_TABLAS[k].label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,'');
+        labelToKey[lbl.toLowerCase()] = k;
+      });
+      var plan = [];
+      wb.SheetNames.forEach(function(sn){
+        if (/instruccion/i.test(sn) || /ayuda/i.test(sn)) return;
+        var key = labelToKey[sn.toLowerCase()];
+        if (!key) return;
+        var parsed = _impParsearHoja(wb.Sheets[sn]);
+        if (!parsed.rows.length) return;
+        plan.push({ tablaKey: key, sheetName: sn, headers: parsed.headers, rows: parsed.rows });
+      });
+      if (!plan.length) {
+        ocultarLoader();
+        alert('No se identificó ninguna hoja con datos. El archivo debería tener hojas con nombres como: Actividades, Sedes, Profesores, Categorías, Horarios, Precios, Socios, Inscripciones, Pagos / Cuotas.');
+        return;
+      }
+      // Ordenar por dependencias
+      plan.sort(function(a,b){
+        return IMP_ORDEN_BULK.indexOf(a.tablaKey) - IMP_ORDEN_BULK.indexOf(b.tablaKey);
+      });
+      // Calcular stats por hoja (con auto-map y mapeo independiente)
+      plan.forEach(function(p){
+        var tabla = IMP_TABLAS[p.tablaKey];
+        p.mapeo = _impAutoMapPara(tabla, p.headers);
+        var nuevos=0, dupes=0, invalidas=0, ejemplos=0;
+        var existentes = tabla.duplicadosExistentes();
+        var seenLocal = {};
+        var faltantes = tabla.campos.filter(function(c){ return c.required && !p.mapeo[c.key]; });
+        p.faltantesObligatorios = faltantes;
+        p.rows.forEach(function(r){
+          var res = _impFilaConMap(tabla, r, p.mapeo);
+          if (res.ejemplo) { ejemplos++; return; }
+          if (res.error) { invalidas++; return; }
+          var id = tabla.obtenerId(res.campos);
+          if (existentes[id] || seenLocal[id]) { dupes++; return; }
+          seenLocal[id] = true;
+          nuevos++;
+        });
+        p.stats = { total:p.rows.length, nuevos:nuevos, dupes:dupes, invalidas:invalidas, ejemplos:ejemplos };
+      });
+      window._impBulkPlan = { plan: plan, fileName: file.name };
+      ocultarLoader();
+      _impBulkRenderPanel();
+    } catch(err) {
+      ocultarLoader();
+      alert('Error al parsear el archivo: ' + (err.message||err));
+      console.error('[bulk upload]', err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  // Reset el input para permitir reelegir el mismo archivo después
+  setTimeout(function(){ try { ev.target.value=''; } catch(_){} }, 100);
+}
+
+function _impBulkRenderPanel() {
+  var panel = document.getElementById('impBulkPanel');
+  var res = document.getElementById('impBulkResumen');
+  if (!window._impBulkPlan) { panel.style.display='none'; return; }
+  var plan = window._impBulkPlan.plan;
+  var totalNuevos = plan.reduce(function(s,p){ return s+p.stats.nuevos; }, 0);
+  var totalDupes = plan.reduce(function(s,p){ return s+p.stats.dupes; }, 0);
+  var totalInv = plan.reduce(function(s,p){ return s+p.stats.invalidas; }, 0);
+  var totalEj = plan.reduce(function(s,p){ return s+p.stats.ejemplos; }, 0);
+
+  var rows = plan.map(function(p, i){
+    var tabla = IMP_TABLAS[p.tablaKey];
+    var bloqueo = p.faltantesObligatorios.length > 0;
+    var color = bloqueo ? 'var(--red)' : (p.stats.nuevos>0 ? '#6de097' : 'var(--muted)');
+    var aviso = bloqueo ? ' <span style="color:var(--red);font-weight:700;">⚠ FALTAN COLUMNAS: '+p.faltantesObligatorios.map(function(c){return c.label;}).join(', ')+'</span>' : '';
+    return '<div style="padding:8px 10px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:30px 1fr auto auto auto auto;gap:8px;align-items:center;">'
+      + '<div style="color:'+color+';font-weight:800;">'+(i+1)+'.</div>'
+      + '<div><b style="color:var(--text);">'+tabla.label+'</b><div style="font-size:10px;color:var(--muted);">hoja "'+p.sheetName+'"</div>'+aviso+'</div>'
+      + '<div style="font-size:11px;color:#6de097;font-weight:700;" title="Nuevos a crear">+'+p.stats.nuevos+'</div>'
+      + '<div style="font-size:11px;color:var(--secondary);" title="Ya existen, se skipean">~'+p.stats.dupes+'</div>'
+      + '<div style="font-size:11px;color:var(--red);" title="Inválidas">×'+p.stats.invalidas+'</div>'
+      + '<div style="font-size:11px;color:var(--muted);" title="Ejemplos ignorados">💡'+p.stats.ejemplos+'</div>'
+      + '</div>';
+  }).join('');
+
+  res.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Archivo: <b>'+window._impBulkPlan.fileName+'</b> · '+plan.length+' tabla'+(plan.length>1?'s':'')+' detectada'+(plan.length>1?'s':'')+'</div>'
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">'
+    + '<div style="padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;color:var(--muted);display:grid;grid-template-columns:30px 1fr auto auto auto auto;gap:8px;">'
+    + '<div></div><div>Tabla / hoja</div><div title="Nuevos">+ N</div><div title="Duplicados">~ Dup</div><div title="Inválidas">× Inv</div><div title="Ejemplos ignorados">💡 Ej</div>'
+    + '</div>'
+    + rows
+    + '</div>'
+    + '<div style="margin-top:10px;padding:8px 10px;background:rgba(26,122,60,.08);border:1px solid rgba(26,122,60,.3);border-radius:8px;font-size:12px;">'
+    + 'Total a crear: <b style="color:#6de097;">'+totalNuevos+'</b> · Se omiten <b>'+totalDupes+'</b> duplicados, <b>'+totalInv+'</b> inválidos, <b>'+totalEj+'</b> ejemplos.'
+    + '</div>';
+
+  // Si alguna tabla tiene faltantes obligatorios, bloquear el botón
+  var hayBloqueo = plan.some(function(p){ return p.faltantesObligatorios.length > 0; });
+  var btn = document.querySelector('#impBulkAcciones .btn-save');
+  if (btn) {
+    btn.disabled = hayBloqueo;
+    btn.style.opacity = hayBloqueo ? '0.4' : '1';
+    btn.style.pointerEvents = hayBloqueo ? 'none' : '';
+  }
+
+  panel.style.display = 'block';
+}
+
+function impBulkCancelar() {
+  window._impBulkPlan = null;
+  document.getElementById('impBulkPanel').style.display = 'none';
+}
+
+function impBulkEjecutar() {
+  if (!window._impBulkPlan) return;
+  var plan = window._impBulkPlan.plan;
+  var totalNuevos = plan.reduce(function(s,p){ return s+p.stats.nuevos; }, 0);
+  if (!totalNuevos) { alert('No hay filas nuevas para importar.'); return; }
+  if (!confirm('Vas a importar '+totalNuevos+' filas en '+plan.length+' tabla'+(plan.length>1?'s':'')+' en orden de dependencias. ¿Continuar?')) return;
+
+  var _user = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+  var hoy = new Date().toLocaleDateString('sv');
+  var totalGlobal = { hechos:0, errores:0 };
+  var idx = 0;
+
+  function siguienteTabla() {
+    if (idx >= plan.length) return finalizarTodo();
+    var paso = plan[idx];
+    var tabla = IMP_TABLAS[paso.tablaKey];
+    var ctx = { hoy: hoy, user: _user };
+    // Recolectar filas válidas con el mapeo guardado
+    var existentes = tabla.duplicadosExistentes();
+    var seenLocal = {};
+    var aImportar = [];
+    paso.rows.forEach(function(r){
+      var res = _impFilaConMap(tabla, r, paso.mapeo);
+      if (res.ejemplo || res.error) return;
+      var id = tabla.obtenerId(res.campos);
+      if (existentes[id] || seenLocal[id]) return;
+      seenLocal[id] = true;
+      aImportar.push(res.campos);
+    });
+    if (!aImportar.length) { idx++; siguienteTabla(); return; }
+
+    mostrarLoader('('+(idx+1)+'/'+plan.length+') Importando '+tabla.label+': 0/'+aImportar.length);
+    var done = 0;
+    function procesarChunk(ix) {
+      if (ix >= aImportar.length) {
+        totalGlobal.hechos += done;
+        // Refresh índices si la tabla es padre de otras
+        var refreshNeeded = (tabla.refrescaIndices||[]).length > 0 ||
+                            ['horarios','config_precios'].indexOf(tabla.collection) >= 0;
+        if (refreshNeeded) {
+          mostrarLoader('Refrescando índices de '+tabla.label+'...');
+          _impRefrescarTabla(tabla, function(){ idx++; siguienteTabla(); });
+        } else {
+          idx++; siguienteTabla();
+        }
+        return;
+      }
+      var chunk = aImportar.slice(ix, ix+400);
+      var batch = db.batch();
+      chunk.forEach(function(c){
+        var doc = tabla.construirDoc(c, ctx);
+        ctx.lastDoc = doc;
+        var ref = tabla.docIdField
+          ? db.collection(tabla.collection).doc(String(c[tabla.docIdField]))
+          : db.collection(tabla.collection).doc();
+        batch.set(ref, doc);
+      });
+      batch.commit().then(function(){
+        done += chunk.length;
+        if (tabla.afterImport) chunk.forEach(function(c){ try { tabla.afterImport(c, ctx); } catch(_){} });
+        mostrarLoader('('+(idx+1)+'/'+plan.length+') Importando '+tabla.label+': '+done+'/'+aImportar.length);
+        procesarChunk(ix+400);
+      }).catch(function(e){
+        totalGlobal.errores += chunk.length;
+        console.error('[bulk] error en '+tabla.collection+':', e);
+        procesarChunk(ix+400);
+      });
+    }
+    procesarChunk(0);
+  }
+
+  function finalizarTodo() {
+    try {
+      db.collection('auditoria_imports').add({
+        tipo: 'bulk_upload',
+        fuente: window._impBulkPlan ? window._impBulkPlan.fileName : '',
+        tablas: plan.map(function(p){ return p.tablaKey; }),
+        importados: totalGlobal.hechos,
+        errores: totalGlobal.errores,
+        usuario: _user,
+        fecha: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e){ console.warn('[bulk] auditoria error',e); }
+    ocultarLoader();
+    try { renderAll(); } catch(_){}
+    try { renderPlayers(); } catch(_){}
+    toast(totalGlobal.hechos+' filas importadas en '+plan.length+' tablas'+(totalGlobal.errores?', '+totalGlobal.errores+' con error':''), totalGlobal.errores?'warn':'ok');
+    impBulkCancelar();
+  }
+  siguienteTabla();
 }
 
 function impExportarTabla() {
