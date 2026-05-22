@@ -1567,6 +1567,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     <a href="#ayuda-admin" onclick="event.preventDefault();document.getElementById('ayuda-admin').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">6. Administración</a>
     <a href="#ayuda-reportes" onclick="event.preventDefault();document.getElementById('ayuda-reportes').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">7. Reportes</a>
     <a href="#ayuda-inst" onclick="event.preventDefault();document.getElementById('ayuda-inst').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">8. Institución</a>
+    <a href="#ayuda-import-export" onclick="event.preventDefault();document.getElementById('ayuda-import-export').scrollIntoView({behavior:'smooth'})" style="color:var(--primary);text-decoration:none;">9. Importar / Exportar</a>
   </div>
 </div>
 
@@ -1763,6 +1764,137 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </ol>
 </div>
 
+<!-- 9. IMPORTAR / EXPORTAR -->
+<div id="ayuda-import-export" class="ayuda-seccion">
+  <div class="ayuda-titulo">&#x1F4E5; 9. Importar / Exportar datos (Excel/CSV)</div>
+  <p class="ayuda-p">Permite cargar masivamente datos desde un archivo Excel/CSV o descargar los datos actuales para backup, edición externa o migración. Se encuentra en <strong>Administración → primera card: 📥 Importar / Exportar datos</strong>.</p>
+
+  <div class="ayuda-subtitulo">Tablas disponibles</div>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Tabla</div><div>Para qué sirve</div></div>
+    <div class="ayuda-fila"><div>&#x1F465; Socios</div><div>Cargar el padrón completo del club al iniciar, o agregar grupos nuevos de socios.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4CB; Inscripciones</div><div>Migrar los planes activos (qué actividad y monto paga cada socio).</div></div>
+    <div class="ayuda-fila"><div>&#x1F4B0; Pagos / Cuotas</div><div>Importar el historial de pagos anteriores al uso del sistema.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4B5; Precios</div><div>Cargar el catálogo de precios por actividad × categoría.</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Flujo recomendado para un cliente nuevo</div>
+  <ol class="ayuda-lista">
+    <li><strong>Configurar categorías y actividades primero</strong> (tab Administración → cards "Categorías" y "Actividades"). Sin esto, los socios importados no tendrán categoría válida.</li>
+    <li><strong>Importar Socios</strong>: bajar la plantilla, completar con los datos del cliente, subir.</li>
+    <li><strong>Importar Inscripciones</strong>: una fila por socio × plan. Si el socio paga 2 actividades (ej: Futsala + Cuota Social), son 2 filas con el mismo DNI.</li>
+    <li><strong>Importar Pagos históricos</strong> (opcional): últimos 3-12 meses de cobros para tener el saldo de cada socio real desde día 1.</li>
+    <li><strong>Importar Precios</strong> (opcional): si no se importa, los precios se ponen manualmente desde Administración → Precios.</li>
+  </ol>
+
+  <div class="ayuda-subtitulo">Las 3 acciones disponibles</div>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Botón</div><div>Qué hace</div></div>
+    <div class="ayuda-fila"><div>&#x1F4C2; SUBIR ARCHIVO</div><div>Abre el selector de archivos. Acepta <code>.xlsx</code>, <code>.xls</code> y <code>.csv</code>. Al elegir el archivo, el sistema lo parsea y muestra el mapeo de columnas.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4C4; PLANTILLA VACÍA</div><div>Descarga un Excel con los headers exactos + 1-2 filas de ejemplo + una hoja de instrucciones. Se completa, se borran las filas de ejemplo y se sube.</div></div>
+    <div class="ayuda-fila"><div>&#x2B07;&#xFE0F; EXPORTAR DATOS ACTUALES</div><div>Descarga todo el contenido actual de Firestore para la tabla seleccionada. Útil para backup, edición masiva externa o llevarse los datos.</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Mapeo automático de columnas</div>
+  <p class="ayuda-p">Cuando subís un archivo, el sistema intenta detectar las columnas automáticamente buscando coincidencias por nombre (ej: "DNI", "Documento", "Doc" → DNI). Si la auto-detección falla, podés ajustar manualmente con los dropdowns. Los campos en <strong style="color:var(--red);">rojo con asterisco *</strong> son obligatorios.</p>
+
+  <div class="ayuda-subtitulo">Campos por tabla</div>
+
+  <p class="ayuda-p"><strong style="color:var(--secondary);">&#x1F465; Socios</strong> (campos obligatorios marcados con *)</p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
+    <div class="ayuda-fila"><div>Apellido *</div><div>Texto libre</div></div>
+    <div class="ayuda-fila"><div>Nombre *</div><div>Texto libre</div></div>
+    <div class="ayuda-fila"><div>DNI / Documento *</div><div>Solo números. Acepta puntos y guiones (se limpian solos). Es el identificador único del socio.</div></div>
+    <div class="ayuda-fila"><div>Fecha de nacimiento</div><div>DD/MM/AAAA o AAAA-MM-DD</div></div>
+    <div class="ayuda-fila"><div>Sexo</div><div>"Masculino" / "Femenino" (también acepta M / F / Masc / Fem)</div></div>
+    <div class="ayuda-fila"><div>Email</div><div>Email válido. Si no tiene "@" se ignora.</div></div>
+    <div class="ayuda-fila"><div>Celular / Teléfono</div><div>Texto libre</div></div>
+    <div class="ayuda-fila"><div>Domicilio</div><div>Texto libre</div></div>
+    <div class="ayuda-fila"><div>Categoría</div><div>Tiene que coincidir con una categoría ya creada (ej: Sub-15)</div></div>
+    <div class="ayuda-fila"><div>Categoría secundaria</div><div>Opcional, para socios que entran en 2 categorías</div></div>
+    <div class="ayuda-fila"><div>Contacto 1/2 (Nombre + Tel)</div><div>Datos de tutor/padre/madre. Nombre y teléfono en columnas separadas, el sistema los combina.</div></div>
+    <div class="ayuda-fila"><div>Observaciones</div><div>Texto libre (alergias, info médica, etc.)</div></div>
+  </div>
+
+  <p class="ayuda-p" style="margin-top:14px;"><strong style="color:var(--secondary);">&#x1F4CB; Inscripciones</strong></p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
+    <div class="ayuda-fila"><div>DNI del socio *</div><div>Tiene que existir en la tabla Socios. Si no existe se descarta la fila con error.</div></div>
+    <div class="ayuda-fila"><div>Plan / Actividad *</div><div>Nombre exacto de la actividad (ej: Futsala, Cuota Social, Mixto, AFA)</div></div>
+    <div class="ayuda-fila"><div>Monto mensual *</div><div>Número (acepta "$45.000", "45000", "45,000")</div></div>
+    <div class="ayuda-fila"><div>Desde *</div><div>AAAA-MM-DD o DD/MM/AAAA (fecha de inicio de la inscripción)</div></div>
+    <div class="ayuda-fila"><div>Hasta</div><div>Vacío = sin fin. Si tiene fecha, marca cuándo se dio de baja.</div></div>
+    <div class="ayuda-fila"><div>Descuento por hermano</div><div>Número (monto que se descuenta del precio base). Se aplica solo a actividades deportivas, NO a Cuota Social.</div></div>
+    <div class="ayuda-fila"><div>Hermano de</div><div>DNI del hermano (referencia, sin lógica especial todavía)</div></div>
+    <div class="ayuda-fila"><div>Observaciones</div><div>Texto libre</div></div>
+  </div>
+  <div class="ayuda-nota">Para socios con varias actividades, hacé una fila por cada plan. Mismo DNI en filas distintas.</div>
+
+  <p class="ayuda-p" style="margin-top:14px;"><strong style="color:var(--secondary);">&#x1F4B0; Pagos / Cuotas</strong></p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
+    <div class="ayuda-fila"><div>DNI del socio *</div><div>Solo números</div></div>
+    <div class="ayuda-fila"><div>Concepto / Plan *</div><div>Nombre de la actividad pagada (ej: Futsala, Cuota Social)</div></div>
+    <div class="ayuda-fila"><div>Monto *</div><div>Número</div></div>
+    <div class="ayuda-fila"><div>Fecha de pago *</div><div>AAAA-MM-DD o DD/MM/AAAA</div></div>
+    <div class="ayuda-fila"><div>Período desde / hasta</div><div>Mes que cubre el pago. Si está vacío se usa fecha de pago.</div></div>
+    <div class="ayuda-fila"><div>Método</div><div>Texto libre (Efectivo / Transferencia / Mercado Pago). Si está vacío se guarda como "Importado".</div></div>
+    <div class="ayuda-fila"><div>Cobrador</div><div>Nombre de quién registra el cobro</div></div>
+  </div>
+  <div class="ayuda-nota">Los pagos importados NO se deduplican (se permite cargar la misma fila 2 veces). Tené cuidado de no subir el mismo archivo 2 veces.</div>
+
+  <p class="ayuda-p" style="margin-top:14px;"><strong style="color:var(--secondary);">&#x1F4B5; Precios (Actividad × Categoría)</strong></p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Campo</div><div>Formato / aclaración</div></div>
+    <div class="ayuda-fila"><div>Actividad *</div><div>Nombre exacto (debe existir en Actividades)</div></div>
+    <div class="ayuda-fila"><div>Categoría *</div><div>Nombre exacto (debe existir en Categorías)</div></div>
+    <div class="ayuda-fila"><div>Monto *</div><div>Número</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Detección de duplicados</div>
+  <p class="ayuda-p">Cada tabla tiene su propia regla para detectar registros que ya existen y evitar duplicarlos en la importación:</p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Tabla</div><div>Cómo detecta duplicados</div></div>
+    <div class="ayuda-fila"><div>Socios</div><div>Por DNI. Si ya existe se saltea (no sobreescribe).</div></div>
+    <div class="ayuda-fila"><div>Inscripciones</div><div>Por DNI + Plan + Fecha desde. Si la misma inscripción ya está, se saltea.</div></div>
+    <div class="ayuda-fila"><div>Pagos</div><div>No detecta duplicados — cada fila genera un pago nuevo.</div></div>
+    <div class="ayuda-fila"><div>Precios</div><div>Por Actividad + Categoría. Si ya hay precio para esa combinación, se saltea.</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Vista previa antes de importar</div>
+  <p class="ayuda-p">Después de mapear las columnas aparecen 4 contadores y una tabla con las primeras 8 filas:</p>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Contador</div><div>Significado</div></div>
+    <div class="ayuda-fila"><div>Filas totales</div><div>Cantidad de filas detectadas en el archivo</div></div>
+    <div class="ayuda-fila"><div>Nuevos a crear</div><div>Filas válidas que se van a importar</div></div>
+    <div class="ayuda-fila"><div>Ya existen (skip)</div><div>Filas que coinciden con datos ya en la base — se saltean automáticamente</div></div>
+    <div class="ayuda-fila"><div>Inválidas</div><div>Filas con problemas (sin DNI, monto inválido, etc.). Aparece el detalle abajo.</div></div>
+  </div>
+
+  <div class="ayuda-subtitulo">Auditoría</div>
+  <p class="ayuda-p">Cada importación se registra automáticamente en la colección <code>auditoria_imports</code> con: tipo de tabla, nombre del archivo, total de filas, importadas, errores, usuario que ejecutó la import y fecha. Útil para trazabilidad si algo sale mal.</p>
+
+  <div class="ayuda-subtitulo">Buenas prácticas</div>
+  <ol class="ayuda-lista">
+    <li><strong>Probá con un archivo chico primero</strong> (3-5 filas) para verificar que el mapeo y formato te queden bien.</li>
+    <li><strong>Exportá antes de modificar masivamente</strong>: si vas a editar precios o categorías de varios socios, primero exportá los datos actuales como backup.</li>
+    <li><strong>Las categorías y actividades deben existir antes</strong> de importar socios/inscripciones que las referencien. Si no, la fila se importa pero el campo queda vacío.</li>
+    <li><strong>Para actualizar masivamente</strong> (ej: cambiar el precio de Futsala de $35k a $45k para todos), usá el botón "Aplicar a inscripciones" en Administración → Precios. La import no sobreescribe, solo agrega lo que no existe.</li>
+    <li><strong>Después de importar pagos históricos</strong>, podés correr el escaneo de inconsistencias en consola con <code>escanearInconsistenciasCS()</code> para detectar cobros mal armados.</li>
+  </ol>
+
+  <div class="ayuda-subtitulo">Solución de problemas</div>
+  <div class="ayuda-tabla">
+    <div class="ayuda-fila-h"><div>Problema</div><div>Solución</div></div>
+    <div class="ayuda-fila"><div>"La librería de Excel todavía no cargó"</div><div>Esperá 2-3 segundos y volvé a hacer click. SheetJS se carga diferido.</div></div>
+    <div class="ayuda-fila"><div>Auto-mapeo no detecta una columna</div><div>El sistema usa heurística por nombre. Si tu columna tiene un nombre raro (ej: "Apellido del Alumno"), corregilo manualmente con el dropdown.</div></div>
+    <div class="ayuda-fila"><div>Muchas filas inválidas por DNI</div><div>Revisá el detalle de error que aparece debajo del preview. Suele ser DNIs con texto, vacíos, o con menos de 6 dígitos.</div></div>
+    <div class="ayuda-fila"><div>Las inscripciones dicen "No existe socio con DNI X"</div><div>Primero importá los socios. La validación de inscripciones requiere que el DNI esté en la tabla Socios.</div></div>
+    <div class="ayuda-fila"><div>Subí 2 veces el mismo archivo de pagos</div><div>Los pagos no se deduplican. Vas a tener que borrar los duplicados manualmente desde el panel de pagos.</div></div>
+  </div>
+</div>
+
 </div>
 </div>
 
@@ -1819,7 +1951,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.54</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.55</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
