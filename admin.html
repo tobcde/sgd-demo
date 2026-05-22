@@ -637,6 +637,25 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           ¿No tenés el archivo armado? Bajá la plantilla, llenala en Excel/Sheets y subila acá. O exportá lo que ya hay, editá los valores y volvé a subir.
         </div>
 
+        <!-- Bajada masiva: todas las tablas en un solo archivo -->
+        <div style="margin-top:18px;padding:14px;background:rgba(74,140,184,.06);border:1px solid rgba(74,140,184,.25);border-radius:10px;">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#6db4e0;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">&#x1F4E6; Bajada masiva (todas las tablas en un solo archivo)</div>
+          <p style="font-size:11px;color:var(--muted);margin:0 0 10px;">
+            Genera un único <code>.xlsx</code> con <b>una hoja por tabla</b> (en el orden correcto de dependencias). Útil para clonar un cliente o entregarle al cliente un kit completo.
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="impExportarTodo(true)" class="btn" style="background:rgba(74,140,184,.2);color:#6db4e0;border:1px solid rgba(74,140,184,.5);font-weight:700;padding:10px 14px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;cursor:pointer;font-size:12px;">
+              &#x1F4E6; BAJAR TODO (con datos actuales)
+            </button>
+            <button onclick="impExportarTodo(false)" class="btn" style="background:rgba(201,162,39,.15);color:var(--secondary);border:1px solid rgba(201,162,39,.4);font-weight:700;padding:10px 14px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;cursor:pointer;font-size:12px;">
+              &#x1F4DD; BAJAR PLANTILLAS VACÍAS (con ejemplos)
+            </button>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:8px;">
+            &#x1F4A1; En la versión vacía, cada hoja trae <b>una fila de ejemplo marcada con la columna <code>_EJEMPLO</code></b>. Al subirla, el sistema la ignora automáticamente — la podés dejar o borrarla a mano, da lo mismo.
+          </div>
+        </div>
+
         <!-- Step 2: Mapeo de columnas -->
         <div id="impMapeo" style="display:none;margin-top:18px;">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Mapeá las columnas</div>
@@ -1818,13 +1837,19 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   </ol>
   <div class="ayuda-nota">Si seguís este orden, todas las foreign keys se resuelven solas. Si te salteás un paso (ej: Categorías antes de Actividades), el sistema no rompe pero el campo <code>actividadesIds[]</code> de Categorías queda vacío hasta que reimportes.</div>
 
-  <div class="ayuda-subtitulo">Las 3 acciones disponibles</div>
+  <div class="ayuda-subtitulo">Acciones disponibles</div>
   <div class="ayuda-tabla">
     <div class="ayuda-fila-h"><div>Botón</div><div>Qué hace</div></div>
     <div class="ayuda-fila"><div>&#x1F4C2; SUBIR ARCHIVO</div><div>Abre el selector de archivos. Acepta <code>.xlsx</code>, <code>.xls</code> y <code>.csv</code>. Al elegir el archivo, el sistema lo parsea y muestra el mapeo de columnas.</div></div>
-    <div class="ayuda-fila"><div>&#x1F4C4; PLANTILLA VACÍA</div><div>Descarga un Excel con los headers exactos + 1-2 filas de ejemplo + una hoja de instrucciones. Se completa, se borran las filas de ejemplo y se sube.</div></div>
-    <div class="ayuda-fila"><div>&#x2B07;&#xFE0F; EXPORTAR DATOS ACTUALES</div><div>Descarga todo el contenido actual de Firestore para la tabla seleccionada. Útil para backup, edición masiva externa o llevarse los datos.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4C4; PLANTILLA VACÍA</div><div>Descarga un Excel de la tabla actual con headers + 1-2 filas de ejemplo + una hoja de instrucciones.</div></div>
+    <div class="ayuda-fila"><div>&#x2B07;&#xFE0F; EXPORTAR DATOS ACTUALES</div><div>Descarga todo el contenido actual de Firestore para la tabla seleccionada.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4E6; BAJAR TODO (con datos)</div><div>Genera un único <code>.xlsx</code> con TODAS las tablas en hojas separadas y los datos actuales de Firestore. Ideal para backup global o clonar un cliente.</div></div>
+    <div class="ayuda-fila"><div>&#x1F4DD; BAJAR PLANTILLAS VACÍAS</div><div>Genera el mismo archivo de TODAS las tablas pero vacío, con 1 fila de ejemplo por hoja (marcada con la columna <code>_EJEMPLO</code>). Perfecto para entregarle al cliente nuevo.</div></div>
   </div>
+
+  <div class="ayuda-subtitulo">La columna especial <code>_EJEMPLO</code></div>
+  <p class="ayuda-p">En la bajada de "Plantillas vacías", cada hoja trae una fila de ejemplo con una columna extra llamada <code>_EJEMPLO</code> que dice <i>"SÍ — borrar antes de subir"</i>. Esto evita confusión: muestra qué se espera en cada campo pero <strong>el sistema la ignora automáticamente al subir</strong>.</p>
+  <p class="ayuda-p">Podés borrar esas filas a mano antes de subir, o dejarlas — al importar, el sistema detecta el marcador y las skipea silenciosamente (no cuenta como nuevas ni como inválidas). En el preview vas a ver una notita <i>"💡 N filas marcadas como ejemplo se ignoran automáticamente"</i>.</p>
 
   <div class="ayuda-subtitulo">Mapeo automático de columnas</div>
   <p class="ayuda-p">Cuando subís un archivo, el sistema intenta detectar las columnas automáticamente buscando coincidencias por nombre (ej: "DNI", "Documento", "Doc" → DNI). Si la auto-detección falla, podés ajustar manualmente con los dropdowns. Los campos en <strong style="color:var(--red);">rojo con asterisco *</strong> son obligatorios.</p>
@@ -2041,7 +2066,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.56</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.57</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11653,6 +11678,122 @@ function impDescargarPlantilla() {
   toast('Plantilla descargada', 'ok');
 }
 
+// Orden de dependencias para la bajada masiva. Si un dia se agregan tablas nuevas
+// con FKs, ubicarlas aca en el orden topologico correcto.
+var IMP_ORDEN_BULK = [
+  'config_actividades','config_sedes','profesores',
+  'config_categorias','horarios','config_precios',
+  'socios','inscripciones','cuotas'
+];
+
+// Genera un .xlsx con UNA HOJA por cada tabla en IMP_TABLAS.
+// conDatos = true  → vuelca los docs actuales de Firestore.
+// conDatos = false → solo headers + 1 fila de ejemplo marcada con _EJEMPLO (la
+//                    importacion de vuelta la ignora silenciosamente).
+function impExportarTodo(conDatos) {
+  if (typeof XLSX === 'undefined') {
+    alert('La librería de Excel todavía no cargó. Esperá unos segundos y volvé a intentar.');
+    return;
+  }
+  if (!confirm('Vas a generar un archivo Excel con TODAS las tablas (' + IMP_ORDEN_BULK.length + ' hojas) ' + (conDatos ? 'CON los datos actuales' : 'VACÍAS con ejemplos') + '. ¿Continuar?')) return;
+
+  mostrarLoader(conDatos ? 'Descargando todas las tablas...' : 'Generando plantillas...');
+  var wb = XLSX.utils.book_new();
+
+  // Hoja inicial: Instrucciones / orden recomendado
+  var instAoa = [
+    ['SGD — Bajada masiva (' + (conDatos ? 'CON datos actuales' : 'PLANTILLAS vacías') + ')'],
+    ['Generado: ' + new Date().toLocaleString('es-AR')],
+    [''],
+    ['ORDEN RECOMENDADO PARA IMPORTAR'],
+    ['Si vas a subir las hojas a un cliente nuevo, hacelo en este orden para que las FKs se resuelvan bien:'],
+    ['']
+  ];
+  IMP_ORDEN_BULK.forEach(function(k, i){
+    var t = IMP_TABLAS[k]; if (!t) return;
+    instAoa.push([(i+1) + '. ' + t.label, t.collection]);
+  });
+  instAoa.push(['']);
+  if (!conDatos) {
+    instAoa.push(['NOTA SOBRE LAS FILAS DE EJEMPLO']);
+    instAoa.push(['Cada hoja trae 1 fila de ejemplo con la columna _EJEMPLO marcada.']);
+    instAoa.push(['Al subir el archivo, el sistema IGNORA esas filas automáticamente.']);
+    instAoa.push(['Podés borrarlas a mano o dejarlas — el resultado es el mismo.']);
+  }
+  var wsi = XLSX.utils.aoa_to_sheet(instAoa);
+  wsi['!cols'] = [{wch:50},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, wsi, 'Instrucciones');
+
+  if (!conDatos) {
+    // Plantillas vacías con 1 fila de ejemplo marcada
+    IMP_ORDEN_BULK.forEach(function(k){
+      var t = IMP_TABLAS[k]; if (!t) return;
+      var headers = t.campos.map(function(c){ return c.label + (c.required ? ' *' : ''); });
+      headers.push('_EJEMPLO');
+      var aoa = [headers];
+      var ej = (t.ejemplos && t.ejemplos[0]) || {};
+      var ejRow = t.campos.map(function(c){ return ej[c.key] != null ? ej[c.key] : ''; });
+      ejRow.push('SÍ — borrar antes de subir');
+      aoa.push(ejRow);
+      // Fila vacía adicional para "donde empezar"
+      aoa.push(t.campos.map(function(){ return ''; }).concat(['']));
+      var ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = t.campos.map(function(c){
+        var w = 14;
+        if (c.key === 'email' || c.key === 'domicilio' || c.key === 'obs' || c.key === 'actividades') w = 28;
+        if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp' || c.key === 'plan' || c.key === 'actividad' || c.key === 'concepto') w = 18;
+        return { wch: w };
+      }).concat([{wch:30}]);
+      XLSX.utils.book_append_sheet(wb, ws, t.label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,''));
+    });
+    ocultarLoader();
+    var hoy = new Date().toISOString().substring(0,10);
+    XLSX.writeFile(wb, 'sgd_plantillas_' + hoy + '.xlsx');
+    toast('Plantillas generadas','ok');
+    return;
+  }
+
+  // CON datos actuales: leer cada coleccion de Firestore en serie
+  var idx = 0;
+  function siguiente() {
+    if (idx >= IMP_ORDEN_BULK.length) {
+      ocultarLoader();
+      var hoy = new Date().toISOString().substring(0,10);
+      XLSX.writeFile(wb, 'sgd_export_' + hoy + '.xlsx');
+      toast('Exportación completa','ok');
+      return;
+    }
+    var k = IMP_ORDEN_BULK[idx]; var t = IMP_TABLAS[k];
+    if (!t) { idx++; siguiente(); return; }
+    mostrarLoader('Descargando ('+(idx+1)+'/'+IMP_ORDEN_BULK.length+'): '+t.label+'...');
+    db.collection(t.collection).get().then(function(snap){
+      var headers = t.campos.map(function(c){ return c.label; });
+      var aoa = [headers];
+      snap.forEach(function(doc){
+        var rowObj = t.docToRow(doc);
+        aoa.push(t.campos.map(function(c){
+          var v = rowObj[c.key];
+          return v != null ? v : '';
+        }));
+      });
+      var ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = t.campos.map(function(c){
+        var w = 14;
+        if (c.key === 'email' || c.key === 'domicilio' || c.key === 'obs') w = 28;
+        if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp' || c.key === 'plan' || c.key === 'actividad' || c.key === 'concepto') w = 18;
+        return { wch: w };
+      });
+      XLSX.utils.book_append_sheet(wb, ws, t.label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,''));
+      idx++; siguiente();
+    }).catch(function(e){
+      console.warn('[bulk] error en '+t.collection+':', e);
+      // continuar con la siguiente
+      idx++; siguiente();
+    });
+  }
+  siguiente();
+}
+
 function impExportarTabla() {
   if (typeof XLSX === 'undefined') {
     alert('La librería de Excel todavía no cargó. Esperá unos segundos y volvé a intentar.');
@@ -11765,8 +11906,18 @@ function impCambioMapeo(key, val) {
 }
 
 function impFila(rowObj) {
-  // Devuelve { campos:{}, error: string|null } — delega la normalización a la tabla
+  // Devuelve { campos:{}, error: string|null, ejemplo: bool }
+  // Si la fila tiene la columna _EJEMPLO con cualquier valor truthy, se marca
+  // como ejemplo y se skipea silenciosamente (no cuenta como invalida ni nuevo).
   var tabla = impTablaActual();
+  // Detectar marcador _EJEMPLO en cualquier variante de capitalización
+  var ejemploKeys = Object.keys(rowObj||{}).filter(function(k){
+    return /^_?ejemplo$/i.test(String(k||'').trim());
+  });
+  for (var i = 0; i < ejemploKeys.length; i++) {
+    var val = String(rowObj[ejemploKeys[i]]||'').trim();
+    if (val) return { ejemplo: true };
+  }
   var out = {};
   tabla.campos.forEach(function(c){
     var src = window._impMap[c.key];
@@ -11792,10 +11943,11 @@ function impRefrescarPreview() {
   var rows = window._impData.rows;
   var existentes = tabla.duplicadosExistentes();
   var seenLocal = {};
-  var nuevos = 0, dupes = 0, invalidas = 0;
+  var nuevos = 0, dupes = 0, invalidas = 0, ejemplos = 0;
   var detalleInval = [];
   rows.forEach(function(r, i){
     var res = impFila(r);
+    if (res.ejemplo) { ejemplos++; return; }
     if (res.error) { invalidas++; if (detalleInval.length < 10) detalleInval.push('Fila ' + (i+2) + ': ' + res.error); return; }
     var id = tabla.obtenerId(res.campos);
     if (existentes[id] || seenLocal[id]) { dupes++; return; }
@@ -11808,12 +11960,17 @@ function impRefrescarPreview() {
   document.getElementById('impStatInval').innerText = invalidas;
   document.getElementById('impAccionN').innerText = nuevos;
   var detEl = document.getElementById('impInvalDetalle');
+  var notas = [];
   if (invalidas > 0) {
     var msg = 'Filas que NO se importan:<br>' + detalleInval.join('<br>');
     if (invalidas > detalleInval.length) msg += '<br>... y ' + (invalidas - detalleInval.length) + ' más.';
-    detEl.innerHTML = msg;
-    detEl.style.display = 'block';
-  } else { detEl.style.display = 'none'; }
+    notas.push(msg);
+  }
+  if (ejemplos > 0) {
+    notas.push('<span style="color:var(--secondary);">&#x1F4A1; ' + ejemplos + ' fila' + (ejemplos>1?'s':'') + ' marcada' + (ejemplos>1?'s':'') + ' como ejemplo (columna _EJEMPLO) se ignora' + (ejemplos>1?'n':'') + ' automáticamente.</span>');
+  }
+  if (notas.length) { detEl.innerHTML = notas.join('<br><br>'); detEl.style.display = 'block'; }
+  else detEl.style.display = 'none';
 
   // Preview con las primeras 4 columnas de la tabla
   var colsPrev = tabla.campos.slice(0, 4);
@@ -11827,6 +11984,11 @@ function impRefrescarPreview() {
   var contPrev = 0;
   for (var i = 0; i < rows.length && contPrev < 8; i++) {
     var res = impFila(rows[i]);
+    if (res.ejemplo) {
+      contPrev++;
+      prevHtml += '<tr style="background:rgba(201,162,39,.08);"><td colspan="' + colsPrev.length + '" style="padding:6px 8px;color:var(--secondary);font-size:11px;font-style:italic;">[Fila ' + (i+2) + '] Fila de ejemplo (marcada con _EJEMPLO)</td><td style="padding:6px 8px;color:var(--secondary);font-weight:700;">&#x1F4A1; EJEMPLO</td></tr>';
+      continue;
+    }
     if (res.error) {
       contPrev++;
       prevHtml += '<tr style="background:rgba(228,67,71,.06);"><td colspan="' + colsPrev.length + '" style="padding:6px 8px;color:var(--red);font-size:11px;">[Fila ' + (i+2) + '] ' + res.error + '</td><td style="padding:6px 8px;color:var(--red);font-weight:700;">&#10007; INVÁLIDA</td></tr>';
@@ -11866,6 +12028,7 @@ function impEjecutar() {
   var aImportar = [];
   window._impData.rows.forEach(function(r){
     var res = impFila(r);
+    if (res.ejemplo) return;
     if (res.error) return;
     var id = tabla.obtenerId(res.campos);
     if (existentes[id] || seenLocal[id]) return;
