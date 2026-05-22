@@ -584,28 +584,43 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <div id="tab-admin" class="tab-content" style="display:none;">
   <div class="admin-container">
 
-    <!-- Importar socios desde Excel/CSV -->
+    <!-- Importar / Exportar datos desde Excel/CSV -->
     <div class="admin-card" id="cardImportar" style="grid-column:1/-1;">
       <div class="admin-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span>&#x1F4E5; Importar socios desde Excel/CSV</span>
+        <span>&#x1F4E5; Importar / Exportar datos (Excel/CSV)</span>
         <button id="impToggle" onclick="impToggleSeccion()" style="background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">Mostrar</button>
       </div>
       <div id="impPanel" style="display:none;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
+          <div style="flex:1;min-width:200px;">
+            <label class="filter-label">Tabla a importar / exportar</label>
+            <select id="impTablaSel" class="edit-input" style="width:100%;margin-top:4px;" onchange="impCambiarTabla(this.value)">
+              <option value="socios">&#x1F465; Socios</option>
+              <option value="inscripciones">&#x1F4CB; Inscripciones</option>
+              <option value="cuotas">&#x1F4B0; Pagos / Cuotas</option>
+              <option value="config_precios">&#x1F4B5; Precios (Actividad × Categoría)</option>
+            </select>
+          </div>
+        </div>
         <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">
-          Subí un archivo <code>.xlsx</code>, <code>.xls</code> o <code>.csv</code> con los datos del club que ya tenés. El sistema detecta las columnas y te deja mapearlas a los campos correctos antes de importar.
+          <b>Importar</b>: subí un archivo <code>.xlsx</code>, <code>.xls</code> o <code>.csv</code>. El sistema detecta columnas y te deja mapearlas antes de aplicar.<br>
+          <b>Exportar</b>: bajá todos los datos actuales de la tabla seleccionada en formato Excel.
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
           <label class="btn" style="background:rgba(201,162,39,.15);color:var(--secondary);border:1px solid rgba(201,162,39,.4);font-weight:700;padding:10px 16px;cursor:pointer;display:inline-block;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;">
-            &#x1F4C2; ELEGIR ARCHIVO
+            &#x1F4C2; SUBIR ARCHIVO
             <input type="file" id="impFile" accept=".xlsx,.xls,.csv,text/csv" style="display:none;" onchange="impArchivoElegido(event)">
           </label>
           <button onclick="impDescargarPlantilla()" class="btn" style="background:var(--primary-dim);color:#6de097;border:1px solid var(--primary-border);font-weight:700;padding:10px 16px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;cursor:pointer;">
-            &#x2B07;&#xFE0F; DESCARGAR PLANTILLA
+            &#x1F4C4; PLANTILLA VACÍA
+          </button>
+          <button onclick="impExportarTabla()" class="btn" style="background:rgba(74,140,184,.15);color:#6db4e0;border:1px solid rgba(74,140,184,.4);font-weight:700;padding:10px 16px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;cursor:pointer;">
+            &#x2B07;&#xFE0F; EXPORTAR DATOS ACTUALES
           </button>
           <span id="impArchNombre" style="color:var(--muted);font-size:12px;"></span>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">
-          ¿No tenés el archivo armado? Bajá la plantilla, llenala en Excel/Sheets y subila acá.
+          ¿No tenés el archivo armado? Bajá la plantilla, llenala en Excel/Sheets y subila acá. O exportá lo que ya hay, editá los valores y volvé a subir.
         </div>
 
         <!-- Step 2: Mapeo de columnas -->
@@ -1804,7 +1819,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.53</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.54</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -10773,12 +10788,54 @@ function emailTemplateRecordatorio(it) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// IMPORTAR SOCIOS desde Excel / CSV (SheetJS)
+// IMPORT / EXPORT genérico de tablas Firestore (SheetJS)
 // ══════════════════════════════════════════════════════════════════
-window._impData = null;  // { headers: [], rows: [{col:valor}, ...], fileName: '' }
-window._impMap  = {};    // { campoTarget: nombreColumnaSource | '' }
+window._impData = null;
+window._impMap  = {};
+window._impTabla = 'socios';
 
-var IMP_CAMPOS = [
+// Helpers de normalización compartidos
+function _impFechaDDMM(fn) {
+  if (!fn) return '';
+  var s = String(fn).trim();
+  var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m) {
+    var d = m[1].padStart(2,'0'), mo = m[2].padStart(2,'0');
+    var yr = m[3].length === 2 ? '19'+m[3] : m[3];
+    return d+'/'+mo+'/'+yr;
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    var p = s.substring(0,10).split('-');
+    return p[2]+'/'+p[1]+'/'+p[0];
+  }
+  return s;
+}
+function _impFechaISO(fn) {
+  if (!fn) return '';
+  var s = String(fn).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+  var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m) {
+    var d = m[1].padStart(2,'0'), mo = m[2].padStart(2,'0');
+    var yr = m[3].length === 2 ? '19'+m[3] : m[3];
+    return yr+'-'+mo+'-'+d;
+  }
+  return s;
+}
+function _impLimpiarDni(d) { return (d||'').toString().replace(/\./g,'').replace(/\s/g,'').replace(/-/g,'').trim(); }
+function _impNumero(v) {
+  if (v == null || v === '') return null;
+  var n = Number(String(v).replace(/[^\d.,-]/g,'').replace(',','.'));
+  return isNaN(n) ? null : n;
+}
+
+var IMP_TABLAS = {
+  // ── SOCIOS ──────────────────────────────────────────────────────
+  socios: {
+    label: 'Socios',
+    collection: 'socios',
+    docIdField: 'dni',
+    campos: [
   { key:'apellido',       label:'Apellido',          required:true,  hints:['apellido','surname','last name','last','apellidos'] },
   { key:'nombre',         label:'Nombre',            required:true,  hints:['nombre','name','first name','first','nombres'] },
   { key:'dni',            label:'DNI / Documento',   required:true,  hints:['dni','documento','doc','identifier','cedula','cuil'] },
@@ -10793,8 +10850,250 @@ var IMP_CAMPOS = [
   { key:'contacto1Tel',   label:'Contacto 1 (Tel)',  required:false, hints:['tel contacto1','tel contacto 1','tutor tel','contacto1 tel','telcontacto'] },
   { key:'contacto2Nom',   label:'Contacto 2 (Nombre)', required:false, hints:['contacto2','contacto 2','contacto secund'] },
   { key:'contacto2Tel',   label:'Contacto 2 (Tel)',  required:false, hints:['tel contacto2','contacto2 tel'] },
-  { key:'obs',            label:'Observaciones',     required:false, hints:['obs','observacion','observación','notas','nota','comentario'] }
-];
+      { key:'obs',            label:'Observaciones',     required:false, hints:['obs','observacion','observación','notas','nota','comentario'] }
+    ],
+    ejemplos: [
+      { apellido:'García', nombre:'Juan Pablo', dni:'38123456', fechaNac:'15/03/2010', sexo:'Masculino', email:'jp@ejemplo.com', celular:'11-5555-1234', domicilio:'Av. Rivadavia 1234, CABA', categoriaApp:'Sub-15', contacto1Nom:'María García (Madre)', contacto1Tel:'11-5555-9876', contacto2Nom:'Pedro García (Padre)', contacto2Tel:'11-4444-3210', obs:'Alérgico al polvo' },
+      { apellido:'Pérez', nombre:'Sofía', dni:'42987654', fechaNac:'22/07/2013', sexo:'Femenino', email:'', celular:'11-2222-3333', domicilio:'Calle Falsa 123, San Justo', categoriaApp:'Sub-12', contacto1Nom:'Laura Pérez (Madre)', contacto1Tel:'11-7777-8888' }
+    ],
+    normalizarFila: function(out) {
+      out.dni = _impLimpiarDni(out.dni);
+      if (!out.apellido) return { error:'Falta apellido' };
+      if (!out.nombre) return { error:'Falta nombre' };
+      if (!out.dni) return { error:'Falta DNI' };
+      if (!/^\d{6,12}$/.test(out.dni)) return { error:'DNI inválido: '+out.dni };
+      if (out.email && out.email.indexOf('@')<0) out.email = '';
+      var sx = (out.sexo||'').toLowerCase();
+      if (['m','masc','masculino','male','h','hombre'].indexOf(sx) >= 0) out.sexo = 'Masculino';
+      else if (['f','fem','femenino','female','mujer'].indexOf(sx) >= 0) out.sexo = 'Femenino';
+      else if (sx) out.sexo = sx.charAt(0).toUpperCase()+sx.slice(1);
+      else out.sexo = '';
+      out.fechaNac = _impFechaDDMM(out.fechaNac);
+      out._contacto1 = [out.contacto1Nom, out.contacto1Tel].filter(Boolean).join('|');
+      out._contacto2 = [out.contacto2Nom, out.contacto2Tel].filter(Boolean).join('|');
+      return { campos: out };
+    },
+    duplicadosExistentes: function() {
+      var set = {};
+      DB.jugadores.slice(1).forEach(function(f){ var d = (f[COL.DNI]||'').toString().trim(); if (d) set[d] = true; });
+      return set;
+    },
+    obtenerId: function(c) { return c.dni; },
+    construirDoc: function(c, ctx) {
+      var _catNom = c.categoriaApp||'', _catSecNom = c.catSecundaria||'';
+      return {
+        apellido:c.apellido, nombre:c.nombre, email:c.email||'',
+        celular:c.celular||'', telefono:'',
+        activo:true, tipoDoc:'DNI', dni:c.dni,
+        fechaNac:c.fechaNac||'', sexo:c.sexo||'', domicilio:c.domicilio||'',
+        obs:c.obs||'', membresia:'', vencimiento:'',
+        fechaIngreso:ctx.hoy, creador:'Import:'+ctx.user,
+        categoriaApp:_catNom, plan:'',
+        foto:'', dniFoto:'', apto:'', dniDorso:'',
+        contacto1:c._contacto1||'', contacto2:c._contacto2||'',
+        actividades:'', saldo:0, catSecundaria:_catSecNom,
+        categoriaAppId: _catNom ? resolveCatId(_catNom) : '',
+        catSecundariaId: _catSecNom ? resolveCatId(_catSecNom) : '',
+        planId:'', actividadesIds:[], sedeId:''
+      };
+    },
+    afterImport: function(c, ctx) {
+      try {
+        var docFake = { data:function(){ return ctx.lastDoc; } };
+        DB.jugadores.push(socioToRow(docFake, c.dni));
+      } catch(_){}
+    },
+    docToRow: function(doc) {
+      var d = doc.data();
+      var c1 = (d.contacto1||'').split('|');
+      var c2 = (d.contacto2||'').split('|');
+      return {
+        apellido:d.apellido||'', nombre:d.nombre||'', dni:d.dni||'',
+        fechaNac:d.fechaNac||'', sexo:d.sexo||'',
+        email:d.email||'', celular:d.celular||'',
+        domicilio:d.domicilio||'',
+        categoriaApp:d.categoriaApp||'', catSecundaria:d.catSecundaria||'',
+        contacto1Nom:c1[0]||'', contacto1Tel:c1[1]||'',
+        contacto2Nom:c2[0]||'', contacto2Tel:c2[1]||'',
+        obs:d.obs||''
+      };
+    }
+  },
+
+  // ── INSCRIPCIONES ───────────────────────────────────────────────
+  inscripciones: {
+    label: 'Inscripciones',
+    collection: 'inscripciones',
+    docIdField: null,
+    campos: [
+      { key:'dni',          label:'DNI del socio',    required:true,  hints:['dni','documento','doc'] },
+      { key:'plan',         label:'Plan / Actividad', required:true,  hints:['plan','actividad','disciplina','curso'] },
+      { key:'monto',        label:'Monto mensual',    required:true,  hints:['monto','precio','valor','cuota'] },
+      { key:'desde',        label:'Desde (AAAA-MM-DD)', required:true,  hints:['desde','inicio','from','start','vigencia desde','fecha desde'] },
+      { key:'hasta',        label:'Hasta (AAAA-MM-DD)', required:false, hints:['hasta','fin','to','end','vencimiento','vigencia hasta','fecha hasta'] },
+      { key:'descuentoHno', label:'Descuento por hermano', required:false, hints:['descuento','desc hno','descuento hermano'] },
+      { key:'hnoDe',        label:'Hermano de (DNI)', required:false, hints:['hno','hermano','hno de'] },
+      { key:'obs',          label:'Observaciones',    required:false, hints:['obs','nota','comentario'] }
+    ],
+    ejemplos: [
+      { dni:'38123456', plan:'Futsala',      monto:'45000', desde:'2026-03-01', hasta:'', descuentoHno:'', hnoDe:'', obs:'' },
+      { dni:'38123456', plan:'Cuota Social', monto:'9000',  desde:'2026-03-01', hasta:'', descuentoHno:'', hnoDe:'', obs:'' }
+    ],
+    normalizarFila: function(out) {
+      out.dni = _impLimpiarDni(out.dni);
+      if (!out.dni) return { error:'Falta DNI' };
+      if (!/^\d{6,12}$/.test(out.dni)) return { error:'DNI inválido: '+out.dni };
+      if (!out.plan) return { error:'Falta plan' };
+      var m = _impNumero(out.monto);
+      if (!m || m <= 0) return { error:'Monto inválido' };
+      out.monto = m;
+      out.desde = _impFechaISO(out.desde);
+      if (!out.desde) return { error:'Falta fecha desde' };
+      out.hasta = _impFechaISO(out.hasta);
+      var dh = _impNumero(out.descuentoHno); out.descuentoHno = dh && dh > 0 ? dh : 0;
+      out.hnoDe = _impLimpiarDni(out.hnoDe);
+      var existe = DB.jugadores.slice(1).some(function(f){ return (f[COL.DNI]||'').toString().trim() === out.dni; });
+      if (!existe) return { error:'No existe socio con DNI '+out.dni };
+      return { campos: out };
+    },
+    duplicadosExistentes: function() {
+      var set = {};
+      (DB.inscripciones||[]).forEach(function(i){
+        set[(i.dni||'')+'|'+(i.plan||'')+'|'+(i.desde||'')] = true;
+      });
+      return set;
+    },
+    obtenerId: function(c) { return c.dni+'|'+c.plan+'|'+c.desde; },
+    construirDoc: function(c) {
+      var _socio = DB.jugadores.slice(1).find(function(f){ return (f[COL.DNI]||'').toString().trim() === c.dni; });
+      var nombre = _socio ? ((_socio[COL.APELLIDO]||'')+' '+(_socio[COL.NOMBRE]||'')).trim() : '';
+      return {
+        dni:c.dni, nombre:nombre, plan:c.plan, monto:c.monto,
+        desde:c.desde, hasta:c.hasta||'',
+        obs:c.obs||'', descuentoHno:c.descuentoHno||0, hnoDe:c.hnoDe||'',
+        manual:false,
+        planId: c.plan ? resolveActId(c.plan) : ''
+      };
+    },
+    docToRow: function(doc) {
+      var d = doc.data();
+      return {
+        dni:d.dni||'', plan:d.plan||'',
+        monto:d.monto||0, desde:d.desde||'', hasta:d.hasta||'',
+        descuentoHno:d.descuentoHno||'', hnoDe:d.hnoDe||'',
+        obs:d.obs||''
+      };
+    }
+  },
+
+  // ── CUOTAS / PAGOS ──────────────────────────────────────────────
+  cuotas: {
+    label: 'Pagos / Cuotas',
+    collection: 'cuotas',
+    docIdField: null,
+    campos: [
+      { key:'dni',          label:'DNI del socio',      required:true,  hints:['dni','doc'] },
+      { key:'concepto',     label:'Concepto / Plan',    required:true,  hints:['concepto','plan','actividad','detalle'] },
+      { key:'monto',        label:'Monto',              required:true,  hints:['monto','importe','precio'] },
+      { key:'fechaPago',    label:'Fecha de pago',      required:true,  hints:['fecha pago','fecha','fechapago','f pago'] },
+      { key:'periodoDesde', label:'Período desde',      required:false, hints:['periodo desde','desde','per desde'] },
+      { key:'periodoHasta', label:'Período hasta',      required:false, hints:['periodo hasta','hasta','per hasta'] },
+      { key:'metodo',       label:'Método de pago',     required:false, hints:['metodo','método','medio','forma'] },
+      { key:'cobrador',     label:'Cobrador',           required:false, hints:['cobrador','operador','registra'] },
+      { key:'obs',          label:'Observaciones',      required:false, hints:['obs','nota','comentario'] }
+    ],
+    ejemplos: [
+      { dni:'38123456', concepto:'Futsala', monto:'45000', fechaPago:'2026-03-05', periodoDesde:'2026-03-01', periodoHasta:'2026-03-31', metodo:'Efectivo', cobrador:'Juana', obs:'' }
+    ],
+    normalizarFila: function(out) {
+      out.dni = _impLimpiarDni(out.dni);
+      if (!out.dni) return { error:'Falta DNI' };
+      if (!out.concepto) return { error:'Falta concepto' };
+      var m = _impNumero(out.monto);
+      if (!m || m <= 0) return { error:'Monto inválido' };
+      out.monto = m;
+      out.fechaPago = _impFechaISO(out.fechaPago);
+      if (!out.fechaPago) return { error:'Falta fecha de pago' };
+      out.periodoDesde = _impFechaISO(out.periodoDesde);
+      out.periodoHasta = _impFechaISO(out.periodoHasta);
+      return { campos: out };
+    },
+    duplicadosExistentes: function() { return {}; },
+    obtenerId: function(c) { return c.dni+'|'+c.concepto+'|'+c.fechaPago+'|'+c.monto; },
+    construirDoc: function(c) {
+      var _socio = DB.jugadores.slice(1).find(function(f){ return (f[COL.DNI]||'').toString().trim() === c.dni; });
+      var nombre = _socio ? ((_socio[COL.APELLIDO]||'')+' '+(_socio[COL.NOMBRE]||'')).trim() : '';
+      return {
+        dni:c.dni, nombre:nombre, plan:c.concepto, concepto:c.concepto,
+        periodoDesde:c.periodoDesde||'', periodoHasta:c.periodoHasta||'',
+        fechaPago:c.fechaPago, monto:c.monto,
+        metodo:c.metodo||'Importado', cobrador:c.cobrador||'',
+        obs:c.obs||'', periodo:'', ts: Date.now(),
+        planId: c.concepto ? resolveActId(c.concepto) : '',
+        planNombre:c.concepto, periodoId:'', periodoNombre:''
+      };
+    },
+    docToRow: function(doc) {
+      var d = doc.data();
+      return {
+        dni:d.dni||'', concepto:d.concepto||d.plan||'',
+        monto:d.monto||0,
+        fechaPago:d.fechaPago||'',
+        periodoDesde:d.periodoDesde||'', periodoHasta:d.periodoHasta||'',
+        metodo:d.metodo||'', cobrador:d.cobrador||'',
+        obs:d.obs||''
+      };
+    }
+  },
+
+  // ── CONFIG_PRECIOS ──────────────────────────────────────────────
+  config_precios: {
+    label: 'Precios (Actividad × Categoría)',
+    collection: 'config_precios',
+    docIdField: null,
+    campos: [
+      { key:'actividad', label:'Actividad', required:true, hints:['actividad','plan','disciplina'] },
+      { key:'categoria', label:'Categoría', required:true, hints:['categoria','categoría','category','grupo'] },
+      { key:'monto',     label:'Monto',     required:true, hints:['monto','precio','valor'] }
+    ],
+    ejemplos: [
+      { actividad:'Futsala',      categoria:'Sub-15', monto:'45000' },
+      { actividad:'Cuota Social', categoria:'Sub-15', monto:'9000' }
+    ],
+    normalizarFila: function(out) {
+      if (!out.actividad) return { error:'Falta actividad' };
+      if (!out.categoria) return { error:'Falta categoría' };
+      var m = _impNumero(out.monto);
+      if (!m || m <= 0) return { error:'Monto inválido' };
+      out.monto = m;
+      return { campos: out };
+    },
+    duplicadosExistentes: function() {
+      var set = {};
+      (DB.precios||[]).forEach(function(p){ set[(p.actividad||'')+'|'+(p.categoria||'')] = true; });
+      return set;
+    },
+    obtenerId: function(c) { return c.actividad+'|'+c.categoria; },
+    construirDoc: function(c) {
+      return {
+        actividad:c.actividad, categoria:c.categoria, monto:c.monto,
+        actividadId: c.actividad ? resolveActId(c.actividad) : '',
+        categoriaId: c.categoria ? resolveCatId(c.categoria) : ''
+      };
+    },
+    docToRow: function(doc) {
+      var d = doc.data();
+      return { actividad:d.actividad||'', categoria:d.categoria||'', monto:d.monto||0 };
+    }
+  }
+};
+
+function impTablaActual() { return IMP_TABLAS[window._impTabla] || IMP_TABLAS.socios; }
+function impCambiarTabla(key) {
+  if (!IMP_TABLAS[key]) return;
+  window._impTabla = key;
+  impCancelar();
+}
 
 function impToggleSeccion() {
   var p = document.getElementById('impPanel');
@@ -10808,76 +11107,84 @@ function impDescargarPlantilla() {
     alert('La librería de Excel todavía no cargó. Esperá unos segundos y volvé a intentar.');
     return;
   }
-  // Headers: usamos el label exacto de IMP_CAMPOS para que al subir vuelva a matchear
-  var headers = IMP_CAMPOS.map(function(c){ return c.label + (c.required ? ' *' : ''); });
-  // 2 filas de ejemplo (se borran antes de subir)
-  var ejemplo1 = {
-    apellido: 'García', nombre: 'Juan Pablo', dni: '38123456',
-    fechaNac: '15/03/2010', sexo: 'Masculino',
-    email: 'juangarcia@ejemplo.com', celular: '11-5555-1234',
-    domicilio: 'Av. Rivadavia 1234, CABA',
-    categoriaApp: 'Sub-15', catSecundaria: '',
-    contacto1Nom: 'María García (Madre)', contacto1Tel: '11-5555-9876',
-    contacto2Nom: 'Pedro García (Padre)', contacto2Tel: '11-4444-3210',
-    obs: 'Alérgico al polvo'
-  };
-  var ejemplo2 = {
-    apellido: 'Pérez', nombre: 'Sofía', dni: '42987654',
-    fechaNac: '22/07/2013', sexo: 'Femenino',
-    email: '', celular: '11-2222-3333',
-    domicilio: 'Calle Falsa 123, San Justo',
-    categoriaApp: 'Sub-12', catSecundaria: '',
-    contacto1Nom: 'Laura Pérez (Madre)', contacto1Tel: '11-7777-8888',
-    contacto2Nom: '', contacto2Tel: '',
-    obs: ''
-  };
-  // Armar AoA (array of arrays): primera fila headers, luego ejemplos, luego una fila vacía
+  var tabla = impTablaActual();
+  var headers = tabla.campos.map(function(c){ return c.label + (c.required ? ' *' : ''); });
   var aoa = [headers];
-  [ejemplo1, ejemplo2].forEach(function(ej){
-    aoa.push(IMP_CAMPOS.map(function(c){ return ej[c.key] || ''; }));
+  (tabla.ejemplos||[]).forEach(function(ej){
+    aoa.push(tabla.campos.map(function(c){ return ej[c.key] != null ? ej[c.key] : ''; }));
   });
-  // Línea vacía para que vean "donde empezar"
-  aoa.push(IMP_CAMPOS.map(function(){ return ''; }));
+  aoa.push(tabla.campos.map(function(){ return ''; }));
 
   var ws = XLSX.utils.aoa_to_sheet(aoa);
-  // Anchos de columna para que se lea cómodo
-  ws['!cols'] = IMP_CAMPOS.map(function(c){
+  ws['!cols'] = tabla.campos.map(function(c){
     var w = 14;
     if (c.key === 'email' || c.key === 'domicilio' || c.key === 'obs') w = 28;
     if (c.key === 'contacto1Nom' || c.key === 'contacto2Nom') w = 22;
-    if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp') w = 18;
+    if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp' || c.key === 'plan' || c.key === 'actividad' || c.key === 'concepto') w = 18;
     return { wch: w };
   });
-
   var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Socios');
+  XLSX.utils.book_append_sheet(wb, ws, tabla.label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,''));
 
-  // Segunda hoja con instrucciones
-  var instrucciones = [
-    ['INSTRUCCIONES'],
-    [''],
-    ['1. Completá la hoja "Socios" con tus datos.'],
-    ['2. Las columnas con * son obligatorias: Apellido, Nombre y DNI.'],
-    ['3. DNI: solo números, sin puntos ni guiones (se normaliza igual si los tiene).'],
-    ['4. Fecha nacimiento: formato DD/MM/AAAA (ejemplo: 15/03/2010).'],
-    ['5. Sexo: "Masculino" o "Femenino". También acepta "M"/"F".'],
-    ['6. Borrá las 2 filas de ejemplo (García y Pérez) antes de subir.'],
-    ['7. Podés agregar tantas filas como quieras.'],
-    ['8. Si no tenés un dato, dejá la celda vacía.'],
-    [''],
-    ['CAMPOS DISPONIBLES'],
-    ['']
+  // Hoja de instrucciones
+  var inst = [
+    ['INSTRUCCIONES — ' + tabla.label], [''],
+    ['1. Completá la hoja con tus datos.'],
+    ['2. Las columnas con * son obligatorias.'],
+    ['3. DNI: solo números (se normaliza automáticamente si tiene puntos/guiones).'],
+    ['4. Fechas: formato DD/MM/AAAA o AAAA-MM-DD (el sistema convierte).'],
+    ['5. Borrá las filas de ejemplo antes de subir.'],
+    ['6. Si no tenés un dato, dejá la celda vacía.'],
+    [''], ['CAMPOS DISPONIBLES'], ['']
   ];
-  IMP_CAMPOS.forEach(function(c){
-    instrucciones.push([c.label + (c.required?' (obligatorio)':''), '— ' + c.hints.slice(0,3).join(', ')]);
+  tabla.campos.forEach(function(c){
+    inst.push([c.label + (c.required?' (obligatorio)':''), '— ' + c.hints.slice(0,3).join(', ')]);
   });
-  var wsInst = XLSX.utils.aoa_to_sheet(instrucciones);
-  wsInst['!cols'] = [{ wch: 32 }, { wch: 50 }];
-  XLSX.utils.book_append_sheet(wb, wsInst, 'Instrucciones');
+  var wsi = XLSX.utils.aoa_to_sheet(inst);
+  wsi['!cols'] = [{wch:32},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, wsi, 'Instrucciones');
 
   var hoy = new Date().toISOString().substring(0,10);
-  XLSX.writeFile(wb, 'plantilla_socios_' + hoy + '.xlsx');
+  var slug = window._impTabla.replace(/_/g,'-');
+  XLSX.writeFile(wb, 'plantilla_' + slug + '_' + hoy + '.xlsx');
   toast('Plantilla descargada', 'ok');
+}
+
+function impExportarTabla() {
+  if (typeof XLSX === 'undefined') {
+    alert('La librería de Excel todavía no cargó. Esperá unos segundos y volvé a intentar.');
+    return;
+  }
+  var tabla = impTablaActual();
+  mostrarLoader('Descargando '+tabla.label+'...');
+  db.collection(tabla.collection).get().then(function(snap){
+    var headers = tabla.campos.map(function(c){ return c.label; });
+    var aoa = [headers];
+    snap.forEach(function(doc){
+      var rowObj = tabla.docToRow(doc);
+      aoa.push(tabla.campos.map(function(c){
+        var v = rowObj[c.key];
+        return v != null ? v : '';
+      }));
+    });
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = tabla.campos.map(function(c){
+      var w = 14;
+      if (c.key === 'email' || c.key === 'domicilio' || c.key === 'obs') w = 28;
+      if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp' || c.key === 'plan' || c.key === 'actividad' || c.key === 'concepto') w = 18;
+      return { wch: w };
+    });
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, tabla.label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,''));
+    var hoy = new Date().toISOString().substring(0,10);
+    var slug = window._impTabla.replace(/_/g,'-');
+    XLSX.writeFile(wb, 'export_'+slug+'_'+hoy+'.xlsx');
+    ocultarLoader();
+    toast(snap.size+' filas exportadas', 'ok');
+  }).catch(function(e){
+    ocultarLoader();
+    alert('Error al exportar: '+(e.message||e));
+  });
 }
 
 function impArchivoElegido(ev) {
@@ -10913,14 +11220,16 @@ function impArchivoElegido(ev) {
 
 function impAutoMap(headers) {
   window._impMap = {};
+  var tabla = impTablaActual();
   var lower = headers.map(function(h){ return (h||'').toString().toLowerCase().trim(); });
-  IMP_CAMPOS.forEach(function(campo){
+  tabla.campos.forEach(function(campo){
     var found = '';
     for (var i = 0; i < lower.length && !found; i++) {
-      var h = lower[i];
+      // Limpiar asteriscos finales y espacios para comparar
+      var hClean = lower[i].replace(/\s*\*\s*$/,'').trim();
       for (var j = 0; j < campo.hints.length; j++) {
         var hint = campo.hints[j];
-        if (h === hint || h.indexOf(hint) >= 0) { found = headers[i]; break; }
+        if (hClean === hint || hClean.indexOf(hint) >= 0) { found = headers[i]; break; }
       }
     }
     window._impMap[campo.key] = found;
@@ -10930,7 +11239,8 @@ function impAutoMap(headers) {
 function impRenderMapeo() {
   var cont = document.getElementById('impMapeoCampos');
   var headers = window._impData ? window._impData.headers : [];
-  cont.innerHTML = IMP_CAMPOS.map(function(campo){
+  var tabla = impTablaActual();
+  cont.innerHTML = tabla.campos.map(function(campo){
     var sel = '<select onchange="impCambioMapeo(\'' + campo.key + '\', this.value)" class="edit-input" style="width:100%;margin-top:4px;">'
       + '<option value="">(ninguna)</option>'
       + headers.map(function(h){
@@ -10952,53 +11262,22 @@ function impCambioMapeo(key, val) {
 }
 
 function impFila(rowObj) {
-  // Devuelve { campos:{}, error: string|null }
+  // Devuelve { campos:{}, error: string|null } — delega la normalización a la tabla
+  var tabla = impTablaActual();
   var out = {};
-  IMP_CAMPOS.forEach(function(c){
+  tabla.campos.forEach(function(c){
     var src = window._impMap[c.key];
-    var v = src ? (rowObj[src] || '') : '';
+    var v = src ? (rowObj[src] != null ? rowObj[src] : '') : '';
     v = (v == null ? '' : String(v)).trim();
     out[c.key] = v;
   });
-  // Normalizar DNI
-  out.dni = (out.dni||'').replace(/\./g,'').replace(/\s/g,'').replace(/-/g,'').trim();
-  // Validaciones obligatorias
-  if (!out.apellido) return { error: 'Falta apellido' };
-  if (!out.nombre)   return { error: 'Falta nombre' };
-  if (!out.dni)      return { error: 'Falta DNI' };
-  if (!/^\d{6,12}$/.test(out.dni)) return { error: 'DNI inválido: ' + out.dni };
-  // Email validation suave
-  if (out.email && out.email.indexOf('@') < 0) out.email = '';
-  // Sexo normalizado
-  var sx = (out.sexo||'').toLowerCase();
-  if (sx === 'm' || sx === 'masc' || sx === 'masculino' || sx === 'male' || sx === 'h' || sx === 'hombre') out.sexo = 'Masculino';
-  else if (sx === 'f' || sx === 'fem' || sx === 'femenino' || sx === 'female' || sx === 'mujer') out.sexo = 'Femenino';
-  else if (sx) out.sexo = sx.charAt(0).toUpperCase() + sx.slice(1);
-  else out.sexo = '';
-  // Fecha nac normalizada (acepta dd/mm/yyyy, yyyy-mm-dd, Date)
-  var fn = out.fechaNac;
-  if (fn) {
-    var m = fn.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-    if (m) {
-      var d = m[1].padStart(2,'0'), mo = m[2].padStart(2,'0'), yr = m[3].length === 2 ? '19'+m[3] : m[3];
-      out.fechaNac = d + '/' + mo + '/' + yr;
-    } else if (/^\d{4}-\d{2}-\d{2}/.test(fn)) {
-      var parts = fn.substring(0,10).split('-');
-      out.fechaNac = parts[2] + '/' + parts[1] + '/' + parts[0];
-    }
-  }
-  // Combinar contactos en "Nombre|Tel"
-  var c1 = [out.contacto1Nom, out.contacto1Tel].filter(Boolean).join('|');
-  var c2 = [out.contacto2Nom, out.contacto2Tel].filter(Boolean).join('|');
-  out._contacto1 = c1;
-  out._contacto2 = c2;
-  return { campos: out };
+  return tabla.normalizarFila(out);
 }
 
 function impRefrescarPreview() {
   if (!window._impData) return;
-  // Validar mapeo obligatorios
-  var faltantes = IMP_CAMPOS.filter(function(c){ return c.required && !window._impMap[c.key]; });
+  var tabla = impTablaActual();
+  var faltantes = tabla.campos.filter(function(c){ return c.required && !window._impMap[c.key]; });
   if (faltantes.length) {
     document.getElementById('impPreview').style.display = 'none';
     document.getElementById('impAccion').style.display = 'none';
@@ -11008,17 +11287,16 @@ function impRefrescarPreview() {
   document.getElementById('impAccion').style.display = 'flex';
 
   var rows = window._impData.rows;
-  var existentesDni = {};
-  DB.jugadores.slice(1).forEach(function(f){ var d = (f[COL.DNI]||'').toString().trim(); if (d) existentesDni[d] = true; });
-  var seenDni = {};
+  var existentes = tabla.duplicadosExistentes();
+  var seenLocal = {};
   var nuevos = 0, dupes = 0, invalidas = 0;
   var detalleInval = [];
   rows.forEach(function(r, i){
     var res = impFila(r);
     if (res.error) { invalidas++; if (detalleInval.length < 10) detalleInval.push('Fila ' + (i+2) + ': ' + res.error); return; }
-    var dni = res.campos.dni;
-    if (existentesDni[dni] || seenDni[dni]) { dupes++; return; }
-    seenDni[dni] = true;
+    var id = tabla.obtenerId(res.campos);
+    if (existentes[id] || seenLocal[id]) { dupes++; return; }
+    seenLocal[id] = true;
     nuevos++;
   });
   document.getElementById('impStatTotal').innerText = rows.length;
@@ -11026,7 +11304,6 @@ function impRefrescarPreview() {
   document.getElementById('impStatDupes').innerText = dupes;
   document.getElementById('impStatInval').innerText = invalidas;
   document.getElementById('impAccionN').innerText = nuevos;
-  // Detalle de inválidas
   var detEl = document.getElementById('impInvalDetalle');
   if (invalidas > 0) {
     var msg = 'Filas que NO se importan:<br>' + detalleInval.join('<br>');
@@ -11034,39 +11311,37 @@ function impRefrescarPreview() {
     detEl.innerHTML = msg;
     detEl.style.display = 'block';
   } else { detEl.style.display = 'none'; }
-  // Preview de las primeras 5 válidas
+
+  // Preview con las primeras 4 columnas de la tabla
+  var colsPrev = tabla.campos.slice(0, 4);
   var prevHtml = '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:var(--surface);position:sticky;top:0;">';
-  prevHtml += '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Apellido</th>';
-  prevHtml += '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Nombre</th>';
-  prevHtml += '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">DNI</th>';
-  prevHtml += '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Categoría</th>';
-  prevHtml += '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Email</th>';
+  colsPrev.forEach(function(c){
+    prevHtml += '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">' + c.label + '</th>';
+  });
   prevHtml += '<th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">Estado</th>';
   prevHtml += '</tr></thead><tbody>';
   var seenPrev = {};
   var contPrev = 0;
-  rows.forEach(function(r, i){
-    if (contPrev >= 8) return;
-    var res = impFila(r);
+  for (var i = 0; i < rows.length && contPrev < 8; i++) {
+    var res = impFila(rows[i]);
     if (res.error) {
       contPrev++;
-      prevHtml += '<tr style="background:rgba(228,67,71,.06);"><td colspan="5" style="padding:6px 8px;color:var(--red);font-size:11px;">[Fila ' + (i+2) + '] ' + res.error + '</td><td style="padding:6px 8px;color:var(--red);">&#10007; INVÁLIDA</td></tr>';
-      return;
+      prevHtml += '<tr style="background:rgba(228,67,71,.06);"><td colspan="' + colsPrev.length + '" style="padding:6px 8px;color:var(--red);font-size:11px;">[Fila ' + (i+2) + '] ' + res.error + '</td><td style="padding:6px 8px;color:var(--red);font-weight:700;">&#10007; INVÁLIDA</td></tr>';
+      continue;
     }
-    var dni = res.campos.dni;
+    var id = tabla.obtenerId(res.campos);
     var estado, color;
-    if (existentesDni[dni] || seenPrev[dni]) { estado = '&#9888; YA EXISTE'; color = 'var(--secondary)'; }
-    else { estado = '&#10003; NUEVO'; color = '#6de097'; seenPrev[dni] = true; }
+    if (existentes[id] || seenPrev[id]) { estado = '&#9888; YA EXISTE'; color = 'var(--secondary)'; }
+    else { estado = '&#10003; NUEVO'; color = '#6de097'; seenPrev[id] = true; }
     contPrev++;
-    prevHtml += '<tr style="border-bottom:1px solid var(--border);">'
-      + '<td style="padding:6px 8px;">' + res.campos.apellido + '</td>'
-      + '<td style="padding:6px 8px;">' + res.campos.nombre + '</td>'
-      + '<td style="padding:6px 8px;color:var(--muted);">' + res.campos.dni + '</td>'
-      + '<td style="padding:6px 8px;color:var(--muted);">' + (res.campos.categoriaApp||'-') + '</td>'
-      + '<td style="padding:6px 8px;color:var(--muted);">' + (res.campos.email||'-') + '</td>'
-      + '<td style="padding:6px 8px;color:' + color + ';font-weight:700;font-size:10px;">' + estado + '</td>'
-      + '</tr>';
-  });
+    prevHtml += '<tr style="border-bottom:1px solid var(--border);">';
+    colsPrev.forEach(function(c){
+      var v = res.campos[c.key];
+      prevHtml += '<td style="padding:6px 8px;color:' + (c.key === colsPrev[0].key ? 'var(--text)' : 'var(--muted)') + ';">' + (v != null && v !== '' ? v : '-') + '</td>';
+    });
+    prevHtml += '<td style="padding:6px 8px;color:' + color + ';font-weight:700;font-size:10px;">' + estado + '</td>';
+    prevHtml += '</tr>';
+  }
   prevHtml += '</tbody></table>';
   document.getElementById('impPreviewTabla').innerHTML = prevHtml;
 }
@@ -11082,73 +11357,46 @@ function impCancelar() {
 
 function impEjecutar() {
   if (!window._impData) return;
-  // Recolectar filas validas y no duplicadas
-  var existentesDni = {};
-  DB.jugadores.slice(1).forEach(function(f){ var d = (f[COL.DNI]||'').toString().trim(); if (d) existentesDni[d] = true; });
-  var seenDni = {};
+  var tabla = impTablaActual();
+  var existentes = tabla.duplicadosExistentes();
+  var seenLocal = {};
   var aImportar = [];
   window._impData.rows.forEach(function(r){
     var res = impFila(r);
     if (res.error) return;
-    var dni = res.campos.dni;
-    if (existentesDni[dni] || seenDni[dni]) return;
-    seenDni[dni] = true;
+    var id = tabla.obtenerId(res.campos);
+    if (existentes[id] || seenLocal[id]) return;
+    seenLocal[id] = true;
     aImportar.push(res.campos);
   });
-  if (!aImportar.length) { alert('No hay socios válidos para importar.'); return; }
-  if (!confirm('Vas a importar ' + aImportar.length + ' socios nuevos a Firestore. ¿Continuar?')) return;
+  if (!aImportar.length) { alert('No hay filas válidas para importar.'); return; }
+  if (!confirm('Vas a importar ' + aImportar.length + ' filas a "' + tabla.label + '". ¿Continuar?')) return;
 
-  mostrarLoader('Importando 0 / ' + aImportar.length + '...');
-  var hoy = new Date().toLocaleDateString('sv');
   var _user = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
+  var hoy = new Date().toLocaleDateString('sv');
+  var ctx = { hoy: hoy, user: _user };
+  mostrarLoader('Importando 0 / ' + aImportar.length + '...');
   var done = 0, errores = 0;
-  // Procesar en chunks de 400 (límite del batch de Firestore)
+
   function procesarChunk(idx) {
-    if (idx >= aImportar.length) { return finalizar(); }
+    if (idx >= aImportar.length) return finalizar();
     var chunk = aImportar.slice(idx, idx + 400);
     var batch = db.batch();
     chunk.forEach(function(c){
-      var _catNom = c.categoriaApp || '';
-      var _catSecNom = c.catSecundaria || '';
-      var doc = {
-        apellido: c.apellido, nombre: c.nombre, email: c.email||'',
-        celular: c.celular||'', telefono: '',
-        activo: true, tipoDoc: 'DNI', dni: c.dni,
-        fechaNac: c.fechaNac||'', sexo: c.sexo||'', domicilio: c.domicilio||'',
-        obs: c.obs||'', membresia: '', vencimiento: '',
-        fechaIngreso: hoy, creador: 'Import:' + _user,
-        categoriaApp: _catNom, plan: '',
-        foto: '', dniFoto: '', apto: '', dniDorso: '',
-        contacto1: c._contacto1||'', contacto2: c._contacto2||'',
-        actividades: '', saldo: 0, catSecundaria: _catSecNom,
-        categoriaAppId:    _catNom    ? resolveCatId(_catNom)    : '',
-        catSecundariaId:   _catSecNom ? resolveCatId(_catSecNom) : '',
-        planId: '', actividadesIds: [], sedeId: ''
-      };
-      batch.set(db.collection('socios').doc(c.dni), doc);
+      var doc = tabla.construirDoc(c, ctx);
+      ctx.lastDoc = doc;
+      var ref;
+      if (tabla.docIdField) {
+        ref = db.collection(tabla.collection).doc(String(c[tabla.docIdField]));
+      } else {
+        ref = db.collection(tabla.collection).doc();
+      }
+      batch.set(ref, doc);
     });
     batch.commit().then(function(){
       done += chunk.length;
       mostrarLoader('Importando ' + done + ' / ' + aImportar.length + '...');
-      // Actualizar memoria local sin re-fetch completo
-      chunk.forEach(function(c){
-        try {
-          var docFake = { data: function(){ return {
-            apellido: c.apellido, nombre: c.nombre, dni: c.dni, email: c.email||'',
-            celular: c.celular||'', activo: true, tipoDoc:'DNI',
-            fechaNac: c.fechaNac||'', sexo: c.sexo||'', domicilio: c.domicilio||'',
-            obs: c.obs||'', categoriaApp: c.categoriaApp||'', catSecundaria: c.catSecundaria||'',
-            fechaIngreso: hoy, creador: 'Import:' + _user,
-            contacto1: c._contacto1||'', contacto2: c._contacto2||'',
-            membresia:'', vencimiento:'', plan:'', foto:'', dniFoto:'', apto:'', dniDorso:'',
-            actividades:'', saldo:0,
-            categoriaAppId: c.categoriaApp ? resolveCatId(c.categoriaApp) : '',
-            catSecundariaId: c.catSecundaria ? resolveCatId(c.catSecundaria) : '',
-            planId:'', actividadesIds: [], sedeId: ''
-          }; } };
-          DB.jugadores.push(socioToRow(docFake, c.dni));
-        } catch(_) {}
-      });
+      if (tabla.afterImport) chunk.forEach(function(c){ try { tabla.afterImport(c, ctx); } catch(_){} });
       procesarChunk(idx + 400);
     }).catch(function(e){
       errores += chunk.length;
@@ -11157,10 +11405,9 @@ function impEjecutar() {
     });
   }
   function finalizar() {
-    // Auditoría
     try {
       db.collection('auditoria_imports').add({
-        tipo: 'socios',
+        tipo: tabla.collection,
         fuente: (window._impData && window._impData.fileName) || '',
         totalArchivo: window._impData ? window._impData.rows.length : 0,
         importados: done, errores: errores,
@@ -11169,8 +11416,8 @@ function impEjecutar() {
       });
     } catch(e) { console.warn('[importar] auditoria error', e); }
     ocultarLoader();
-    try { renderPlayers(); } catch(_){}
-    toast(done + ' socios importados' + (errores ? ', ' + errores + ' con error' : ''), errores ? 'warn' : 'ok');
+    if (tabla.collection === 'socios') { try { renderPlayers(); } catch(_){} }
+    toast(done + ' filas importadas' + (errores ? ', ' + errores + ' con error' : ''), errores ? 'warn' : 'ok');
     impCancelar();
   }
   procesarChunk(0);
