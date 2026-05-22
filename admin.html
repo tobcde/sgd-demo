@@ -310,8 +310,8 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<!-- SheetJS para importar Excel/CSV (carga diferida solo cuando se usa) -->
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+<!-- xlsx-js-style: fork de SheetJS con soporte de estilos de celda (colores, fonts, validaciones). API 100% compatible. -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" defer></script>
 </head>
 <body>
 
@@ -1847,6 +1847,14 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     <div class="ayuda-fila"><div>&#x1F4DD; BAJAR PLANTILLAS VACÍAS</div><div>Genera el mismo archivo de TODAS las tablas pero vacío, con 1 fila de ejemplo por hoja (marcada con la columna <code>_EJEMPLO</code>). Perfecto para entregarle al cliente nuevo.</div></div>
   </div>
 
+  <div class="ayuda-subtitulo">Colores visibles y dropdown de emojis en Excel</div>
+  <p class="ayuda-p">Para las tablas <strong>Actividades</strong> y <strong>Categorías</strong> hay 2 ayudas visuales en el Excel descargado:</p>
+  <ul class="ayuda-lista">
+    <li>La columna <b>Color (hex)</b> pinta automáticamente la celda con el color que escribiste (con texto blanco o negro según el contraste). Te permite ver de inmediato cómo va a quedar cada actividad/categoría visualmente.</li>
+    <li>La columna <b>Ícono / Emoji</b> tiene un <b>dropdown</b> integrado con emojis sugeridos (deportes, eventos, premios). Click en la flecha y elegís uno, o tipeás cualquier otro a mano.</li>
+  </ul>
+  <p class="ayuda-p">Estos estilos solo afectan la visualización en Excel — la importación lee el texto del hex/emoji igual que antes.</p>
+
   <div class="ayuda-subtitulo">La columna especial <code>_EJEMPLO</code></div>
   <p class="ayuda-p">En la bajada de "Plantillas vacías", cada hoja trae una fila de ejemplo con una columna extra llamada <code>_EJEMPLO</code> que dice <i>"SÍ — borrar antes de subir"</i>. Esto evita confusión: muestra qué se espera en cada campo pero <strong>el sistema la ignora automáticamente al subir</strong>.</p>
   <p class="ayuda-p">Podés borrar esas filas a mano antes de subir, o dejarlas — al importar, el sistema detecta el marcador y las skipea silenciosamente (no cuenta como nuevas ni como inválidas). En el preview vas a ver una notita <i>"💡 N filas marcadas como ejemplo se ignoran automáticamente"</i>.</p>
@@ -2066,7 +2074,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.57</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.58</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11300,8 +11308,8 @@ var IMP_TABLAS = {
     docIdField: null,
     campos: [
       { key:'nombre', label:'Nombre', required:true,  hints:['nombre','name','actividad','disciplina'] },
-      { key:'icono',  label:'Ícono / Emoji', required:false, hints:['icono','icon','emoji','simbolo','símbolo'] },
-      { key:'color',  label:'Color (hex)', required:false, hints:['color','colour','col'] },
+      { key:'icono',  label:'Ícono / Emoji', required:false, hints:['icono','icon','emoji','simbolo','símbolo'], esEmoji:true },
+      { key:'color',  label:'Color (hex)', required:false, hints:['color','colour','col'], esColor:true },
       { key:'monto',  label:'Monto sugerido', required:false, hints:['monto','precio','valor','cuota'] }
     ],
     ejemplos: [
@@ -11427,7 +11435,7 @@ var IMP_TABLAS = {
     docIdField: null,
     campos: [
       { key:'nombre',      label:'Nombre',      required:true,  hints:['nombre','name','categoria','categoría','grupo','division'] },
-      { key:'color',       label:'Color (hex)', required:false, hints:['color','colour','col'] },
+      { key:'color',       label:'Color (hex)', required:false, hints:['color','colour','col'], esColor:true },
       { key:'edadDesde',   label:'Año desde',   required:false, hints:['ano desde','año desde','edaddesde','edad desde','desde','min'] },
       { key:'edadHasta',   label:'Año hasta',   required:false, hints:['ano hasta','año hasta','edadhasta','edad hasta','hasta','max'] },
       { key:'genero',      label:'Género',      required:false, hints:['genero','género','gender','sexo','modalidad'] },
@@ -11630,6 +11638,88 @@ function impToggleSeccion() {
   else { p.style.display = 'none'; b.innerText = 'Mostrar'; }
 }
 
+// Emojis sugeridos para dropdown de Excel en campos esEmoji=true.
+// Excel exige que la lista quepa en ~255 chars total. Tomamos los más comunes
+// para deportes / actividades de club.
+var EMOJIS_SUGERIDOS = ['⚽','🏀','🏐','🎾','🏑','🏈','⚾','🥎','🏉','🥌','⛳','🏌️','🏊','🚴','🚣','🤸','🤾','🤽','🤹','🥋','🥊','🤺','🏋️','🧘','💃','🩰','🏃','🎽','🎯','🎳','🪪','🎫','🎟️','📋','🏆','🥇','🥈','🥉'];
+
+// Convierte hex a un objeto rgb {r,g,b}
+function _impHexToRgb(hex) {
+  hex = (hex||'').toString().replace('#','').trim();
+  if (hex.length === 3) hex = hex.split('').map(function(c){ return c+c; }).join('');
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+  return { r: parseInt(hex.substring(0,2),16), g: parseInt(hex.substring(2,4),16), b: parseInt(hex.substring(4,6),16), hex: hex.toUpperCase() };
+}
+
+// Devuelve 'FFFFFF' o '000000' segun el contraste para que el texto encima del color se lea.
+function _impContrasteHex(hex) {
+  var rgb = _impHexToRgb(hex); if (!rgb) return '000000';
+  // Luminosidad relativa simple
+  var lum = (0.299*rgb.r + 0.587*rgb.g + 0.114*rgb.b);
+  return lum > 140 ? '000000' : 'FFFFFF';
+}
+
+// Aplica estilos a una hoja recién creada con aoa_to_sheet:
+//   - Header bold con fondo oscuro
+//   - Celdas de columnas esColor=true se pintan con el color que tienen escrito
+//   - Validación de datos (dropdown) en columnas esEmoji=true
+function _impAplicarEstilos(ws, campos, dataRows, opciones) {
+  opciones = opciones || {};
+  var startRow = 1; // fila 0 = headers
+  var nCols = campos.length + (opciones.colEjemplo ? 1 : 0);
+  // Header style
+  for (var c = 0; c < nCols; c++) {
+    var addr = XLSX.utils.encode_cell({ r:0, c:c });
+    if (!ws[addr]) continue;
+    ws[addr].s = {
+      font: { bold:true, color:{ rgb:'FFFFFF' }, sz:11 },
+      fill: { fgColor:{ rgb:'1F2A1F' } },
+      alignment: { vertical:'center', horizontal:'left' },
+      border: {
+        top:{ style:'thin', color:{ rgb:'444444' } },
+        bottom:{ style:'thin', color:{ rgb:'444444' } }
+      }
+    };
+  }
+  // Celdas esColor → pintar fondo del color de su contenido
+  campos.forEach(function(campo, ci){
+    if (!campo.esColor) return;
+    for (var ri = 0; ri < dataRows; ri++) {
+      var addr = XLSX.utils.encode_cell({ r: startRow+ri, c: ci });
+      if (!ws[addr]) continue;
+      var hex = String(ws[addr].v || '').trim();
+      var rgb = _impHexToRgb(hex);
+      if (!rgb) continue;
+      ws[addr].s = {
+        fill: { fgColor:{ rgb: rgb.hex } },
+        font: { color:{ rgb: _impContrasteHex(hex) }, bold:true },
+        alignment: { horizontal:'center', vertical:'center' }
+      };
+    }
+  });
+  // Dropdowns en columnas esEmoji
+  var dvs = [];
+  campos.forEach(function(campo, ci){
+    if (!campo.esEmoji) return;
+    var colLetter = XLSX.utils.encode_col(ci);
+    // Hasta fila 500 (más que suficiente para imports normales)
+    dvs.push({
+      sqref: colLetter + (startRow+1) + ':' + colLetter + '500',
+      type: 'list',
+      formula1: '"' + EMOJIS_SUGERIDOS.join(',') + '"',
+      showDropDown: false,
+      promptTitle: 'Elegí un emoji',
+      prompt: 'O escribí cualquier otro a mano',
+      showInputMessage: true
+    });
+  });
+  if (dvs.length) {
+    // xlsx-js-style soporta dataValidations en ws (formato variable según versión)
+    ws['!dataValidation'] = dvs;
+    ws['!dataValidations'] = dvs; // alias por compatibilidad
+  }
+}
+
 function impDescargarPlantilla() {
   if (typeof XLSX === 'undefined') {
     alert('La librería de Excel todavía no cargó. Esperá unos segundos y volvé a intentar.');
@@ -11651,6 +11741,7 @@ function impDescargarPlantilla() {
     if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp' || c.key === 'plan' || c.key === 'actividad' || c.key === 'concepto') w = 18;
     return { wch: w };
   });
+  _impAplicarEstilos(ws, tabla.campos, (tabla.ejemplos||[]).length);
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, tabla.label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,''));
 
@@ -11744,6 +11835,7 @@ function impExportarTodo(conDatos) {
         if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp' || c.key === 'plan' || c.key === 'actividad' || c.key === 'concepto') w = 18;
         return { wch: w };
       }).concat([{wch:30}]);
+      _impAplicarEstilos(ws, t.campos, 1, { colEjemplo:true });
       XLSX.utils.book_append_sheet(wb, ws, t.label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,''));
     });
     ocultarLoader();
@@ -11783,6 +11875,7 @@ function impExportarTodo(conDatos) {
         if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp' || c.key === 'plan' || c.key === 'actividad' || c.key === 'concepto') w = 18;
         return { wch: w };
       });
+      _impAplicarEstilos(ws, t.campos, snap.size);
       XLSX.utils.book_append_sheet(wb, ws, t.label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,''));
       idx++; siguiente();
     }).catch(function(e){
@@ -11818,6 +11911,7 @@ function impExportarTabla() {
       if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp' || c.key === 'plan' || c.key === 'actividad' || c.key === 'concepto') w = 18;
       return { wch: w };
     });
+    _impAplicarEstilos(ws, tabla.campos, snap.size);
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, tabla.label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,''));
     var hoy = new Date().toISOString().substring(0,10);
