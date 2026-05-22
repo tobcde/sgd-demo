@@ -1847,13 +1847,20 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
     <div class="ayuda-fila"><div>&#x1F4DD; BAJAR PLANTILLAS VACÍAS</div><div>Genera el mismo archivo de TODAS las tablas pero vacío, con 1 fila de ejemplo por hoja (marcada con la columna <code>_EJEMPLO</code>). Perfecto para entregarle al cliente nuevo.</div></div>
   </div>
 
-  <div class="ayuda-subtitulo">Colores visibles y dropdown de emojis en Excel</div>
-  <p class="ayuda-p">Para las tablas <strong>Actividades</strong> y <strong>Categorías</strong> hay 2 ayudas visuales en el Excel descargado:</p>
+  <div class="ayuda-subtitulo">Colores y emojis en Actividades / Categorías</div>
+  <p class="ayuda-p">El Excel descargado para estas tablas trae una hoja extra llamada <strong>"Ayudas visuales"</strong> al inicio con:</p>
   <ul class="ayuda-lista">
-    <li>La columna <b>Color (hex)</b> pinta automáticamente la celda con el color que escribiste (con texto blanco o negro según el contraste). Te permite ver de inmediato cómo va a quedar cada actividad/categoría visualmente.</li>
-    <li>La columna <b>Ícono / Emoji</b> tiene un <b>dropdown</b> integrado con emojis sugeridos (deportes, eventos, premios). Click en la flecha y elegís uno, o tipeás cualquier otro a mano.</li>
+    <li><b>Paleta de 16 colores sugeridos</b>: nombre, hex y muestra pintada. Podés copiar el hex como texto, o copiar la celda con formato (Pegado especial → Formato).</li>
+    <li><b>Lista de emojis sugeridos</b> para copiar/pegar. También tip de los selectores nativos de emoji: <code>Win + .</code> en Windows, <code>Ctrl + Cmd + Espacio</code> en Mac.</li>
   </ul>
-  <p class="ayuda-p">Estos estilos solo afectan la visualización en Excel — la importación lee el texto del hex/emoji igual que antes.</p>
+
+  <p class="ayuda-p"><strong>3 formas de cambiar el color de una celda:</strong></p>
+  <ol class="ayuda-lista">
+    <li><b>Escribir el hex</b> directamente como texto (ej: <code>#1a7a3c</code>). Es lo más simple.</li>
+    <li><b>Copiar de la paleta</b> de "Ayudas visuales": copiar la celda con formato y pegar en la celda destino con Pegado especial → Formato.</li>
+    <li><b>Botón "Color de relleno"</b> de Excel (icono de balde de pintura en la toolbar). Pintás la celda con cualquier color y el sistema lo detecta al importar.</li>
+  </ol>
+  <div class="ayuda-nota">Si la celda tiene tanto texto <i>como</i> color de fondo, el <strong>color de fondo gana</strong>. Esto te permite editar visualmente en Excel sin preocuparte por sincronizar el texto.</div>
 
   <div class="ayuda-subtitulo">La columna especial <code>_EJEMPLO</code></div>
   <p class="ayuda-p">En la bajada de "Plantillas vacías", cada hoja trae una fila de ejemplo con una columna extra llamada <code>_EJEMPLO</code> que dice <i>"SÍ — borrar antes de subir"</i>. Esto evita confusión: muestra qué se espera en cada campo pero <strong>el sistema la ignora automáticamente al subir</strong>.</p>
@@ -2074,7 +2081,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.58</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.59</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11638,10 +11645,29 @@ function impToggleSeccion() {
   else { p.style.display = 'none'; b.innerText = 'Mostrar'; }
 }
 
-// Emojis sugeridos para dropdown de Excel en campos esEmoji=true.
-// Excel exige que la lista quepa en ~255 chars total. Tomamos los más comunes
-// para deportes / actividades de club.
+// Emojis sugeridos para la hoja "Ayudas visuales".
 var EMOJIS_SUGERIDOS = ['⚽','🏀','🏐','🎾','🏑','🏈','⚾','🥎','🏉','🥌','⛳','🏌️','🏊','🚴','🚣','🤸','🤾','🤽','🤹','🥋','🥊','🤺','🏋️','🧘','💃','🩰','🏃','🎽','🎯','🎳','🪪','🎫','🎟️','📋','🏆','🥇','🥈','🥉'];
+
+// Paleta sugerida — nombres amigables + hex. Se renderiza con la celda pintada
+// para que el usuario pueda copiar el hex o copiar la celda con formato.
+var PALETA_SUGERIDA = [
+  { nombre:'Verde club',    hex:'#1a7a3c' },
+  { nombre:'Verde claro',   hex:'#6de097' },
+  { nombre:'Dorado',        hex:'#c9a227' },
+  { nombre:'Naranja',       hex:'#f59e0b' },
+  { nombre:'Rojo',          hex:'#e44347' },
+  { nombre:'Rosa',          hex:'#e45be6' },
+  { nombre:'Magenta',       hex:'#ff4dff' },
+  { nombre:'Violeta',       hex:'#7c3aed' },
+  { nombre:'Azul cielo',    hex:'#6db4e0' },
+  { nombre:'Azul fuerte',   hex:'#1e40af' },
+  { nombre:'Turquesa',      hex:'#8af0ee' },
+  { nombre:'Verde agua',    hex:'#22c55e' },
+  { nombre:'Amarillo',      hex:'#eab308' },
+  { nombre:'Gris claro',    hex:'#cccccc' },
+  { nombre:'Gris oscuro',   hex:'#555555' },
+  { nombre:'Negro',         hex:'#222222' }
+];
 
 // Convierte hex a un objeto rgb {r,g,b}
 function _impHexToRgb(hex) {
@@ -11697,27 +11723,90 @@ function _impAplicarEstilos(ws, campos, dataRows, opciones) {
       };
     }
   });
-  // Dropdowns en columnas esEmoji
-  var dvs = [];
-  campos.forEach(function(campo, ci){
-    if (!campo.esEmoji) return;
-    var colLetter = XLSX.utils.encode_col(ci);
-    // Hasta fila 500 (más que suficiente para imports normales)
-    dvs.push({
-      sqref: colLetter + (startRow+1) + ':' + colLetter + '500',
-      type: 'list',
-      formula1: '"' + EMOJIS_SUGERIDOS.join(',') + '"',
-      showDropDown: false,
-      promptTitle: 'Elegí un emoji',
-      prompt: 'O escribí cualquier otro a mano',
-      showInputMessage: true
-    });
+  // Nota: el dropdown nativo de emojis se removió porque xlsx-js-style/Excel/Sheets
+  // tienen comportamiento inconsistente con dataValidation de listas con emojis.
+  // La alternativa es la hoja "Ayudas visuales" que se agrega al workbook con
+  // colores y emojis para copiar/pegar.
+}
+
+// Genera una hoja con paleta de colores pintada + emojis sugeridos para copiar.
+// Se agrega al inicio de cada plantilla / export para dar referencia visual.
+function _impHojaAyudasVisuales() {
+  var aoa = [
+    ['AYUDAS VISUALES'],
+    ['Esta hoja te da referencias rápidas para completar las columnas de Color y Emoji en las otras hojas.'],
+    [''],
+    ['📌 CÓMO USAR LOS COLORES'],
+    ['Opción A: copiá el HEX de la columna abajo y pegalo como texto en la columna "Color (hex)".'],
+    ['Opción B: copiá toda la celda pintada y pegala con formato (botón derecho → Pegado especial → Formato) en la celda destino.'],
+    ['Opción C: en la celda destino, usá el botón "Color de relleno" de Excel (icono de balde de pintura). El sistema detecta el color al importar.'],
+    [''],
+    ['Nombre', 'HEX', 'Muestra']
+  ];
+  // Filas de la paleta
+  PALETA_SUGERIDA.forEach(function(c){
+    aoa.push([c.nombre, c.hex, c.hex]);
   });
-  if (dvs.length) {
-    // xlsx-js-style soporta dataValidations en ws (formato variable según versión)
-    ws['!dataValidation'] = dvs;
-    ws['!dataValidations'] = dvs; // alias por compatibilidad
+  aoa.push(['']);
+  aoa.push(['🎨 EMOJIS SUGERIDOS — copiá el que quieras y pegalo en la columna "Ícono / Emoji"']);
+  aoa.push(['']);
+  aoa.push(['En Windows: tecla Win + . (punto) abre el selector nativo de emojis.']);
+  aoa.push(['En Mac: Ctrl + Cmd + Barra espaciadora.']);
+  aoa.push(['']);
+  // Emojis en bloques de 6 columnas
+  for (var i = 0; i < EMOJIS_SUGERIDOS.length; i += 6) {
+    aoa.push(EMOJIS_SUGERIDOS.slice(i, i+6));
   }
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch:22 }, { wch:14 }, { wch:16 }, { wch:8 }, { wch:8 }, { wch:8 }];
+
+  // Estilo del título principal
+  if (ws['A1']) ws['A1'].s = { font:{ bold:true, sz:14, color:{ rgb:'1A7A3C' } } };
+  if (ws['A4']) ws['A4'].s = { font:{ bold:true, sz:12, color:{ rgb:'1F2A1F' } } };
+  // Header de la tabla de paleta (fila 9 → índice 8)
+  ['A9','B9','C9'].forEach(function(addr){
+    if (ws[addr]) ws[addr].s = {
+      font:{ bold:true, color:{ rgb:'FFFFFF' } },
+      fill:{ fgColor:{ rgb:'1F2A1F' } },
+      alignment:{ horizontal:'center' }
+    };
+  });
+  // Pintar las celdas de "Muestra" con cada color
+  PALETA_SUGERIDA.forEach(function(c, i){
+    var rowIdx = 9 + i; // fila 10 en adelante (índice 9)
+    var rgb = _impHexToRgb(c.hex);
+    if (!rgb) return;
+    // Celda HEX: también la pintamos
+    var addrHex = 'B' + (rowIdx+1);
+    if (ws[addrHex]) ws[addrHex].s = {
+      fill:{ fgColor:{ rgb: rgb.hex } },
+      font:{ color:{ rgb: _impContrasteHex(c.hex) }, bold:true },
+      alignment:{ horizontal:'center' }
+    };
+    // Celda Muestra: solo fondo (texto vacío visual con el hex como contenido)
+    var addrMu = 'C' + (rowIdx+1);
+    if (ws[addrMu]) ws[addrMu].s = {
+      fill:{ fgColor:{ rgb: rgb.hex } },
+      font:{ color:{ rgb: _impContrasteHex(c.hex) }, bold:true },
+      alignment:{ horizontal:'center' }
+    };
+  });
+  // Estilizar el bloque de emojis (fontsize bigger)
+  var rangeRef = XLSX.utils.decode_range(ws['!ref']);
+  for (var r = 0; r <= rangeRef.e.r; r++) {
+    for (var c = 0; c <= rangeRef.e.c; c++) {
+      var addr = XLSX.utils.encode_cell({ r:r, c:c });
+      if (!ws[addr]) continue;
+      var v = String(ws[addr].v||'');
+      // detectar si es solo emoji (uso heurística simple: 1-3 chars con código > 127)
+      if (v.length <= 4 && v.length > 0 && v.codePointAt(0) > 127) {
+        ws[addr].s = ws[addr].s || {};
+        ws[addr].s.font = Object.assign({}, ws[addr].s.font||{}, { sz:18 });
+        ws[addr].s.alignment = { horizontal:'center', vertical:'center' };
+      }
+    }
+  }
+  return ws;
 }
 
 function impDescargarPlantilla() {
@@ -11743,6 +11832,11 @@ function impDescargarPlantilla() {
   });
   _impAplicarEstilos(ws, tabla.campos, (tabla.ejemplos||[]).length);
   var wb = XLSX.utils.book_new();
+  // Si la tabla tiene campos esColor o esEmoji, agregar primero la hoja de ayudas visuales
+  var necesitaAyudas = tabla.campos.some(function(c){ return c.esColor || c.esEmoji; });
+  if (necesitaAyudas) {
+    XLSX.utils.book_append_sheet(wb, _impHojaAyudasVisuales(), 'Ayudas visuales');
+  }
   XLSX.utils.book_append_sheet(wb, ws, tabla.label.substring(0,30).replace(/[\[\]\?\*\\\/:]/g,''));
 
   // Hoja de instrucciones
@@ -11814,6 +11908,9 @@ function impExportarTodo(conDatos) {
   var wsi = XLSX.utils.aoa_to_sheet(instAoa);
   wsi['!cols'] = [{wch:50},{wch:30}];
   XLSX.utils.book_append_sheet(wb, wsi, 'Instrucciones');
+
+  // Hoja de ayudas visuales (paleta colores + emojis sugeridos)
+  XLSX.utils.book_append_sheet(wb, _impHojaAyudasVisuales(), 'Ayudas visuales');
 
   if (!conDatos) {
     // Plantillas vacías con 1 fila de ejemplo marcada
@@ -11937,13 +12034,57 @@ function impArchivoElegido(ev) {
   reader.onload = function(e) {
     try {
       var data = new Uint8Array(e.target.result);
-      var wb = XLSX.read(data, { type: 'array', cellDates: true });
+      // cellStyles:true permite leer fills/colores → para detectar color pintado a mano
+      var wb = XLSX.read(data, { type: 'array', cellDates: true, cellStyles: true });
+      // Si hay varias hojas, intentar elegir la que matchee con el label de la tabla seleccionada;
+      // si no, usar la primera que tenga al menos una fila de datos (ignorar Instrucciones/Ayudas).
       var sheetName = wb.SheetNames[0];
+      var preferida = (impTablaActual().label || '').substring(0,30).replace(/[\[\]\?\*\\\/:]/g,'');
+      if (wb.SheetNames.indexOf(preferida) >= 0) sheetName = preferida;
+      else {
+        for (var si = 0; si < wb.SheetNames.length; si++) {
+          var n = wb.SheetNames[si];
+          if (/instruccion/i.test(n) || /ayuda/i.test(n)) continue;
+          sheetName = n; break;
+        }
+      }
       var sheet = wb.Sheets[sheetName];
-      var rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-      if (!rows.length) { alert('El archivo está vacío o no se pudo leer.'); return; }
-      var headers = Object.keys(rows[0]);
-      window._impData = { headers: headers, rows: rows, fileName: file.name };
+      // Parseo manual para capturar estilos de fill por celda
+      var range = XLSX.utils.decode_range(sheet['!ref']||'A1');
+      var headers = [];
+      for (var c = range.s.c; c <= range.e.c; c++) {
+        var addr = XLSX.utils.encode_cell({ r: range.s.r, c: c });
+        var v = (sheet[addr] && sheet[addr].v != null) ? sheet[addr].v : '';
+        headers.push(String(v));
+      }
+      var rows = [];
+      for (var r = range.s.r + 1; r <= range.e.r; r++) {
+        var rowObj = {};
+        var hayDato = false;
+        for (var c = range.s.c; c <= range.e.c; c++) {
+          var addr = XLSX.utils.encode_cell({ r: r, c: c });
+          var cell = sheet[addr];
+          var key = headers[c - range.s.c];
+          if (!key) continue;
+          rowObj[key] = (cell && cell.v != null) ? cell.v : '';
+          if (rowObj[key] !== '' && rowObj[key] !== null) hayDato = true;
+          // Capturar fill color del cell (si tiene)
+          if (cell && cell.s && cell.s.fill) {
+            var rgb = null;
+            try {
+              rgb = (cell.s.fill.fgColor && cell.s.fill.fgColor.rgb) ||
+                    (cell.s.fill.bgColor && cell.s.fill.bgColor.rgb) || null;
+            } catch(_){}
+            if (rgb && typeof rgb === 'string' && /^[0-9a-fA-F]{6,8}$/.test(rgb)) {
+              // Tomar últimos 6 dígitos (descartar alpha si hay)
+              rowObj['__fill__' + key] = rgb.substring(rgb.length - 6).toUpperCase();
+            }
+          }
+        }
+        if (hayDato) rows.push(rowObj);
+      }
+      if (!rows.length) { alert('La hoja "'+sheetName+'" no tiene filas de datos.'); return; }
+      window._impData = { headers: headers, rows: rows, fileName: file.name, sheetName: sheetName };
       impAutoMap(headers);
       impRenderMapeo();
       document.getElementById('impMapeo').style.display = 'block';
@@ -12001,8 +12142,6 @@ function impCambioMapeo(key, val) {
 
 function impFila(rowObj) {
   // Devuelve { campos:{}, error: string|null, ejemplo: bool }
-  // Si la fila tiene la columna _EJEMPLO con cualquier valor truthy, se marca
-  // como ejemplo y se skipea silenciosamente (no cuenta como invalida ni nuevo).
   var tabla = impTablaActual();
   // Detectar marcador _EJEMPLO en cualquier variante de capitalización
   var ejemploKeys = Object.keys(rowObj||{}).filter(function(k){
@@ -12017,6 +12156,15 @@ function impFila(rowObj) {
     var src = window._impMap[c.key];
     var v = src ? (rowObj[src] != null ? rowObj[src] : '') : '';
     v = (v == null ? '' : String(v)).trim();
+    // Para campos de color: si la celda tiene un fill no-blanco, PRIORIZAR el fill
+    // sobre el texto. Esto permite que el usuario use el botón "Color de relleno"
+    // de Excel directamente y el sistema detecte el hex.
+    if (c.esColor && src) {
+      var fillHex = rowObj['__fill__' + src];
+      if (fillHex && fillHex !== 'FFFFFF' && fillHex !== '000000') {
+        v = '#' + fillHex.toLowerCase();
+      }
+    }
     out[c.key] = v;
   });
   return tabla.normalizarFila(out);
