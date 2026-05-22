@@ -594,11 +594,19 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">
           Subí un archivo <code>.xlsx</code>, <code>.xls</code> o <code>.csv</code> con los datos del club que ya tenés. El sistema detecta las columnas y te deja mapearlas a los campos correctos antes de importar.
         </p>
-        <label class="btn" style="background:rgba(201,162,39,.15);color:var(--secondary);border:1px solid rgba(201,162,39,.4);font-weight:700;padding:10px 16px;cursor:pointer;display:inline-block;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;">
-          &#x1F4C2; ELEGIR ARCHIVO
-          <input type="file" id="impFile" accept=".xlsx,.xls,.csv,text/csv" style="display:none;" onchange="impArchivoElegido(event)">
-        </label>
-        <span id="impArchNombre" style="margin-left:12px;color:var(--muted);font-size:12px;"></span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <label class="btn" style="background:rgba(201,162,39,.15);color:var(--secondary);border:1px solid rgba(201,162,39,.4);font-weight:700;padding:10px 16px;cursor:pointer;display:inline-block;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;">
+            &#x1F4C2; ELEGIR ARCHIVO
+            <input type="file" id="impFile" accept=".xlsx,.xls,.csv,text/csv" style="display:none;" onchange="impArchivoElegido(event)">
+          </label>
+          <button onclick="impDescargarPlantilla()" class="btn" style="background:var(--primary-dim);color:#6de097;border:1px solid var(--primary-border);font-weight:700;padding:10px 16px;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;cursor:pointer;">
+            &#x2B07;&#xFE0F; DESCARGAR PLANTILLA
+          </button>
+          <span id="impArchNombre" style="color:var(--muted);font-size:12px;"></span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+          ¿No tenés el archivo armado? Bajá la plantilla, llenala en Excel/Sheets y subila acá.
+        </div>
 
         <!-- Step 2: Mapeo de columnas -->
         <div id="impMapeo" style="display:none;margin-top:18px;">
@@ -1796,7 +1804,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.52</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.53</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -10793,6 +10801,83 @@ function impToggleSeccion() {
   var b = document.getElementById('impToggle');
   if (p.style.display === 'none') { p.style.display = 'block'; b.innerText = 'Ocultar'; }
   else { p.style.display = 'none'; b.innerText = 'Mostrar'; }
+}
+
+function impDescargarPlantilla() {
+  if (typeof XLSX === 'undefined') {
+    alert('La librería de Excel todavía no cargó. Esperá unos segundos y volvé a intentar.');
+    return;
+  }
+  // Headers: usamos el label exacto de IMP_CAMPOS para que al subir vuelva a matchear
+  var headers = IMP_CAMPOS.map(function(c){ return c.label + (c.required ? ' *' : ''); });
+  // 2 filas de ejemplo (se borran antes de subir)
+  var ejemplo1 = {
+    apellido: 'García', nombre: 'Juan Pablo', dni: '38123456',
+    fechaNac: '15/03/2010', sexo: 'Masculino',
+    email: 'juangarcia@ejemplo.com', celular: '11-5555-1234',
+    domicilio: 'Av. Rivadavia 1234, CABA',
+    categoriaApp: 'Sub-15', catSecundaria: '',
+    contacto1Nom: 'María García (Madre)', contacto1Tel: '11-5555-9876',
+    contacto2Nom: 'Pedro García (Padre)', contacto2Tel: '11-4444-3210',
+    obs: 'Alérgico al polvo'
+  };
+  var ejemplo2 = {
+    apellido: 'Pérez', nombre: 'Sofía', dni: '42987654',
+    fechaNac: '22/07/2013', sexo: 'Femenino',
+    email: '', celular: '11-2222-3333',
+    domicilio: 'Calle Falsa 123, San Justo',
+    categoriaApp: 'Sub-12', catSecundaria: '',
+    contacto1Nom: 'Laura Pérez (Madre)', contacto1Tel: '11-7777-8888',
+    contacto2Nom: '', contacto2Tel: '',
+    obs: ''
+  };
+  // Armar AoA (array of arrays): primera fila headers, luego ejemplos, luego una fila vacía
+  var aoa = [headers];
+  [ejemplo1, ejemplo2].forEach(function(ej){
+    aoa.push(IMP_CAMPOS.map(function(c){ return ej[c.key] || ''; }));
+  });
+  // Línea vacía para que vean "donde empezar"
+  aoa.push(IMP_CAMPOS.map(function(){ return ''; }));
+
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Anchos de columna para que se lea cómodo
+  ws['!cols'] = IMP_CAMPOS.map(function(c){
+    var w = 14;
+    if (c.key === 'email' || c.key === 'domicilio' || c.key === 'obs') w = 28;
+    if (c.key === 'contacto1Nom' || c.key === 'contacto2Nom') w = 22;
+    if (c.key === 'apellido' || c.key === 'nombre' || c.key === 'categoriaApp') w = 18;
+    return { wch: w };
+  });
+
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Socios');
+
+  // Segunda hoja con instrucciones
+  var instrucciones = [
+    ['INSTRUCCIONES'],
+    [''],
+    ['1. Completá la hoja "Socios" con tus datos.'],
+    ['2. Las columnas con * son obligatorias: Apellido, Nombre y DNI.'],
+    ['3. DNI: solo números, sin puntos ni guiones (se normaliza igual si los tiene).'],
+    ['4. Fecha nacimiento: formato DD/MM/AAAA (ejemplo: 15/03/2010).'],
+    ['5. Sexo: "Masculino" o "Femenino". También acepta "M"/"F".'],
+    ['6. Borrá las 2 filas de ejemplo (García y Pérez) antes de subir.'],
+    ['7. Podés agregar tantas filas como quieras.'],
+    ['8. Si no tenés un dato, dejá la celda vacía.'],
+    [''],
+    ['CAMPOS DISPONIBLES'],
+    ['']
+  ];
+  IMP_CAMPOS.forEach(function(c){
+    instrucciones.push([c.label + (c.required?' (obligatorio)':''), '— ' + c.hints.slice(0,3).join(', ')]);
+  });
+  var wsInst = XLSX.utils.aoa_to_sheet(instrucciones);
+  wsInst['!cols'] = [{ wch: 32 }, { wch: 50 }];
+  XLSX.utils.book_append_sheet(wb, wsInst, 'Instrucciones');
+
+  var hoy = new Date().toISOString().substring(0,10);
+  XLSX.writeFile(wb, 'plantilla_socios_' + hoy + '.xlsx');
+  toast('Plantilla descargada', 'ok');
 }
 
 function impArchivoElegido(ev) {
