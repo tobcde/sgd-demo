@@ -2106,7 +2106,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.60</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.61</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -11905,8 +11905,17 @@ function impExportarTodo(conDatos) {
     alert('La librería de Excel todavía no cargó. Esperá unos segundos y volvé a intentar.');
     return;
   }
-  if (!confirm('Vas a generar un archivo Excel con TODAS las tablas (' + IMP_ORDEN_BULK.length + ' hojas) ' + (conDatos ? 'CON los datos actuales' : 'VACÍAS con ejemplos') + '. ¿Continuar?')) return;
+  var msgExp = '<div style="font-size:14px;color:var(--text);margin-bottom:10px;">'
+    + 'Vas a generar un archivo Excel con <b>todas las tablas</b> (' + IMP_ORDEN_BULK.length + ' hojas + Ayudas visuales).'
+    + '</div>'
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted);">'
+    + (conDatos ? '<b style="color:#6db4e0;">📦 Con los datos actuales</b> — vuelca todo lo que hay hoy en Firestore. Ideal para backup o clonado.'
+                : '<b style="color:var(--secondary);">📝 Plantillas vacías</b> — solo headers + 1 fila de ejemplo por hoja (marcada con <code>_EJEMPLO</code>).')
+    + '</div>';
+  sgdConfirm(msgExp, function(){ _impExportarTodoConfirmado(conDatos); }, 'GENERAR');
+}
 
+function _impExportarTodoConfirmado(conDatos) {
   mostrarLoader(conDatos ? 'Descargando todas las tablas...' : 'Generando plantillas...');
   var wb = XLSX.utils.book_new();
 
@@ -12213,9 +12222,31 @@ function impBulkEjecutar() {
   if (!window._impBulkPlan) return;
   var plan = window._impBulkPlan.plan;
   var totalNuevos = plan.reduce(function(s,p){ return s+p.stats.nuevos; }, 0);
+  var totalDupes = plan.reduce(function(s,p){ return s+p.stats.dupes; }, 0);
+  var totalInv = plan.reduce(function(s,p){ return s+p.stats.invalidas; }, 0);
+  var totalEj = plan.reduce(function(s,p){ return s+p.stats.ejemplos; }, 0);
   if (!totalNuevos) { alert('No hay filas nuevas para importar.'); return; }
-  if (!confirm('Vas a importar '+totalNuevos+' filas en '+plan.length+' tabla'+(plan.length>1?'s':'')+' en orden de dependencias. ¿Continuar?')) return;
+  var detalleHtml = plan.map(function(p){
+    var tabla = IMP_TABLAS[p.tablaKey];
+    return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;">'
+      + '<span style="color:var(--text);">' + tabla.label + '</span>'
+      + '<span style="color:#6de097;font-weight:700;">+' + p.stats.nuevos + '</span>'
+      + '</div>';
+  }).join('');
+  var msg = '<div style="font-size:14px;color:var(--text);margin-bottom:12px;">'
+    + 'Vas a importar <b style="color:#6de097;">' + totalNuevos + ' filas</b> en <b>' + plan.length + ' tabla' + (plan.length>1?'s':'') + '</b> respetando el orden de dependencias.'
+    + '</div>'
+    + '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;max-height:240px;overflow:auto;">'
+    + detalleHtml
+    + '</div>'
+    + (totalDupes + totalInv + totalEj > 0
+      ? '<div style="margin-top:10px;font-size:11px;color:var(--muted);">Se omiten: <b>' + totalDupes + '</b> duplicados · <b>' + totalInv + '</b> inválidos · <b>' + totalEj + '</b> ejemplos.</div>'
+      : '')
+    + '<div style="margin-top:12px;font-size:12px;color:var(--muted);">Entre tabla y tabla se refrescan los índices automáticamente.</div>';
+  sgdConfirm(msg, function(){ _impBulkEjecutarConfirmado(plan); }, 'IMPORTAR ' + totalNuevos);
+}
 
+function _impBulkEjecutarConfirmado(plan) {
   var _user = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
   var hoy = new Date().toLocaleDateString('sv');
   var totalGlobal = { hechos:0, errores:0 };
@@ -12595,8 +12626,14 @@ function impEjecutar() {
     aImportar.push(res.campos);
   });
   if (!aImportar.length) { alert('No hay filas válidas para importar.'); return; }
-  if (!confirm('Vas a importar ' + aImportar.length + ' filas a "' + tabla.label + '". ¿Continuar?')) return;
+  var msgImp = '<div style="font-size:14px;color:var(--text);margin-bottom:10px;">'
+    + 'Vas a importar <b style="color:#6de097;">' + aImportar.length + ' fila' + (aImportar.length>1?'s':'') + '</b> a la tabla <b>"' + tabla.label + '"</b>.'
+    + '</div>'
+    + '<div style="font-size:12px;color:var(--muted);">Los duplicados, inválidos y ejemplos ya fueron filtrados.</div>';
+  sgdConfirm(msgImp, function(){ _impEjecutarConfirmado(tabla, aImportar); }, 'IMPORTAR ' + aImportar.length);
+}
 
+function _impEjecutarConfirmado(tabla, aImportar) {
   var _user = (window.ADMIN_USER || (typeof localStorage!=='undefined' && localStorage.getItem('admin_user')) || 'admin');
   var hoy = new Date().toLocaleDateString('sv');
   var ctx = { hoy: hoy, user: _user };
