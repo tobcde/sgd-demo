@@ -37,6 +37,10 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 }
 /* TABS */
 .tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
+/* Desktop: tabs sticky justo debajo del header (top ≈ alto del header). */
+@media (min-width: 769px) {
+  .tabs { position: sticky; top: 60px; z-index: 99; }
+}
 .tab{font-family:'Barlow Condensed',sans-serif;padding:15px 22px;cursor:pointer;color:var(--muted);border:none;background:none;text-transform:uppercase;border-bottom:3px solid transparent;font-size:13px;letter-spacing:.05em;white-space:nowrap;}
 .tab:hover{color:var(--text);}
 .tab.active{color:var(--secondary);border-bottom-color:var(--secondary);background:var(--secondary-dim);}
@@ -2106,7 +2110,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.61</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.63</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3711,8 +3715,18 @@ function getDriveThumb(url, sz) {
   sz = sz || 'w200';
   var m = url.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
   if(!m) m = url.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
-  if(!m) return '';
-  return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=' + sz;
+  // Si no matchea formato Drive pero parece una URL directa, usar tal cual
+  if(!m) return /^https?:\/\//i.test(url.trim()) ? url.trim() : '';
+  // Endpoint lh3.googleusercontent.com (el de drive.google.com/thumbnail está deprecado
+  // y bloquea hotlinking desde dominios externos desde 2024).
+  // sz puede venir como "w100" / "w200" / "w400" → en lh3 se pasa como "=w100".
+  var sufijo = '';
+  if (sz) {
+    var ms = String(sz).match(/^([wsh])(\d+)$/);
+    if (ms) sufijo = '=' + ms[1] + ms[2];
+    else sufijo = '=w200';
+  }
+  return 'https://lh3.googleusercontent.com/d/' + m[1] + sufijo;
 }
 // Para logos e imagenes que se muestran en el HTML (no como foto de perfil)
 // usa uc?export=view que es embeddable directamente
