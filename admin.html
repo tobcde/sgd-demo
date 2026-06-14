@@ -1585,7 +1585,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.14</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.15</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -3053,7 +3053,7 @@ function getDriveThumb(url, sz) {
   sz = sz || 'w200';
   var m = url.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
   if(!m) m = url.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
-  if(!m) return '';
+  if(!m) return url; // no es Drive: usar la URL cruda (ej. foto hosteada en GitHub Pages)
   return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=' + sz;
 }
 // Para logos e imagenes que se muestran en el HTML (no como foto de perfil)
