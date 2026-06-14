@@ -1068,11 +1068,17 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
         </div>
         <div class="inst-field">
           <div class="inst-label">Color primario <span id="inst-color1-preview" class="color-preview" style="background:#1a7a3c;"></span></div>
-          <input id="inst-colorPrimario" class="inst-input" type="color" value="#1a7a3c" oninput="document.getElementById('inst-color1-preview').style.background=this.value; aplicarBrandingPreview(this.value, null);" style="height:40px;padding:2px 8px;">
+          <input id="inst-colorPrimario" class="inst-input" type="color" value="#1a7a3c" oninput="document.getElementById('inst-color1-preview').style.background=this.value; aplicarBrandingPreview(this.value, null); renderTemasFondo();" style="height:40px;padding:2px 8px;">
         </div>
         <div class="inst-field">
           <div class="inst-label">Color secundario <span id="inst-color2-preview" class="color-preview" style="background:#c9a227;"></span></div>
-          <input id="inst-colorSecundario" class="inst-input" type="color" value="#c9a227" oninput="document.getElementById('inst-color2-preview').style.background=this.value; aplicarBrandingPreview(null, this.value);" style="height:40px;padding:2px 8px;">
+          <input id="inst-colorSecundario" class="inst-input" type="color" value="#c9a227" oninput="document.getElementById('inst-color2-preview').style.background=this.value; aplicarBrandingPreview(null, this.value); renderTemasFondo();" style="height:40px;padding:2px 8px;">
+        </div>
+        <div class="inst-field" style="grid-column:1/-1;">
+          <div class="inst-label">Tema de fondo de la app</div>
+          <div id="inst-temas-wrap" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;"></div>
+          <input type="hidden" id="inst-temaFondo" value="verde">
+          <p style="font-size:10px;color:var(--muted);margin-top:8px;">Cambia el fondo y los tonos neutros de toda la app (admin, profes y registro). Los colores primario y secundario se mantienen como acentos. Se ve en el momento; recorda <b>Guardar</b> para que quede.</p>
         </div>
       </div>
 
@@ -2114,7 +2120,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.65</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.66</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2512,7 +2518,30 @@ function aplicarTerminologia() {
 }
 
 // -- APLICAR COLORES Y BRANDING -----------------------------------
+// ── TEMAS DE FONDO (paletas neutras configurables desde Institucion) ──
+// Cada tema define el fondo y los tonos neutros. Los colores primario/
+// secundario se mantienen como acentos sobre cualquier tema.
+var TEMAS_FONDO = {
+  verde:   {nombre:'Verde Oscuro',   bg:'#0a0d0a', surface:'#121812', surface2:'#181f18', border:'#253025', text:'#e8f0e8', muted:'#7a927a'},
+  azul:    {nombre:'Azul Noche',     bg:'#0b1220', surface:'#131c2e', surface2:'#1b2740', border:'#27344d', text:'#e6ecf5', muted:'#8294b0'},
+  menta:   {nombre:'Pastel Menta',   bg:'#eaf5ee', surface:'#ffffff', surface2:'#f3faf5', border:'#cfe6d7', text:'#1c2b22', muted:'#5e7a68'},
+  lavanda: {nombre:'Pastel Lavanda', bg:'#f0edf8', surface:'#ffffff', surface2:'#f7f4fc', border:'#ddd5ef', text:'#241d33', muted:'#6f6589'},
+  claro:   {nombre:'Gris Claro',     bg:'#eef2f6', surface:'#ffffff', surface2:'#f7f9fc', border:'#dde4ec', text:'#1f2937', muted:'#647082'},
+};
+function aplicarTemaFondo(key){
+  var t = TEMAS_FONDO[key] || TEMAS_FONDO.verde;
+  var r = document.documentElement.style;
+  r.setProperty('--bg', t.bg);
+  r.setProperty('--surface', t.surface);
+  r.setProperty('--surface2', t.surface2);
+  r.setProperty('--border', t.border);
+  r.setProperty('--text', t.text);
+  r.setProperty('--muted', t.muted);
+  document.documentElement.setAttribute('data-tema', key || 'verde');
+}
+
 function aplicarBranding() {
+  aplicarTemaFondo(INST.temaFondo || 'verde');
   var p = INST.colorPrimario  || '#1a7a3c';
   var s = INST.colorSecundario || '#c9a227';
   var nombre = INST.nombre || 'Sistema de Gestion';
@@ -7886,6 +7915,32 @@ function aplicarBrandingPreview(primario, secundario) {
   }
 }
 
+// -- TEMA DE FONDO: picker visual ---------------------------------
+function renderTemasFondo(){
+  var wrap = document.getElementById('inst-temas-wrap'); if(!wrap) return;
+  var sel = (document.getElementById('inst-temaFondo')||{}).value || 'verde';
+  var pri = (document.getElementById('inst-colorPrimario')||{}).value || INST.colorPrimario || '#1a7a3c';
+  var sec = (document.getElementById('inst-colorSecundario')||{}).value || INST.colorSecundario || '#c9a227';
+  wrap.innerHTML = Object.keys(TEMAS_FONDO).map(function(k){
+    var t = TEMAS_FONDO[k], on = (k === sel);
+    return '<div onclick="seleccionarTema(\'' + k + '\')" title="' + t.nombre + '" '
+      + 'style="cursor:pointer;border:2px solid ' + (on ? 'var(--secondary)' : 'transparent') + ';border-radius:11px;padding:4px;transition:border-color .15s;">'
+      + '<div style="width:88px;height:56px;border-radius:7px;background:' + t.bg + ';border:1px solid ' + t.border + ';position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.2);">'
+      +   '<div style="position:absolute;left:7px;top:7px;right:7px;height:15px;border-radius:4px;background:' + t.surface + ';border:1px solid ' + t.border + ';"></div>'
+      +   '<div style="position:absolute;left:8px;bottom:8px;width:15px;height:15px;border-radius:50%;background:' + pri + ';"></div>'
+      +   '<div style="position:absolute;left:27px;bottom:8px;width:15px;height:15px;border-radius:50%;background:' + sec + ';"></div>'
+      +   '<div style="position:absolute;right:8px;bottom:7px;font-size:11px;font-weight:800;color:' + t.text + ';">Aa</div>'
+      + '</div>'
+      + '<div style="text-align:center;font-size:10px;margin-top:5px;' + (on ? 'color:var(--secondary);font-weight:700;' : 'color:var(--muted);') + '">' + t.nombre + '</div>'
+      + '</div>';
+  }).join('');
+}
+function seleccionarTema(k){
+  var inp = document.getElementById('inst-temaFondo'); if(inp) inp.value = k;
+  aplicarTemaFondo(k);   // preview en vivo
+  renderTemasFondo();    // re-marcar el seleccionado
+}
+
 function cargarFormInstitucion() {
   var campos = ['nombre','nombreCorto','logoUrl','driveFolder','colorPrimario','colorSecundario','terminologiaSocio','terminologiaSocios','terminologiaGrupo','terminologiaGrupos','emailRemitente'];
   campos.forEach(function(c){
@@ -7896,6 +7951,8 @@ function cargarFormInstitucion() {
       if(prev) prev.style.background = INST[c] || (c === 'colorPrimario' ? '#1a7a3c' : '#c9a227');
     }
   });
+  var _tf = document.getElementById('inst-temaFondo'); if(_tf) _tf.value = INST.temaFondo || 'verde';
+  renderTemasFondo();
 }
 
 function guardarInstitucion() {
@@ -7906,6 +7963,7 @@ function guardarInstitucion() {
     driveFolder: document.getElementById('inst-driveFolder').value.trim(),
     colorPrimario: document.getElementById('inst-colorPrimario').value,
     colorSecundario: document.getElementById('inst-colorSecundario').value,
+    temaFondo: (document.getElementById('inst-temaFondo')||{}).value || 'verde',
     terminologiaSocio: document.getElementById('inst-terminologiaSocio').value.trim() || 'Socio',
     terminologiaSocios: document.getElementById('inst-terminologiaSocios').value.trim() || 'Socios',
     terminologiaGrupo: document.getElementById('inst-terminologiaGrupo').value.trim() || 'Categoria',
