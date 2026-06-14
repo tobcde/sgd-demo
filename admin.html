@@ -1074,11 +1074,18 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
           <div class="inst-label">Color secundario <span id="inst-color2-preview" class="color-preview" style="background:#c9a227;"></span></div>
           <input id="inst-colorSecundario" class="inst-input" type="color" value="#c9a227" oninput="document.getElementById('inst-color2-preview').style.background=this.value; aplicarBrandingPreview(null, this.value); renderTemasFondo();" style="height:40px;padding:2px 8px;">
         </div>
+        <div class="inst-field">
+          <div class="inst-label">Color de fondo de la app <span id="inst-fondo-prev" class="color-preview" style="background:#0a0d0a;"></span></div>
+          <input id="inst-colorFondo" class="inst-input" type="color" value="#0a0d0a" oninput="onCambioFondoColor();" style="height:40px;padding:2px 8px;">
+        </div>
+        <div class="inst-field">
+          <div class="inst-label">Color de las cards / paneles <span id="inst-cards-prev" class="color-preview" style="background:#121812;"></span></div>
+          <input id="inst-colorCards" class="inst-input" type="color" value="#121812" oninput="onCambioFondoColor();" style="height:40px;padding:2px 8px;">
+        </div>
         <div class="inst-field" style="grid-column:1/-1;">
-          <div class="inst-label">Tema de fondo de la app</div>
+          <div class="inst-label">Combinaciones rapidas</div>
           <div id="inst-temas-wrap" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;"></div>
-          <input type="hidden" id="inst-temaFondo" value="verde">
-          <p style="font-size:10px;color:var(--muted);margin-top:8px;">Cambia el fondo y los tonos neutros de toda la app (admin, profes y registro). Los colores primario y secundario se mantienen como acentos. Se ve en el momento; recorda <b>Guardar</b> para que quede.</p>
+          <p style="font-size:10px;color:var(--muted);margin-top:8px;">Elegi una combinacion lista o ajusta los dos colores a mano. <b>Tip:</b> en fondos claros, cards un poco mas oscuras que el fondo se ven mejor. El color del texto se adapta solo. Aplica a admin, profes y registro &mdash; recorda <b>Guardar</b>.</p>
         </div>
       </div>
 
@@ -2120,7 +2127,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.66</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.67</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2518,30 +2525,36 @@ function aplicarTerminologia() {
 }
 
 // -- APLICAR COLORES Y BRANDING -----------------------------------
-// ── TEMAS DE FONDO (paletas neutras configurables desde Institucion) ──
-// Cada tema define el fondo y los tonos neutros. Los colores primario/
-// secundario se mantienen como acentos sobre cualquier tema.
+// ── FONDO + CARDS (configurable desde Institucion) ───────────────
+// El usuario elige el color de fondo y el de las cards por separado.
+// El resto (surface2, borde, texto, muted) se deriva automaticamente.
+// Combinaciones rapidas: en claros, cards un poco mas oscuras que el fondo.
 var TEMAS_FONDO = {
-  verde:   {nombre:'Verde Oscuro',   bg:'#0a0d0a', surface:'#121812', surface2:'#181f18', border:'#253025', text:'#e8f0e8', muted:'#7a927a'},
-  azul:    {nombre:'Azul Noche',     bg:'#0b1220', surface:'#131c2e', surface2:'#1b2740', border:'#27344d', text:'#e6ecf5', muted:'#8294b0'},
-  menta:   {nombre:'Pastel Menta',   bg:'#eaf5ee', surface:'#ffffff', surface2:'#f3faf5', border:'#cfe6d7', text:'#1c2b22', muted:'#5e7a68'},
-  lavanda: {nombre:'Pastel Lavanda', bg:'#f0edf8', surface:'#ffffff', surface2:'#f7f4fc', border:'#ddd5ef', text:'#241d33', muted:'#6f6589'},
-  claro:   {nombre:'Gris Claro',     bg:'#eef2f6', surface:'#ffffff', surface2:'#f7f9fc', border:'#dde4ec', text:'#1f2937', muted:'#647082'},
+  verde:   {nombre:'Verde Oscuro', bg:'#0a0d0a', card:'#121812'},
+  azul:    {nombre:'Azul Noche',   bg:'#0b1220', card:'#172138'},
+  carbon:  {nombre:'Carbon',       bg:'#111114', card:'#1c1c22'},
+  menta:   {nombre:'Menta',        bg:'#f0f8f3', card:'#d9ecdf'},
+  lavanda: {nombre:'Lavanda',      bg:'#f3f0fa', card:'#e2daf3'},
+  arena:   {nombre:'Arena',        bg:'#f7f2ea', card:'#ece0cf'},
+  gris:    {nombre:'Gris Claro',   bg:'#eef2f7', card:'#dde4ee'},
 };
-function aplicarTemaFondo(key){
-  var t = TEMAS_FONDO[key] || TEMAS_FONDO.verde;
+function _hex2rgb(h){ h=(h||'').replace('#',''); if(h.length===3){h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];} return {r:parseInt(h.substr(0,2),16)||0,g:parseInt(h.substr(2,2),16)||0,b:parseInt(h.substr(4,2),16)||0}; }
+function _ajust(h,f){ var c=_hex2rgb(h); function a(v){ var x=f>=0?v+(255-v)*f:v*(1+f); return Math.max(0,Math.min(255,Math.round(x))); } return '#'+[a(c.r),a(c.g),a(c.b)].map(function(x){return ('0'+x.toString(16)).slice(-2);}).join(''); }
+function aplicarFondoColores(bg, card){
+  bg = bg || '#0a0d0a'; card = card || '#121812';
+  var c = _hex2rgb(bg), oscuro = (0.299*c.r + 0.587*c.g + 0.114*c.b) < 140;
   var r = document.documentElement.style;
-  r.setProperty('--bg', t.bg);
-  r.setProperty('--surface', t.surface);
-  r.setProperty('--surface2', t.surface2);
-  r.setProperty('--border', t.border);
-  r.setProperty('--text', t.text);
-  r.setProperty('--muted', t.muted);
-  document.documentElement.setAttribute('data-tema', key || 'verde');
+  r.setProperty('--bg', bg);
+  r.setProperty('--surface', card);
+  r.setProperty('--surface2', _ajust(card, oscuro ? 0.06 : -0.05));
+  r.setProperty('--border',   _ajust(card, oscuro ? 0.18 : -0.16));
+  r.setProperty('--text',  oscuro ? '#e8f0e8' : '#1b2430');
+  r.setProperty('--muted', oscuro ? '#8a9a8a' : '#606b7a');
+  document.documentElement.setAttribute('data-fondo', oscuro ? 'oscuro' : 'claro');
 }
 
 function aplicarBranding() {
-  aplicarTemaFondo(INST.temaFondo || 'verde');
+  aplicarFondoColores(INST.colorFondo, INST.colorCards);
   var p = INST.colorPrimario  || '#1a7a3c';
   var s = INST.colorSecundario || '#c9a227';
   var nombre = INST.nombre || 'Sistema de Gestion';
@@ -7915,30 +7928,40 @@ function aplicarBrandingPreview(primario, secundario) {
   }
 }
 
-// -- TEMA DE FONDO: picker visual ---------------------------------
+// -- FONDO + CARDS: picker visual ---------------------------------
+function onCambioFondoColor(){
+  var bg = document.getElementById('inst-colorFondo').value;
+  var card = document.getElementById('inst-colorCards').value;
+  var pf = document.getElementById('inst-fondo-prev'); if(pf) pf.style.background = bg;
+  var pc = document.getElementById('inst-cards-prev'); if(pc) pc.style.background = card;
+  aplicarFondoColores(bg, card);   // preview en vivo
+  renderTemasFondo();
+}
 function renderTemasFondo(){
   var wrap = document.getElementById('inst-temas-wrap'); if(!wrap) return;
-  var sel = (document.getElementById('inst-temaFondo')||{}).value || 'verde';
+  var bg  = ((document.getElementById('inst-colorFondo')||{}).value || '').toLowerCase();
+  var card= ((document.getElementById('inst-colorCards')||{}).value || '').toLowerCase();
   var pri = (document.getElementById('inst-colorPrimario')||{}).value || INST.colorPrimario || '#1a7a3c';
   var sec = (document.getElementById('inst-colorSecundario')||{}).value || INST.colorSecundario || '#c9a227';
   wrap.innerHTML = Object.keys(TEMAS_FONDO).map(function(k){
-    var t = TEMAS_FONDO[k], on = (k === sel);
+    var t = TEMAS_FONDO[k], on = (t.bg.toLowerCase() === bg && t.card.toLowerCase() === card);
+    var brd = _ajust(t.card, (_hex2rgb(t.bg).r+_hex2rgb(t.bg).g+_hex2rgb(t.bg).b)/3 < 140 ? 0.18 : -0.16);
     return '<div onclick="seleccionarTema(\'' + k + '\')" title="' + t.nombre + '" '
       + 'style="cursor:pointer;border:2px solid ' + (on ? 'var(--secondary)' : 'transparent') + ';border-radius:11px;padding:4px;transition:border-color .15s;">'
-      + '<div style="width:88px;height:56px;border-radius:7px;background:' + t.bg + ';border:1px solid ' + t.border + ';position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.2);">'
-      +   '<div style="position:absolute;left:7px;top:7px;right:7px;height:15px;border-radius:4px;background:' + t.surface + ';border:1px solid ' + t.border + ';"></div>'
-      +   '<div style="position:absolute;left:8px;bottom:8px;width:15px;height:15px;border-radius:50%;background:' + pri + ';"></div>'
-      +   '<div style="position:absolute;left:27px;bottom:8px;width:15px;height:15px;border-radius:50%;background:' + sec + ';"></div>'
-      +   '<div style="position:absolute;right:8px;bottom:7px;font-size:11px;font-weight:800;color:' + t.text + ';">Aa</div>'
+      + '<div style="width:88px;height:56px;border-radius:7px;background:' + t.bg + ';position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.25);">'
+      +   '<div style="position:absolute;left:8px;top:8px;right:8px;height:21px;border-radius:5px;background:' + t.card + ';border:1px solid ' + brd + ';"></div>'
+      +   '<div style="position:absolute;left:9px;bottom:8px;width:14px;height:14px;border-radius:50%;background:' + pri + ';"></div>'
+      +   '<div style="position:absolute;left:27px;bottom:8px;width:14px;height:14px;border-radius:50%;background:' + sec + ';"></div>'
       + '</div>'
       + '<div style="text-align:center;font-size:10px;margin-top:5px;' + (on ? 'color:var(--secondary);font-weight:700;' : 'color:var(--muted);') + '">' + t.nombre + '</div>'
       + '</div>';
   }).join('');
 }
 function seleccionarTema(k){
-  var inp = document.getElementById('inst-temaFondo'); if(inp) inp.value = k;
-  aplicarTemaFondo(k);   // preview en vivo
-  renderTemasFondo();    // re-marcar el seleccionado
+  var t = TEMAS_FONDO[k]; if(!t) return;
+  document.getElementById('inst-colorFondo').value = t.bg;
+  document.getElementById('inst-colorCards').value = t.card;
+  onCambioFondoColor();
 }
 
 function cargarFormInstitucion() {
@@ -7951,7 +7974,9 @@ function cargarFormInstitucion() {
       if(prev) prev.style.background = INST[c] || (c === 'colorPrimario' ? '#1a7a3c' : '#c9a227');
     }
   });
-  var _tf = document.getElementById('inst-temaFondo'); if(_tf) _tf.value = INST.temaFondo || 'verde';
+  var _bg = INST.colorFondo || '#0a0d0a', _card = INST.colorCards || '#121812';
+  var _ef = document.getElementById('inst-colorFondo'); if(_ef){ _ef.value = _bg; var _pf=document.getElementById('inst-fondo-prev'); if(_pf) _pf.style.background=_bg; }
+  var _ec = document.getElementById('inst-colorCards'); if(_ec){ _ec.value = _card; var _pc=document.getElementById('inst-cards-prev'); if(_pc) _pc.style.background=_card; }
   renderTemasFondo();
 }
 
@@ -7963,7 +7988,8 @@ function guardarInstitucion() {
     driveFolder: document.getElementById('inst-driveFolder').value.trim(),
     colorPrimario: document.getElementById('inst-colorPrimario').value,
     colorSecundario: document.getElementById('inst-colorSecundario').value,
-    temaFondo: (document.getElementById('inst-temaFondo')||{}).value || 'verde',
+    colorFondo: (document.getElementById('inst-colorFondo')||{}).value || '#0a0d0a',
+    colorCards: (document.getElementById('inst-colorCards')||{}).value || '#121812',
     terminologiaSocio: document.getElementById('inst-terminologiaSocio').value.trim() || 'Socio',
     terminologiaSocios: document.getElementById('inst-terminologiaSocios').value.trim() || 'Socios',
     terminologiaGrupo: document.getElementById('inst-terminologiaGrupo').value.trim() || 'Categoria',
