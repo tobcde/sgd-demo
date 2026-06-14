@@ -428,7 +428,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 </div>
 
 <div id="toast"></div>
-<div id="vbadge">v2.8</div>
+<div id="vbadge">v2.9</div>
 
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -502,8 +502,22 @@ function fmtHora(h){ if(!h)return''; var s=h.toString(); if(s.includes('T')||s.i
 // ══════════════════════════════════════════════════════════════════
 // BRANDING
 // ══════════════════════════════════════════════════════════════════
+// Temas de fondo (paletas neutras) — se configuran desde Institucion (admin)
+var TEMAS_FONDO = {
+  verde:   {bg:'#0a0d0a', surface:'#121812', surface2:'#181f18', border:'#253025', text:'#e8f0e8', muted:'#7a927a'},
+  azul:    {bg:'#0b1220', surface:'#131c2e', surface2:'#1b2740', border:'#27344d', text:'#e6ecf5', muted:'#8294b0'},
+  menta:   {bg:'#eaf5ee', surface:'#ffffff', surface2:'#f3faf5', border:'#cfe6d7', text:'#1c2b22', muted:'#5e7a68'},
+  lavanda: {bg:'#f0edf8', surface:'#ffffff', surface2:'#f7f4fc', border:'#ddd5ef', text:'#241d33', muted:'#6f6589'},
+  claro:   {bg:'#eef2f6', surface:'#ffffff', surface2:'#f7f9fc', border:'#dde4ec', text:'#1f2937', muted:'#647082'},
+};
+function aplicarTemaFondo(key){
+  var t = TEMAS_FONDO[key] || TEMAS_FONDO.verde, r = document.documentElement.style;
+  r.setProperty('--bg', t.bg); r.setProperty('--surface', t.surface); r.setProperty('--surface2', t.surface2);
+  r.setProperty('--border', t.border); r.setProperty('--text', t.text); r.setProperty('--muted', t.muted);
+}
 function aplicarBranding(inst) {
   INST = inst || {};
+  aplicarTemaFondo(INST.temaFondo || 'verde');
   var p = INST.colorPrimario || '#1a7a3c';
   var s = INST.colorSecundario || '#c9a227';
   var r = document.documentElement;
