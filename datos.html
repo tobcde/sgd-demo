@@ -538,7 +538,7 @@ video{width:100%;display:block;}
 
 <!-- TOAST -->
 <div id="toast"></div>
-<div id="version-badge">v2.8</div>
+<div id="version-badge">v2.10</div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- FIREBASE SDK                                                   -->
@@ -642,8 +642,12 @@ function getDriveThumb(url, sz) {
   sz = sz || 'w200';
   var m = url.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
   if(!m) m = url.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
-  if(!m) return '';
-  return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=' + sz;
+  if(!m) return /^https?:\/\//i.test(url.trim()) ? url.trim() : '';
+  // Endpoint lh3.googleusercontent.com (el de drive.google.com/thumbnail está deprecado desde 2024).
+  var sufijo = '';
+  var ms = String(sz).match(/^([wsh])(\d+)$/);
+  if (ms) sufijo = '=' + ms[1] + ms[2]; else sufijo = '=w200';
+  return 'https://lh3.googleusercontent.com/d/' + m[1] + sufijo;
 }
 function getDriveDisplay(url) {
   if(!url || typeof url !== 'string' || !url.trim()) return '';
@@ -656,8 +660,22 @@ function getDriveDisplay(url) {
 // ══════════════════════════════════════════════════════════════════
 // BRANDING
 // ══════════════════════════════════════════════════════════════════
+// Temas de fondo (paletas neutras) — se configuran desde Institucion (admin)
+var TEMAS_FONDO = {
+  verde:   {bg:'#0a0d0a', surface:'#121812', surface2:'#181f18', border:'#253025', text:'#e8f0e8', muted:'#7a927a'},
+  azul:    {bg:'#0b1220', surface:'#131c2e', surface2:'#1b2740', border:'#27344d', text:'#e6ecf5', muted:'#8294b0'},
+  menta:   {bg:'#eaf5ee', surface:'#ffffff', surface2:'#f3faf5', border:'#cfe6d7', text:'#1c2b22', muted:'#5e7a68'},
+  lavanda: {bg:'#f0edf8', surface:'#ffffff', surface2:'#f7f4fc', border:'#ddd5ef', text:'#241d33', muted:'#6f6589'},
+  claro:   {bg:'#eef2f6', surface:'#ffffff', surface2:'#f7f9fc', border:'#dde4ec', text:'#1f2937', muted:'#647082'},
+};
+function aplicarTemaFondo(key){
+  var t = TEMAS_FONDO[key] || TEMAS_FONDO.verde, r = document.documentElement.style;
+  r.setProperty('--bg', t.bg); r.setProperty('--surface', t.surface); r.setProperty('--surface2', t.surface2);
+  r.setProperty('--border', t.border); r.setProperty('--text', t.text); r.setProperty('--muted', t.muted);
+}
 function aplicarBranding(inst) {
   INST = inst;
+  aplicarTemaFondo((inst && inst.temaFondo) || 'verde');
   if (inst.colorPrimario) {
     document.documentElement.style.setProperty('--primary', inst.colorPrimario);
     var c = inst.colorPrimario;
@@ -1176,7 +1194,7 @@ function inicializarPaso4() {
   if (fotoExistente && !S.foto) {
     var fotoThumb = fotoExistente;
     var mDrive = fotoExistente.match(/[?&]id=([a-zA-Z0-9_-]{10,})/) || fotoExistente.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
-    if (mDrive) fotoThumb = 'https://drive.google.com/thumbnail?id=' + mDrive[1] + '&sz=w400';
+    if (mDrive) fotoThumb = 'https://lh3.googleusercontent.com/d/' + mDrive[1] + '=w400';
     document.getElementById('prev-foto-img').src = fotoThumb;
     prevFotoWrap.style.display = 'block';
     zonaFoto.style.display = 'none';
