@@ -106,6 +106,17 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 .toggle-btn.presente::after{content:'✓';color:#fff;font-size:18px;}
 .toggle-btn.ausente{background:var(--red-dim);border:1px solid var(--red-border);}
 .toggle-btn.ausente::after{content:'✗';color:var(--red);font-size:18px;}
+/* Semaforo de emociones */
+.sem-group{display:flex;gap:4px;margin-right:8px;flex-shrink:0;transition:opacity .15s;}
+.sem-group.disabled{opacity:.25;pointer-events:none;}
+.sem-btn{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;display:inline-block;padding:0;transition:transform .1s,border-color .1s;}
+.sem-btn:hover{transform:scale(1.15);}
+.sem-btn.verde{background:#22c55e;}
+.sem-btn.amarillo{background:#eab308;}
+.sem-btn.rojo{background:#ef4444;}
+.sem-btn.activo{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.3);}
+.sem-btn:not(.activo){opacity:.45;}
+.sem-btn:not(.activo):hover{opacity:.85;}
 .btn-guardar{background:var(--primary);color:#fff;border:none;border-radius:10px;padding:13px;width:100%;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;}
 .btn-guardar:disabled{opacity:.5;cursor:not-allowed;}
 .empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
@@ -287,6 +298,18 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
         <button style="flex:1;background:var(--red-dim);border:1px solid var(--red-border);color:var(--red);border-radius:8px;padding:8px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;" onclick="marcarTodos(false)">&#x2717; Todos ausentes</button>
       </div>
       <div id="lista-alumnos" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;"></div>
+      <div id="invitados-section" style="margin-top:14px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+          <div style="background:rgba(201,162,39,.12);padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div>
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;">&#x1F465; Invitados / Sin alta</div>
+              <div style="font-size:11px;color:var(--muted);">Alumnos que todavía no están registrados en la app</div>
+            </div>
+            <button onclick="agregarInvitado()" style="background:var(--secondary);border:none;color:#0d130d;font-weight:800;padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;">+ AGREGAR</button>
+          </div>
+          <div id="invitados-lista"></div>
+        </div>
+      </div>
       <button class="btn-guardar" id="btn-guardar" onclick="guardarAsistencia()">&#x1F4BE; GUARDAR ASISTENCIA</button>
     </div>
   </div>
@@ -405,7 +428,7 @@ body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);over
 </div>
 
 <div id="toast"></div>
-<div id="vbadge">v2.5</div>
+<div id="vbadge">v2.8</div>
 
 <!-- FIREBASE SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -451,7 +474,10 @@ var DB = {
   misGrupos: []    // categorías (h.grupo) que el profe enseña — usado por el filtro de jugadores
 };
 var asistencias  = [];  // registros últimos 2 meses [{fecha,turnoId,label,dni,nombre,presente}]
-var asistActual  = {};  // {dni: true/false}
+var asistActual    = {};  // {dni: true/false}
+var invitadosActual = [];  // [{tempId, nombre, presente, semaforo}] — alumnos sin alta cargados a mano
+var _invSeq = 0;
+var semaforoActual = {};  // {dni: 'verde'|'amarillo'|'rojo'|null}
 var turnoActual  = null;
 
 var COL = {
@@ -580,6 +606,9 @@ function toggleBiometrico() {
 function dniToEmail(dni){ return normalizarDni(dni) + '@sgd.app'; }
 function normalizarDni(dni){ return dni?dni.toString().replace(/\./g,'').replace(/\s/g,'').trim():''; }
 
+// Flag: hay un login manual en curso. Evita que onAuthStateChanged oculte el
+// loader (y deje ver el login) entre que el signIn resuelve y entrarApp() corre.
+var _loginEnCurso = false;
 function doLogin() {
   var dni  = document.getElementById('login-dni').value.trim();
   var pass = document.getElementById('login-pass').value.trim();
@@ -587,6 +616,7 @@ function doLogin() {
   errEl.style.display = 'none';
   if (!dni || !pass){ errEl.innerText='Completá todos los campos'; errEl.style.display='block'; return; }
 
+  _loginEnCurso = true;
   mostrarLoader('Verificando...');
 
   // Firebase Auth: email ficticio basado en DNI
@@ -608,6 +638,7 @@ function doLogin() {
         });
     })
     .catch(function(e) {
+      _loginEnCurso = false;
       ocultarLoader();
       var msg = 'Credenciales incorrectas';
       if (e.code === 'auth/too-many-requests') msg = 'Demasiados intentos. Intentá más tarde.';
@@ -642,6 +673,7 @@ function doForzarCambioPass() {
 }
 
 function entrarApp(pass) {
+  _loginEnCurso = false;
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
   // Sin confirm() bloqueante — ofrecemos huella via botón en el perfil
@@ -941,16 +973,19 @@ function irTab(tab) {
 // ══════════════════════════════════════════════════════════════════
 // JUGADORES — grid + ficha reducida
 // ══════════════════════════════════════════════════════════════════
-// Convierte una URL cruda de Google Drive (drive.google.com/file/d/ID/view)
-// a una URL de thumbnail embeddable (drive.google.com/thumbnail?id=ID&sz=wXXX).
-// Si la URL no es de Drive, la devuelve tal cual (permite URLs de otros hosts).
+// Convierte una URL cruda de Google Drive a una URL embeddable.
+// Usa lh3.googleusercontent.com (el endpoint drive.google.com/thumbnail está
+// deprecado desde 2024 y bloquea hotlinking desde dominios externos).
 function getDriveThumb(url, sz) {
   if (!url || typeof url !== 'string' || !url.trim()) return '';
   sz = sz || 'w200';
   var m = url.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
   if (!m) m = url.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
-  if (!m) return url;
-  return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=' + sz;
+  if (!m) return url; // URLs no-Drive se devuelven tal cual
+  var sufijo = '';
+  var ms = String(sz).match(/^([wsh])(\d+)$/);
+  if (ms) sufijo = '=' + ms[1] + ms[2]; else sufijo = '=w200';
+  return 'https://lh3.googleusercontent.com/d/' + m[1] + sufijo;
 }
 
 function renderJugadoresGrid() {
@@ -1181,7 +1216,7 @@ function ocultarLista() {
   document.getElementById('stats-bar').style.display='none';
   document.getElementById('turno-info').classList.remove('visible');
   document.getElementById('asist-empty').style.display='block';
-  turnoActual=null; asistActual={};
+  turnoActual=null; asistActual={}; invitadosActual=[];
 }
 
 function cargarLista(h, turnoId) {
@@ -1202,11 +1237,22 @@ function cargarLista(h, turnoId) {
   });
 
   // Cargar asistencias previas
-  asistActual = {}; var tieneRegistro = false;
+  // Cargar asistencias previas — separar invitados (dni con prefijo INV_)
+  asistActual = {}; semaforoActual = {}; invitadosActual = []; var tieneRegistro = false;
   asistencias.forEach(function(r) {
-    if (r.turnoId === turnoId) {
-      tieneRegistro = true;
-      asistActual[r.dni.toString()] = r.presente === true;
+    if (r.turnoId !== turnoId) return;
+    tieneRegistro = true;
+    var _d = (r.dni||'').toString();
+    if (_d.indexOf('INV_') === 0) {
+      invitadosActual.push({
+        tempId: _d,
+        nombre: r.nombre || '',
+        presente: r.presente === true,
+        semaforo: (r.semaforo || '').toString()
+      });
+    } else {
+      asistActual[_d] = r.presente === true;
+      if (r.semaforo) semaforoActual[_d] = r.semaforo;
     }
   });
   if (!tieneRegistro) {
@@ -1223,6 +1269,7 @@ function cargarLista(h, turnoId) {
   infoEl.classList.add('visible');
 
   renderLista(jug, turnoId);
+  renderInvitados();
   document.getElementById('asist-empty').style.display='none';
   document.getElementById('lista-container').style.display='block';
   document.getElementById('stats-bar').style.display='grid';
@@ -1240,17 +1287,42 @@ function renderLista(jug, turnoId) {
     var dni    = (f.dni || '').toString();
     var nombre = (f.apellido||'') + ', ' + (f.nombre||'');
     var pres   = asistActual[dni] !== false;
+    var sem    = semaforoActual[dni] || '';
     var _fotoUrl = getDriveThumb(f.foto||'', 'w100');
     var _fotoHtml = _fotoUrl
       ? '<img src="'+_fotoUrl+'" loading="lazy" class="alumno-foto" onerror="this.style.display=\'none\';var ph=this.nextElementSibling;if(ph)ph.style.display=\'flex\';"><div class="alumno-foto-ph" style="display:none;">&#128100;</div>'
       : '<div class="alumno-foto-ph">&#128100;</div>';
+    var semHtml = '<div class="sem-group ' + (pres ? '' : 'disabled') + '" id="sem-'+dni+'" title="C&oacute;mo se sinti&oacute; el alumno hoy">'
+      + '<button class="sem-btn verde'    + (sem==='verde'    ? ' activo' : '') + '" onclick="toggleSemaforo(\''+dni+'\',\'verde\')"    title="Bien"></button>'
+      + '<button class="sem-btn amarillo' + (sem==='amarillo' ? ' activo' : '') + '" onclick="toggleSemaforo(\''+dni+'\',\'amarillo\')" title="Regular"></button>'
+      + '<button class="sem-btn rojo'     + (sem==='rojo'     ? ' activo' : '') + '" onclick="toggleSemaforo(\''+dni+'\',\'rojo\')"     title="Mal"></button>'
+      + '</div>';
     html += '<div class="alumno-row" id="row-'+dni+'">'
       + '<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">'+_fotoHtml+'<div style="min-width:0;flex:1;"><div class="alumno-nombre">'+nombre+'</div>'
       + '<div class="alumno-info">DNI: '+dni+(f.categoriaApp?' &bull; '+f.categoriaApp:'')+'</div></div></div>'
+      + semHtml
       + '<button class="toggle-btn '+(pres?'presente':'ausente')+'" onclick="toggleAlumno(\''+dni+'\')"></button>'
       + '</div>';
   });
   document.getElementById('lista-alumnos').innerHTML = html || '<div class="empty-state">Sin alumnos en este grupo</div>';
+}
+
+function toggleSemaforo(dni, color) {
+  if (asistActual[dni] === false) return;
+  if (semaforoActual[dni] === color) {
+    delete semaforoActual[dni];
+  } else {
+    semaforoActual[dni] = color;
+  }
+  var grp = document.getElementById('sem-'+dni);
+  if (!grp) return;
+  var btns = grp.querySelectorAll('.sem-btn');
+  btns.forEach(function(b){ b.classList.remove('activo'); });
+  var sel = semaforoActual[dni];
+  if (sel) {
+    var act = grp.querySelector('.sem-btn.' + sel);
+    if (act) act.classList.add('activo');
+  }
 }
 
 function toggleAlumno(dni) {
@@ -1258,6 +1330,16 @@ function toggleAlumno(dni) {
   var btn = document.querySelector('#row-'+dni+' .toggle-btn');
   if (btn) {
     btn.className = 'toggle-btn ' + (asistActual[dni] ? 'presente' : 'ausente');
+  }
+  var grp = document.getElementById('sem-'+dni);
+  if (grp) {
+    if (asistActual[dni]) {
+      grp.classList.remove('disabled');
+    } else {
+      grp.classList.add('disabled');
+      delete semaforoActual[dni];
+      grp.querySelectorAll('.sem-btn').forEach(function(b){ b.classList.remove('activo'); });
+    }
   }
   actualizarStats(window._jugActual ? window._jugActual.length : 0);
 }
@@ -1269,6 +1351,16 @@ function marcarTodos(pres) {
     asistActual[dni] = pres;
     var btn = document.querySelector('#row-'+dni+' .toggle-btn');
     if (btn) btn.className = 'toggle-btn ' + (pres ? 'presente' : 'ausente');
+    var grp = document.getElementById('sem-'+dni);
+    if (grp) {
+      if (pres) {
+        grp.classList.remove('disabled');
+      } else {
+        grp.classList.add('disabled');
+        delete semaforoActual[dni];
+        grp.querySelectorAll('.sem-btn').forEach(function(b){ b.classList.remove('activo'); });
+      }
+    }
   });
   actualizarStats(window._jugActual.length);
 }
@@ -1290,6 +1382,73 @@ function actualizarStats(total) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// INVITADOS — alumnos que todavia no estan dados de alta en la app
+// ══════════════════════════════════════════════════════════════════
+function agregarInvitado() {
+  invitadosActual.push({
+    tempId: 'INV_' + Date.now() + '_' + (++_invSeq),
+    nombre: '', presente: true, semaforo: ''
+  });
+  renderInvitados();
+  setTimeout(function(){
+    var inputs = document.querySelectorAll('#invitados-lista input[type="text"]');
+    if (inputs.length) inputs[inputs.length-1].focus();
+  }, 50);
+}
+
+function eliminarInvitado(tempId) {
+  invitadosActual = invitadosActual.filter(function(i){ return i.tempId !== tempId; });
+  renderInvitados();
+}
+
+function actualizarNombreInvitado(tempId, valor) {
+  var inv = invitadosActual.find(function(i){ return i.tempId === tempId; });
+  if (inv) inv.nombre = valor;
+}
+
+function toggleInvitado(tempId) {
+  var inv = invitadosActual.find(function(i){ return i.tempId === tempId; });
+  if (!inv) return;
+  inv.presente = !inv.presente;
+  if (!inv.presente) inv.semaforo = '';
+  renderInvitados();
+}
+
+function toggleSemaforoInvitado(tempId, color) {
+  var inv = invitadosActual.find(function(i){ return i.tempId === tempId; });
+  if (!inv || !inv.presente) return;
+  inv.semaforo = inv.semaforo === color ? '' : color;
+  renderInvitados();
+}
+
+function renderInvitados() {
+  var lst = document.getElementById('invitados-lista');
+  if (!lst) return;
+  if (!invitadosActual.length) {
+    lst.innerHTML = '<div style="padding:14px 16px;color:var(--muted);font-size:12px;text-align:center;">Sin invitados. Tocá <b>+ AGREGAR</b> para sumar alguien.</div>';
+    return;
+  }
+  lst.innerHTML = invitadosActual.map(function(inv) {
+    var pres = inv.presente;
+    var nomEsc = (inv.nombre||'').replace(/"/g,'&quot;');
+    var semHtml = '<div class="sem-group ' + (pres?'':'disabled') + '">'
+      + '<button class="sem-btn verde'    + (inv.semaforo==='verde'    ? ' activo':'') + '" onclick="toggleSemaforoInvitado(\''+inv.tempId+'\',\'verde\')"    title="Bien"></button>'
+      + '<button class="sem-btn amarillo' + (inv.semaforo==='amarillo' ? ' activo':'') + '" onclick="toggleSemaforoInvitado(\''+inv.tempId+'\',\'amarillo\')" title="Regular"></button>'
+      + '<button class="sem-btn rojo'     + (inv.semaforo==='rojo'     ? ' activo':'') + '" onclick="toggleSemaforoInvitado(\''+inv.tempId+'\',\'rojo\')"     title="Mal"></button>'
+      + '</div>';
+    return '<div class="alumno-row" style="border-top:1px solid var(--border);">'
+      + '<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">'
+      + '<div class="alumno-foto-ph" style="background:rgba(201,162,39,.18);color:var(--secondary);font-size:18px;">+</div>'
+      + '<input type="text" placeholder="Nombre y apellido del invitado" value="' + nomEsc + '" oninput="actualizarNombreInvitado(\''+inv.tempId+'\', this.value)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:13px;width:100%;min-width:0;">'
+      + '</div>'
+      + semHtml
+      + '<button class="toggle-btn '+(pres?'presente':'ausente')+'" onclick="toggleInvitado(\''+inv.tempId+'\')"></button>'
+      + '<button onclick="eliminarInvitado(\''+inv.tempId+'\')" style="background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;margin-left:6px;padding:0 4px;" title="Quitar">&times;</button>'
+      + '</div>';
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
 // GUARDAR ASISTENCIA — Firestore batch
 // ══════════════════════════════════════════════════════════════════
 function guardarAsistencia() {
@@ -1305,14 +1464,34 @@ function guardarAsistencia() {
   // Armar registros
   var registros = window._jugActual.map(function(f) {
     var dni = (f.dni||'').toString();
-    return {
+    var pres = asistActual[dni] !== false;
+    var rec = {
       fecha:    fecha,
       turnoId:  turnoId,
       label:    turnoLabel,
       dni:      dni,
       nombre:   (f.apellido||'') + ' ' + (f.nombre||''),
-      presente: asistActual[dni] !== false
+      presente: pres
     };
+    if (pres && semaforoActual[dni]) rec.semaforo = semaforoActual[dni];
+    return rec;
+  });
+
+  // Agregar invitados con nombre no vacio
+  invitadosActual.forEach(function(inv) {
+    var nom = (inv.nombre||'').trim();
+    if (!nom) return;
+    var rec = {
+      fecha:    fecha,
+      turnoId:  turnoId,
+      label:    turnoLabel,
+      dni:      inv.tempId, // sintetico (prefijo INV_)
+      nombre:   nom,
+      presente: inv.presente !== false,
+      invitado: true
+    };
+    if (rec.presente && inv.semaforo) rec.semaforo = inv.semaforo;
+    registros.push(rec);
   });
 
   // Batch: borrar registros viejos del turno + insertar nuevos
@@ -1375,6 +1554,23 @@ function renderHistorial() {
     return true;
   });
 
+  // Invitados (DNI sintetico con prefijo INV_) que tienen registros en el rango y cat aplicable
+  var invMap = {};
+  var invList = [];
+  asistencias.forEach(function(r) {
+    var dni = (r.dni||'').toString();
+    if (dni.indexOf('INV_') !== 0) return;
+    var fecha = r.fecha||''; if(desde && fecha<desde) return; if(hasta && fecha>hasta) return;
+    var tid = r.turnoId||'';
+    var partes = tid.split('_'); var cat = partes.length>2 ? partes.slice(2).join('_') : '';
+    if(catF && cat !== catF) return;
+    if(misCats.length && misCats.indexOf(cat) < 0) return;
+    if (!invMap[dni]) {
+      invMap[dni] = true;
+      invList.push({ dni: dni, nombre: r.nombre || '(sin nombre)' });
+    }
+  });
+
   var turnosMap = {};
   asistencias.forEach(function(r) {
     var fecha=r.fecha||''; if(desde&&fecha<desde)return; if(hasta&&fecha>hasta)return;
@@ -1384,10 +1580,11 @@ function renderHistorial() {
   });
   var turnos = Object.values(turnosMap).sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
 
+  var totalFilas = jug.length + invList.length;
   var emptyEl=document.getElementById('hist-empty'), wrapEl=document.getElementById('hist-tabla-wrap');
-  if (!jug.length || !turnos.length) {
+  if (!totalFilas || !turnos.length) {
     wrapEl.style.display='none'; emptyEl.style.display='block';
-    emptyEl.innerText = !jug.length ? 'Sin registros en este grupo' : 'Sin registros en el período';
+    emptyEl.innerText = !totalFilas ? 'Sin registros en este grupo' : 'Sin registros en el período';
     return;
   }
   wrapEl.style.display='block'; emptyEl.style.display='none';
@@ -1397,7 +1594,7 @@ function renderHistorial() {
     var fecha=r.fecha||''; if(desde&&fecha<desde)return; if(hasta&&fecha>hasta)return;
     var dni=r.dni||'',tid=r.turnoId||'';
     if(!asistMap[dni]) asistMap[dni]={};
-    asistMap[dni][tid] = r.presente===true;
+    asistMap[dni][tid] = { pres: r.presente===true, sem: (r.semaforo||'').toString().trim().toLowerCase() };
   });
 
   var html = '<table class="hist-table"><thead><tr><th>Nombre</th>';
@@ -1406,31 +1603,82 @@ function renderHistorial() {
     var lbl=t.label?t.label.split(' - ')[0]:'';
     html += '<th><div>'+dia+'</div><div style="font-size:10px;color:var(--primary);">'+lbl+'</div></th>';
   });
-  html += '<th>%</th></tr></thead><tbody>';
+  html += '<th title="Verdes">&#x1F7E2;</th><th title="Amarillos">&#x1F7E1;</th><th title="Rojos">&#x1F534;</th><th>%</th></tr></thead><tbody>';
 
   jug.sort(function(a,b){return (a.apellido||'').localeCompare(b.apellido||'');})
   .forEach(function(f) {
     var dni=(f.dni||'').toString(), nombre=(f.apellido||'')+', '+(f.nombre||'');
-    var pres=0, tot=0;
+    var pres=0, tot=0, nV=0, nA=0, nR=0;
     html += '<tr><td title="DNI: '+dni+'">'+nombre+'</td>';
     turnos.forEach(function(t) {
       var jA=asistMap[dni]||{};
-      if(t.turnoId in jA){ tot++; if(jA[t.turnoId]){pres++;html+='<td class="pres-cell">&#x2713;</td>';}else html+='<td class="ause-cell">&#x2717;</td>'; }
-      else html += '<td class="no-cell">-</td>';
+      var rec = jA[t.turnoId];
+      if(rec){
+        tot++;
+        if(rec.pres){
+          pres++;
+          if (rec.sem === 'verde')         { nV++; html += '<td class="pres-cell" title="Verde">&#x1F7E2;</td>'; }
+          else if (rec.sem === 'amarillo') { nA++; html += '<td class="pres-cell" title="Amarillo">&#x1F7E1;</td>'; }
+          else if (rec.sem === 'rojo')     { nR++; html += '<td class="pres-cell" title="Rojo">&#x1F534;</td>'; }
+          else                                   { html += '<td class="pres-cell">&#x2713;</td>'; }
+        } else {
+          html += '<td class="ause-cell">&#x2717;</td>';
+        }
+      } else {
+        html += '<td class="no-cell">-</td>';
+      }
     });
     var pct=tot>0?Math.round(pres/tot*100):null;
     var col=pct===null?'var(--muted)':pct>=75?'#6de097':pct>=50?'var(--secondary)':'var(--red)';
+    html += '<td style="color:#22c55e;font-weight:700;">'+(nV||'')+'</td>';
+    html += '<td style="color:#eab308;font-weight:700;">'+(nA||'')+'</td>';
+    html += '<td style="color:#ef4444;font-weight:700;">'+(nR||'')+'</td>';
     html += '<td style="font-weight:700;color:'+col+';">'+(pct!==null?pct+'%':'-')+'</td></tr>';
   });
+
+  // Filas de invitados — con badge INV y sin DNI real
+  invList.sort(function(a,b){ return (a.nombre||'').localeCompare(b.nombre||''); })
+  .forEach(function(inv) {
+    var dni = inv.dni;
+    var pres=0, tot=0, nV=0, nA=0, nR=0;
+    html += '<tr><td title="Invitado / sin alta"><span style="background:rgba(201,162,39,.22);color:var(--secondary);font-size:9px;padding:1px 6px;border-radius:8px;font-weight:800;margin-right:6px;letter-spacing:.5px;">INV</span>'+inv.nombre+'</td>';
+    turnos.forEach(function(t) {
+      var jA = asistMap[dni] || {};
+      var rec = jA[t.turnoId];
+      if(rec) {
+        tot++;
+        if(rec.pres) {
+          pres++;
+          if (rec.sem === 'verde')         { nV++; html += '<td class="pres-cell" title="Verde">&#x1F7E2;</td>'; }
+          else if (rec.sem === 'amarillo') { nA++; html += '<td class="pres-cell" title="Amarillo">&#x1F7E1;</td>'; }
+          else if (rec.sem === 'rojo')     { nR++; html += '<td class="pres-cell" title="Rojo">&#x1F534;</td>'; }
+          else                                   { html += '<td class="pres-cell">&#x2713;</td>'; }
+        } else {
+          html += '<td class="ause-cell">&#x2717;</td>';
+        }
+      } else {
+        html += '<td class="no-cell">-</td>';
+      }
+    });
+    var pct = tot>0 ? Math.round(pres/tot*100) : null;
+    var col = pct===null ? 'var(--muted)' : pct>=75 ? '#6de097' : pct>=50 ? 'var(--secondary)' : 'var(--red)';
+    html += '<td style="color:#22c55e;font-weight:700;">'+(nV||'')+'</td>';
+    html += '<td style="color:#eab308;font-weight:700;">'+(nA||'')+'</td>';
+    html += '<td style="color:#ef4444;font-weight:700;">'+(nR||'')+'</td>';
+    html += '<td style="font-weight:700;color:'+col+';">'+(pct!==null?pct+'%':'-')+'</td></tr>';
+  });
+
   html += '</tbody></table>';
 
   var totP=0,totR=0;
-  jug.forEach(function(f){ var dni=(f.dni||'').toString(),jA=asistMap[dni]||{}; turnos.forEach(function(t){ if(t.turnoId in jA){totR++;if(jA[t.turnoId])totP++;} }); });
+  jug.forEach(function(f){ var dni=(f.dni||'').toString(),jA=asistMap[dni]||{}; turnos.forEach(function(t){ if(t.turnoId in jA){totR++; if(jA[t.turnoId].pres) totP++;} }); });
+  invList.forEach(function(inv){ var jA=asistMap[inv.dni]||{}; turnos.forEach(function(t){ if(t.turnoId in jA){totR++; if(jA[t.turnoId].pres) totP++;} }); });
   var pG=totR>0?Math.round(totP/totR*100):0;
 
+  var sumInv = invList.length ? ' <span style="color:var(--secondary);">(' + invList.length + ' invitado' + (invList.length>1?'s':'') + ')</span>' : '';
   document.getElementById('hist-tabla').innerHTML = html;
   document.getElementById('hist-resumen').innerHTML =
-    '<span>'+jug.length+' alumnos</span><span>&bull;</span><span>'+turnos.length+' clases</span><span>&bull;</span><span>Global: <b style="color:var(--secondary);">'+pG+'%</b></span>';
+    '<span>'+(jug.length + invList.length)+' alumnos'+sumInv+'</span><span>&bull;</span><span>'+turnos.length+' clases</span><span>&bull;</span><span>Global: <b style="color:var(--secondary);">'+pG+'%</b></span>';
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1508,7 +1756,10 @@ window.onload = function() {
           cargarDatos();
           actualizarBtnBio();
           iniciarFecha();
-        } else {
+        } else if (!_loginEnCurso) {
+          // Solo mostramos el login si NO hay un login manual completándose.
+          // (Durante doLogin, el signIn dispara este callback antes de guardar la
+          //  sesión; sin este guard el loader se ocultaba y parpadeaba el login.)
           ocultarLoader();
         }
       });
