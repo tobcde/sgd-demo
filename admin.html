@@ -389,6 +389,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
   <div class="stats">
     <div><span class="stat-n" id="statT">0</span><span class="stat-l" id="lbl-stat-socios">Socios</span></div>
     <div><span class="stat-n" id="statM">0</span><span class="stat-l">Masculino</span></div>
+    <div><span class="stat-n" id="statF">0</span><span class="stat-l">Femenino</span></div>
     <div><span class="stat-n" id="statD" style="color:var(--red);">0</span><span class="stat-l">Deben</span></div>
     <div><span class="stat-n" id="statV" style="color:var(--orange);">0</span><span class="stat-l">Por vencer</span></div>
   </div>
@@ -2113,7 +2114,7 @@ header{background:var(--surface);border-bottom:2px solid var(--primary);padding:
 
 
 <!-- VERSION BADGE -->
-<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.64</div>
+<div id="vbadge" style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,.7);border:1px solid var(--secondary);color:var(--secondary);font-family:'Barlow Condensed',sans-serif;font-size:11px;padding:3px 8px;border-radius:6px;z-index:9999;">v2.65</div>
 
 <!-- PWA BANNER -->
 <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,var(--primary-dark),var(--bg));border-top:2px solid var(--primary);padding:14px 20px;align-items:center;gap:14px;">
@@ -2140,8 +2141,8 @@ var FIREBASE_CONFIG = {
   "messagingSenderId": "486153791045",
   "appId": "1:486153791045:web:81bf466e0d1453590c652c"
 };
-var GAS_URL         = 'https://script.google.com/macros/s/AKfycbx4kVBNBGsnlYtWqbeZMKjC7tLcjGOHsYB-IUs5j-3T_2P95vyIMlOPL-FW9pBHTokeQQ/exec';
-var GAS_OCR_KEY     = ''; // deprecated
+var GAS_URL         = 'https://script.google.com/macros/s/AKfycbxsBHnK0iyNJkBgeDYsDbzemV4uyzDJii5eeMT4O4xnTYTGLU8Y5HZMr7K5bvDDv4r-jA/exec';
+var GAS_OCR_KEY     = 'sgd2026'; // deprecated
 var ADMIN_EMAIL     = 'admin@sgd.app';
 
 firebase.initializeApp(FIREBASE_CONFIG);
@@ -4684,7 +4685,7 @@ html += '<div class="cuota-badge"><span class="cuota-pill ' + cl + '" title="'+_
 
   grid.innerHTML = html;
   var _s = function(id,v){ var el = document.getElementById(id); if(el) el.innerText = v; };
-  _s('statT', t); _s('statM', m); _s('statD', deu); _s('statV', pv);
+  _s('statT', t); _s('statM', m); _s('statF', fc); _s('statD', deu); _s('statV', pv);
 }
 
 // -- CUOTAS -------------------------------------------------------
